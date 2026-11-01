@@ -60,6 +60,7 @@ export class ExpensesApp {
       this.sync = await createMonthSync({
         onMonth: (monthRecord, savedMonthKeys) => this.#showMonth(monthRecord, savedMonthKeys),
         onSaveStatus: (saveStatus) => this.statusView.showSaveStatus(saveStatus),
+        onConnectionProblem: (message) => this.statusView.showErrorText(message),
       });
       await this.sync.openMonth(currentMonthKey());
     } catch (error) {
@@ -123,6 +124,7 @@ export class ExpensesApp {
 
   /** Shows the change immediately, then hands it to storage. */
   #applyChange(change) {
+    if (!this.currentMonth) return; // nothing loaded yet, for example while still connecting
     try {
       applyMonthChange(this.currentMonth, change);
     } catch (error) {
@@ -173,6 +175,7 @@ export class ExpensesApp {
   // ----- Month helpers -----
 
   #openMonthAtOffset(offset) {
+    if (!this.currentMonth) return;
     const position = this.savedMonthKeys.indexOf(this.currentMonth.monthKey);
     const targetMonthKey = this.savedMonthKeys[position + offset];
     if (targetMonthKey) this.sync.openMonth(targetMonthKey);

@@ -7,7 +7,19 @@ const LIVE_PATH = '/api/live';
 const KEEPALIVE_PING = 'ping'; // answered by the server platform without waking the household
 const KEEPALIVE_PONG = 'pong';
 const KEEPALIVE_INTERVAL_MS = 50_000;
+const STATUS_PATH = '/api/status';
 const RECONNECT_DELAY_MS = 2_000;
+const REFUSED_RETRY_DELAY_MS = 20_000; // when the server refuses us, retrying fast won't help
+
+/** What to tell the user when the server explains why it refused the connection. */
+const PROBLEM_MESSAGES = {
+  'access-not-configured': () =>
+    'The login for this site isn\u2019t set up yet. In Cloudflare, add the ACCESS_TEAM_DOMAIN and ACCESS_AUD secrets to the Worker.',
+  'not-signed-in': () => 'You are signed out. Reload the page to sign in again.',
+  'invalid-sign-in': () => 'Your sign-in could not be verified. Reload the page to sign in again.',
+  'not-a-member': ({ email }) =>
+    `${email} isn\u2019t part of a household yet. In Cloudflare, add it to the HOUSEHOLD_MEMBERS secret.`,
+};
 
 /**
  * Backend for the Cloudflare deployment, shared by several people.
@@ -26,10 +38,12 @@ export class CloudMonthSync {
    * @param {object} callbacks
    * @param {(monthRecord: MonthRecord, savedMonthKeys: string[]) => void} callbacks.onMonth
    * @param {(saveStatus: string) => void} callbacks.onSaveStatus
+   * @param {(message: string | null) => void} callbacks.onConnectionProblem  plain text; null when solved
    */
-  constructor({ onMonth, onSaveStatus }) {
+  constructor({ onMonth, onSaveStatus, onConnectionProblem }) {
     this.onMonth = onMonth;
     this.onSaveStatus = onSaveStatus;
+    this.onConnectionProblem = onConnectionProblem;
     this.socket = null;
     this.isConnected = false;
     this.shownMonthKey = null;
@@ -89,9 +103,12 @@ export class CloudMonthSync {
   #connect() {
     const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
     this.socket = new WebSocket(`${protocol}//${location.host}${LIVE_PATH}`);
+    let didOpen = false;
 
     this.socket.addEventListener('open', () => {
+      didOpen = true;
       this.isConnected = true;
+      this.onConnectionProblem(null);
       this.keepaliveTimer = setInterval(() => this.socket.send(KEEPALIVE_PING), KEEPALIVE_INTERVAL_MS);
       // After a reconnect: show the latest version of the month and resend unconfirmed changes.
       if (this.shownMonthKey) this.socket.send(JSON.stringify({ type: 'openMonth', month: this.shownMonthKey }));
@@ -103,12 +120,29 @@ export class CloudMonthSync {
 
     this.socket.addEventListener('message', (messageEvent) => this.#handleMessage(messageEvent.data));
 
-    this.socket.addEventListener('close', () => {
+    this.socket.addEventListener('close', async () => {
       this.isConnected = false;
       clearInterval(this.keepaliveTimer);
       this.onSaveStatus(SaveStatus.OFFLINE);
-      setTimeout(() => this.#connect(), RECONNECT_DELAY_MS);
+      // A connection that never opened was refused: ask the server why, and retry slowly.
+      const wasRefused = !didOpen && (await this.#explainRefusal());
+      setTimeout(() => this.#connect(), wasRefused ? REFUSED_RETRY_DELAY_MS : RECONNECT_DELAY_MS);
     });
+  }
+
+  /** @returns {Promise<boolean>} true when the server refused us on purpose */
+  async #explainRefusal() {
+    try {
+      const response = await fetch(STATUS_PATH, { cache: 'no-store' });
+      if (response.ok) return false; // signed in and a member: the drop was a network problem
+      const details = await response.json();
+      const describe = PROBLEM_MESSAGES[details.problem];
+      this.onConnectionProblem(describe ? describe(details) : 'The server refused the connection.');
+      return true;
+    } catch {
+      this.onConnectionProblem('Could not reach the server. Check your internet connection.');
+      return false;
+    }
   }
 
   /** Messages sent while offline are dropped; reconnecting resends what matters. */

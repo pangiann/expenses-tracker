@@ -13,7 +13,19 @@ import { createRemoteJWKSet, jwtVerify } from 'jose';
  *   ACCESS_AUD          the application's "Application Audience (AUD) Tag"
  * Without them every request is refused.
  */
-export class AccessDeniedError extends Error {}
+/** Why a request was refused, shown to the signed-in user so they know what to fix. */
+export const AccessProblem = Object.freeze({
+  NOT_CONFIGURED: 'access-not-configured',
+  NO_TOKEN: 'not-signed-in',
+  INVALID_TOKEN: 'invalid-sign-in',
+});
+
+export class AccessDeniedError extends Error {
+  constructor(message, problem) {
+    super(message);
+    this.problem = problem;
+  }
+}
 
 const keySetsByTeamDomain = new Map(); // cached per Worker instance
 
@@ -30,20 +42,20 @@ export async function verifiedUserEmail(request, env) {
   const teamDomain = env.ACCESS_TEAM_DOMAIN;
   const audience = env.ACCESS_AUD;
   if (!teamDomain || !audience) {
-    throw new AccessDeniedError('Cloudflare Access is not configured for this Worker');
+    throw new AccessDeniedError('Cloudflare Access is not configured for this Worker', AccessProblem.NOT_CONFIGURED);
   }
   const token = request.headers.get('Cf-Access-Jwt-Assertion');
-  if (!token) throw new AccessDeniedError('Missing Cloudflare Access token');
+  if (!token) throw new AccessDeniedError('Missing Cloudflare Access token', AccessProblem.NO_TOKEN);
 
   try {
     const { payload } = await jwtVerify(token, keySetFor(teamDomain), { issuer: teamDomain, audience });
     if (typeof payload.email !== 'string' || payload.email === '') {
-      throw new AccessDeniedError('Access token has no email');
+      throw new AccessDeniedError('Access token has no email', AccessProblem.INVALID_TOKEN);
     }
     return payload.email.toLowerCase();
   } catch (error) {
     if (error instanceof AccessDeniedError) throw error;
-    throw new AccessDeniedError(`Invalid Cloudflare Access token: ${error.message}`);
+    throw new AccessDeniedError(`Invalid Cloudflare Access token: ${error.message}`, AccessProblem.INVALID_TOKEN);
   }
 }
 

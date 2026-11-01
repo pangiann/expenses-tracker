@@ -27,4 +27,10 @@ export class StatusView {
     this.errorBanner.innerHTML = trustedHtml;
     this.errorBanner.hidden = false;
   }
+
+  /** @param {string | null} text  shown as plain text; null hides the banner */
+  showErrorText(text) {
+    this.errorBanner.textContent = text ?? '';
+    this.errorBanner.hidden = text === null;
+  }
 }

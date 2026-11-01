@@ -15,7 +15,7 @@ export class LocalMonthSync {
    * @param {(monthRecord: MonthRecord, savedMonthKeys: string[]) => void} callbacks.onMonth
    * @param {(saveStatus: string) => void} callbacks.onSaveStatus
    */
-  constructor({ onMonth, onSaveStatus }) {
+  constructor({ onMonth, onSaveStatus }) { // onConnectionProblem isn't needed locally
     this.onMonth = onMonth;
     this.repository = new MonthRepository();
     this.autoSaver = new AutoSaver(this.repository, { onStatusChange: onSaveStatus });

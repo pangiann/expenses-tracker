@@ -1,8 +1,9 @@
 /**
  * Cloudflare Worker entry point.
  *
- *   /api/live   WebSocket to the signed-in user's household (see HouseholdRoom)
- *   /api/...    anything else: 404
+ *   /api/live    WebSocket to the signed-in user's household (see HouseholdRoom)
+ *   /api/status  why the WebSocket was refused; the page asks only after a failed connection
+ *   /api/...     anything else: 404
  *   everything else: static files from web/ (served by Cloudflare without running this code)
  *
  * Only the default handler and Durable Object classes may be exported from this module.
@@ -14,6 +15,7 @@ import { UnknownMemberError, householdForEmail } from './households.js';
 export { HouseholdRoom };
 
 const LIVE_PATH = '/api/live';
+const STATUS_PATH = '/api/status';
 
 export default {
   /**
@@ -23,6 +25,7 @@ export default {
   async fetch(request, env) {
     const { pathname } = new URL(request.url);
     if (pathname === LIVE_PATH) return openHouseholdConnection(request, env);
+    if (pathname === STATUS_PATH) return describeAccess(request, env);
     if (pathname.startsWith('/api/')) return textResponse('Not found', 404);
     return env.ASSETS.fetch(request);
   },
@@ -54,6 +57,27 @@ async function openHouseholdConnection(request, env) {
   return household.fetch(request);
 }
 
+/**
+ * Tells the signed-in user why they can't connect, for example that their email isn't in
+ * any household yet. Reveals nothing to strangers: Cloudflare Access stops them first.
+ */
+async function describeAccess(request, env) {
+  let email;
+  try {
+    email = await verifiedUserEmail(request, env);
+  } catch (error) {
+    if (error instanceof AccessDeniedError) return jsonResponse({ problem: error.problem }, 403);
+    throw error;
+  }
+  try {
+    householdForEmail(email, env);
+  } catch (error) {
+    if (error instanceof UnknownMemberError) return jsonResponse({ problem: 'not-a-member', email }, 403);
+    throw error;
+  }
+  return jsonResponse({ email }, 200);
+}
+
 export function isSameOriginRequest(request) {
   const origin = request.headers.get('Origin');
   if (!origin) return false;
@@ -62,6 +86,13 @@ export function isSameOriginRequest(request) {
   } catch {
     return false;
   }
+}
+
+function jsonResponse(body, status) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+  });
 }
 
 function textResponse(text, status) {

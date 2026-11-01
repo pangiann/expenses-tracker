@@ -2,9 +2,10 @@ import Cocoa
 import WebKit
 
 /// The app's single window, showing the expenses page in a WebKit view.
-final class MainWindowController: NSObject, WKUIDelegate, WKNavigationDelegate {
+final class MainWindowController: NSObject, WKUIDelegate, WKNavigationDelegate, WKDownloadDelegate {
     let window: NSWindow
     private let webView: WKWebView
+    private var downloadDestinations: [ObjectIdentifier: URL] = [:]
 
     override init() {
         let configuration = WKWebViewConfiguration()
@@ -69,9 +70,12 @@ final class MainWindowController: NSObject, WKUIDelegate, WKNavigationDelegate {
 
     // MARK: WKNavigationDelegate
 
-    /// Links that leave the app open in the default browser.
+    /// Downloads (the Export button) are saved to Downloads; links that leave the app open in the browser.
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction,
                  decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+        if navigationAction.shouldPerformDownload {
+            return decisionHandler(.download)
+        }
         if navigationAction.navigationType == .linkActivated,
            let linkURL = navigationAction.request.url,
            linkURL.host != LocalServer.pageURL.host {
@@ -79,6 +83,46 @@ final class MainWindowController: NSObject, WKUIDelegate, WKNavigationDelegate {
             return decisionHandler(.cancel)
         }
         decisionHandler(.allow)
+    }
+
+    func webView(_ webView: WKWebView, navigationAction: WKNavigationAction, didBecome download: WKDownload) {
+        download.delegate = self
+    }
+
+    // MARK: WKDownloadDelegate
+
+    /// Saves to ~/Downloads under the page's file name, adding " 2", " 3"… instead of overwriting.
+    func download(_ download: WKDownload, decideDestinationUsing response: URLResponse,
+                  suggestedFilename: String, completionHandler: @escaping (URL?) -> Void) {
+        let downloadsFolder = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask)[0]
+        let requestedFile = downloadsFolder.appendingPathComponent(suggestedFilename)
+        var destination = requestedFile
+        var copyNumber = 2
+        while FileManager.default.fileExists(atPath: destination.path) {
+            destination = downloadsFolder.appendingPathComponent(
+                "\(requestedFile.deletingPathExtension().lastPathComponent) \(copyNumber).\(requestedFile.pathExtension)")
+            copyNumber += 1
+        }
+        downloadDestinations[ObjectIdentifier(download)] = destination
+        completionHandler(destination)
+    }
+
+    func downloadDidFinish(_ download: WKDownload) {
+        guard let savedFile = downloadDestinations.removeValue(forKey: ObjectIdentifier(download)) else { return }
+        NSWorkspace.shared.activateFileViewerSelecting([savedFile])  // show it in Finder
+    }
+
+    // MARK: WKUIDelegate: file picker for Import
+
+    func webView(_ webView: WKWebView, runOpenPanelWith parameters: WKOpenPanelParameters,
+                 initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping ([URL]?) -> Void) {
+        let openPanel = NSOpenPanel()
+        openPanel.canChooseFiles = true
+        openPanel.canChooseDirectories = false
+        openPanel.allowsMultipleSelection = parameters.allowsMultipleSelection
+        openPanel.beginSheetModal(for: window) { response in
+            completionHandler(response == .OK ? openPanel.urls : nil)
+        }
     }
 
     // MARK: WKUIDelegate: JavaScript alert() and confirm() as native sheets
