@@ -1,12 +1,60 @@
 /* Narrow windows: stack the sections in one column. */
 
 @media (max-width: 960px) {
-  .summary-cards { grid-template-columns: repeat(2, 1fr); }
+  .summary-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .charts,
-  .month-details { grid-template-columns: 1fr; }
-  .quick-add-form { grid-template-columns: 1fr 1fr; }
+  .month-details { grid-template-columns: minmax(0, 1fr); }
+  .quick-add-form { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .quick-add-form .primary-button { grid-column: span 2; }
   .recurring-costs-panel { position: static; }
-  .top-bar { flex-wrap: wrap; gap: 10px; padding: 12px 16px; }
   .page-content { padding: 16px; }
+}
+
+/* Phones. */
+@media (max-width: 600px) {
+  /* Top bar: brand and buttons on the first row, month navigation on the second. */
+  .top-bar {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-areas: "brand actions" "months months";
+    row-gap: 10px;
+    padding: 10px 14px 12px;
+  }
+  .brand { grid-area: brand; font-size: 16px; }
+  .brand-icon { width: 22px; height: 22px; }
+  .top-bar-actions { grid-area: actions; justify-content: flex-end; gap: 6px; }
+  .top-bar-actions .secondary-button { padding: 5px 9px; font-size: 12px; }
+  .save-status { min-width: 0; font-size: 11px; }
+  .month-navigation { grid-area: months; justify-content: space-between; gap: 8px; }
+  .month-navigation h1 { font-size: 18px; min-width: 0; flex: 1; }
+
+  .page-content { padding: 12px; gap: 12px; }
+  .card { padding: 14px; }
+  .category-card { padding: 0; } /* its sections have their own padding */
+  h2 { font-size: 14px; margin-bottom: 10px; }
+
+  /* 16px text stops iPhones from zooming in when a field is tapped. */
+  input, select { font-size: 16px !important; }
+
+  .summary-cards { gap: 12px; }
+  .summary-card-value { font-size: 20px; }
+  .income-input { width: 100%; min-width: 0; }
+
+  .budget-bar-row { grid-template-columns: 92px minmax(0, 1fr) 124px; gap: 8px; font-size: 12px; }
+
+  .spending-donut { gap: 14px; }
+  .spending-donut-chart { width: 120px; height: 120px; }
+  .spending-donut-legend { font-size: 12px; min-width: 0; }
+
+  .category-cards { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .expense-list { max-height: none; }
+  .category-add-form input[name=amount] { width: 90px; }
+  .category-add-form button { padding: 0 14px; font-size: 16px; }
+
+  .dialog { width: calc(100vw - 32px); }
+}
+
+/* Touch screens have no hover, so the ✕ buttons are always shown. */
+@media (hover: none) {
+  .delete-button { visibility: visible; }
 }
