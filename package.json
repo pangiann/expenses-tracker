@@ -1,0 +1,20 @@
+{
+  "name": "expenses-tracker",
+  "private": true,
+  "type": "module",
+  "description": "Personal expenses tracker: local Mac app or a shared Cloudflare deployment.",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "wrangler dev",
+    "test": "node --test test/",
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "jose": "^6.0.0"
+  },
+  "devDependencies": {
+    "wrangler": "^4.40.0"
+  }
+}

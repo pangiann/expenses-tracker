@@ -1,0 +1,4 @@
+# Copy to .dev.vars (git-ignored) for `npm run dev`. Never commit real emails.
+# Lets you use the app on localhost without Cloudflare Access.
+ACCESS_TEST_BYPASS_EMAIL=you@example.com
+HOUSEHOLD_MEMBERS={"you@example.com": "home"}

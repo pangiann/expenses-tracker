@@ -1,0 +1,24 @@
+/* Budget vs actual bars and the spending donut chart. */
+
+.charts { display: grid; grid-template-columns: 3fr 2fr; gap: 20px; }
+
+.budget-bars { display: grid; gap: 12px; }
+.budget-bar-row {
+  display: grid; grid-template-columns: 120px 1fr 150px; align-items: center; gap: 12px;
+  font-size: 13px; white-space: nowrap;
+}
+.budget-bar-track { height: 12px; background: var(--color-track); border-radius: 6px; overflow: hidden; }
+.budget-bar-fill { height: 100%; border-radius: 6px; transition: width .3s; }
+.budget-bar-amount { text-align: right; color: var(--color-text-muted); font-variant-numeric: tabular-nums; }
+.budget-bar-amount.is-negative { color: var(--color-negative); font-weight: 600; }
+
+.spending-donut { display: flex; align-items: center; gap: 20px; }
+.spending-donut-chart { width: 180px; height: 180px; flex-shrink: 0; }
+.spending-donut-total { font-size: 13px; font-weight: 700; fill: var(--color-text); }
+.spending-donut-caption { font-size: 7px; fill: var(--color-text-muted); }
+
+.spending-donut-legend { list-style: none; padding: 0; margin: 0; font-size: 13px; display: grid; gap: 6px; flex: 1; }
+.spending-donut-legend li { display: flex; align-items: center; gap: 8px; }
+.spending-donut-legend-value { margin-left: auto; color: var(--color-text-muted); font-variant-numeric: tabular-nums; }
+.spending-donut-legend-empty { color: var(--color-text-muted); }
+.color-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }

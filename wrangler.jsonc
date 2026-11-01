@@ -1,0 +1,15 @@
+{
+  // Cloudflare deployment. Settings that identify people (Access team, emails) are
+  // secrets set in the Cloudflare dashboard, never in this file. See README.md.
+  "name": "expenses-tracker",
+  "main": "worker/index.js",
+  "compatibility_date": "2026-05-03",
+  "assets": {
+    "directory": "./web",
+    "binding": "ASSETS",
+  },
+  "durable_objects": {
+    "bindings": [{ "name": "HOUSEHOLD", "class_name": "HouseholdRoom" }],
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["HouseholdRoom"] }],
+}

@@ -1,0 +1,47 @@
+/* One card per spending category, with its expenses and an add form. */
+
+.month-details { display: grid; grid-template-columns: 1fr 300px; gap: 20px; align-items: start; }
+.category-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; }
+
+.category-card { padding: 0; overflow: hidden; display: flex; flex-direction: column; }
+.category-card-header { padding: 16px 18px 12px; border-top: 4px solid; }
+.category-card-title { display: flex; justify-content: space-between; align-items: baseline; }
+.category-card-title h2 { margin: 0; }
+.category-card-spent { font-weight: 700; font-variant-numeric: tabular-nums; }
+.category-card-budget-line {
+  font-size: 12px; color: var(--color-text-muted); margin-top: 4px;
+  display: flex; justify-content: space-between;
+}
+.category-card-budget-line .is-negative { font-weight: 600; }
+.category-card-progress-track { height: 5px; background: var(--color-track); border-radius: 3px; margin-top: 10px; overflow: hidden; }
+.category-card-progress-fill { height: 100%; }
+
+.expense-list { list-style: none; margin: 0; padding: 0 18px; max-height: 220px; overflow-y: auto; flex: 1; }
+.expense-row {
+  display: flex; align-items: center; gap: 8px; padding: 7px 0;
+  border-top: 1px solid var(--color-border); font-size: 13px;
+}
+.expense-row:hover .delete-button { visibility: visible; }
+.expense-date { color: var(--color-text-muted); font-size: 11px; width: 38px; flex-shrink: 0; }
+.expense-description { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.expense-description.is-empty { color: var(--color-text-faint); font-style: italic; }
+.expense-amount { font-variant-numeric: tabular-nums; }
+.expense-list-empty {
+  color: var(--color-text-faint); font-size: 13px; padding: 12px 0; text-align: center;
+  border-top: 1px solid var(--color-border);
+}
+
+.category-add-form {
+  display: flex; gap: 6px; padding: 10px 18px 14px;
+  border-top: 1px solid var(--color-border); background: #fafbfd;
+}
+.category-add-form input {
+  border: 1px solid var(--color-border); border-radius: 6px; padding: 6px 8px;
+  font-size: 13px; font-family: inherit; min-width: 0;
+}
+.category-add-form input[name=description] { flex: 1; }
+.category-add-form input[name=amount] { width: 72px; }
+.category-add-form button {
+  border: 0; background: var(--color-accent); color: #fff; border-radius: 6px;
+  padding: 0 10px; cursor: pointer; font-weight: 700;
+}

@@ -1,0 +1,9 @@
+# Personal financial data: keep out of git unless the repo is private
+data/
+*.xlsx
+*.csv
+.DS_Store
+.idea/
+node_modules/
+.wrangler/
+.dev.vars

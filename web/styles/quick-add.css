@@ -1,0 +1,14 @@
+/* "Add expense" bar at the top of the page. */
+
+.quick-add h2 { margin-bottom: 10px; }
+
+.quick-add-form { display: grid; grid-template-columns: 130px 1fr 190px 160px auto; gap: 10px; }
+
+.quick-add-form input,
+.quick-add-form select {
+  border: 1px solid var(--color-border); border-radius: 8px; padding: 10px 12px;
+  font-size: 14px; font-family: inherit; background: #fafbfd; color: var(--color-text);
+}
+
+.quick-add-form input:focus,
+.quick-add-form select:focus { outline: 2px solid var(--color-accent); outline-offset: -1px; background: #fff; }
