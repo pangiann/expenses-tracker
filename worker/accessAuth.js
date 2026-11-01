@@ -15,6 +15,7 @@ import { createRemoteJWKSet, jwtVerify } from 'jose';
 /** Why a request was refused, shown to the signed-in user so they know what to fix. */
 export const AccessProblem = Object.freeze({
   NOT_ENABLED: 'access-not-enabled',
+  NEEDS_TOKEN_SETTINGS: 'access-needs-token-settings',
   INVALID_TOKEN: 'invalid-sign-in',
 });
 
@@ -44,6 +45,10 @@ export async function verifiedUserEmail(request, env, context) {
   }
   if (env.ACCESS_TEAM_DOMAIN && env.ACCESS_AUD) {
     return requireEmail(await emailFromAccessToken(request, env.ACCESS_TEAM_DOMAIN, env.ACCESS_AUD));
+  }
+  // Access signed the request in, but this Worker can't read the identity without the token settings.
+  if (request.headers.get('Cf-Access-Jwt-Assertion')) {
+    throw new AccessDeniedError('ACCESS_TEAM_DOMAIN and ACCESS_AUD are not set', AccessProblem.NEEDS_TOKEN_SETTINGS);
   }
   throw new AccessDeniedError('Cloudflare Access did not authenticate this request', AccessProblem.NOT_ENABLED);
 }

@@ -31,6 +31,13 @@ test('a request Access did not authenticate is refused', async () => {
   await assert.rejects(verifiedUserEmail(request, {}, undefined), AccessDeniedError);
 });
 
+test('a signed-in request without token settings asks for them', async () => {
+  const request = new Request('https://expenses.example.workers.dev/api/live', {
+    headers: { 'Cf-Access-Jwt-Assertion': 'some.signed.token' },
+  });
+  await assert.rejects(verifiedUserEmail(request, {}, {}), (error) => error.problem === 'access-needs-token-settings');
+});
+
 test('a sign-in without an email is refused', async () => {
   const request = new Request('https://expenses.example.workers.dev/api/live');
   const context = { access: { getIdentity: async () => ({}) } };
