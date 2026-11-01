@@ -31,6 +31,16 @@ test('a request Access did not authenticate is refused', async () => {
   await assert.rejects(verifiedUserEmail(request, {}, undefined), AccessDeniedError);
 });
 
+test('the team domain is accepted with or without https:// and a trailing slash', async () => {
+  const request = new Request('https://expenses.example.workers.dev/api/live', {
+    headers: { 'Cf-Access-Jwt-Assertion': 'not.a.token' },
+  });
+  for (const teamDomain of ['team.cloudflareaccess.com/', ' https://team.cloudflareaccess.com ']) {
+    await assert.rejects(verifiedUserEmail(request, { ACCESS_TEAM_DOMAIN: teamDomain, ACCESS_AUD: 'aud' }, {}),
+      (error) => error.problem === 'invalid-sign-in');
+  }
+});
+
 test('a signed-in request without token settings asks for them', async () => {
   const request = new Request('https://expenses.example.workers.dev/api/live', {
     headers: { 'Cf-Access-Jwt-Assertion': 'some.signed.token' },

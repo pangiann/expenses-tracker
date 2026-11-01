@@ -67,7 +67,8 @@ async function describeAccess(request, env, context) {
   try {
     email = await verifiedUserEmail(request, env, context);
   } catch (error) {
-    if (error instanceof AccessDeniedError) return jsonResponse({ problem: error.problem }, 403);
+    // The reason helps fix the setup; it names the failed check, never a secret value.
+    if (error instanceof AccessDeniedError) return jsonResponse({ problem: error.problem, reason: error.message }, 403);
     throw error;
   }
   try {

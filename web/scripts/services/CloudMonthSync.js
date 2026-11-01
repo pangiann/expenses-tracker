@@ -17,7 +17,7 @@ const PROBLEM_MESSAGES = {
     'You are signed in, but the Worker can\u2019t read your sign-in yet. In Cloudflare, add the ACCESS_TEAM_DOMAIN and ACCESS_AUD secrets to the Worker.',
   'access-not-enabled': () =>
     'The login for this site isn\u2019t switched on. In Cloudflare, open the Worker\u2019s Access tab and protect it with Cloudflare Access.',
-  'invalid-sign-in': () => 'Your sign-in could not be verified. Reload the page to sign in again.',
+  'invalid-sign-in': ({ reason }) => `Your sign-in could not be verified (${reason}). Check the ACCESS_TEAM_DOMAIN and ACCESS_AUD secrets, then reload.`,
   'not-a-member': ({ email }) =>
     `${email} isn\u2019t part of a household yet. In Cloudflare, add it to the HOUSEHOLD_MEMBERS secret.`,
 };

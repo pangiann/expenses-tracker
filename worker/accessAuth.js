@@ -43,14 +43,23 @@ export async function verifiedUserEmail(request, env, context) {
     const identity = await context.access.getIdentity();
     return requireEmail(identity?.email);
   }
-  if (env.ACCESS_TEAM_DOMAIN && env.ACCESS_AUD) {
-    return requireEmail(await emailFromAccessToken(request, env.ACCESS_TEAM_DOMAIN, env.ACCESS_AUD));
+  const teamDomain = normalizeTeamDomain(env.ACCESS_TEAM_DOMAIN);
+  const audience = env.ACCESS_AUD?.trim();
+  if (teamDomain && audience) {
+    return requireEmail(await emailFromAccessToken(request, teamDomain, audience));
   }
   // Access signed the request in, but this Worker can't read the identity without the token settings.
   if (request.headers.get('Cf-Access-Jwt-Assertion')) {
     throw new AccessDeniedError('ACCESS_TEAM_DOMAIN and ACCESS_AUD are not set', AccessProblem.NEEDS_TOKEN_SETTINGS);
   }
   throw new AccessDeniedError('Cloudflare Access did not authenticate this request', AccessProblem.NOT_ENABLED);
+}
+
+/** Accepts the domain with or without https:// and a trailing slash, as people paste it. */
+function normalizeTeamDomain(value) {
+  const trimmed = value?.trim().replace(/\/+$/, '');
+  if (!trimmed) return null;
+  return trimmed.startsWith('https://') ? trimmed : `https://${trimmed.replace(/^http:\/\//, '')}`;
 }
 
 function requireEmail(email) {
