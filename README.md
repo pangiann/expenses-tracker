@@ -18,23 +18,17 @@ The local server listens on 127.0.0.1 only, so other machines can't reach it. It
 Cloudflare builds and deploys the Worker from GitHub. Nothing personal is in this repository: who can sign in and which household they belong to are set in the Cloudflare dashboard.
 
 1. **Connect the repository.** In the Cloudflare dashboard, go to **Workers & Pages → Create → Import a repository** and choose this repository. Keep the default deploy command, `npx wrangler deploy`. Every push to `main` deploys again.
-2. **Turn on the login.** Open the Worker, go to **Settings → Domains & Routes**, and choose **Enable Cloudflare Access** for the workers.dev URL. Do the same for **Preview URLs**.
-3. **Choose who may sign in.** In **Zero Trust → Access → Policies**, edit the policy for this Worker so that **Include → Emails** lists only the people who use it. They sign in with a one-time code sent to that email.
-4. **Copy two values.**
-   - Team domain: **Zero Trust → Settings**, shown as `https://<your-team>.cloudflareaccess.com`.
-   - Audience tag: **Zero Trust → Access → Applications**, open this Worker's application, copy **Application Audience (AUD) Tag**.
-5. **Add three secrets.** In the Worker, go to **Settings → Variables and Secrets** and add each as type **Secret**:
+2. **Turn on the login.** Open the Worker's **Access** tab (or **Settings → Domains & Routes → Enable Cloudflare Access**). Choose **All traffic**, and for the policy choose **Cloudflare account** to start with only yourself.
+3. **Add one secret.** In the Worker, go to **Settings → Variables and Secrets**, click **Add**, choose type **Secret**, and add:
 
    | Name | Value |
    |---|---|
-   | `ACCESS_TEAM_DOMAIN` | the team domain, for example `https://your-team.cloudflareaccess.com` |
-   | `ACCESS_AUD` | the audience tag |
    | `HOUSEHOLD_MEMBERS` | JSON from each email to a household name, for example `{"you@example.com": "home"}` |
 
-   Until all three are set, the Worker refuses every request.
-6. **Open the site** and sign in. To bring over months from the local app, click **Export** in the local app, then **Import** on the website.
+   Use the email you sign in with. The Worker learns who is signed in from Cloudflare Access (`ctx.access`); a request that Access didn't authenticate is refused. If the page ever says the sign-in can't be read, you can also add the optional secrets `ACCESS_TEAM_DOMAIN` and `ACCESS_AUD`, and the Worker verifies the Access token itself.
+4. **Open the site** and sign in. To bring over months from the local app, click **Export** in the local app, then **Import** on the website.
 
-**Adding a household.** Add the new people's emails to the Access policy (step 3), and add them to `HOUSEHOLD_MEMBERS` with their own household name, for example `{"you@example.com": "home", "a@example.com": "family-2", "b@example.com": "family-2"}`. People with the same household name share months; different households never see each other's data. The Cloudflare account owner can see all data stored in the account.
+**Adding a household.** In **Zero Trust → Access → Policies**, edit this Worker's policy and add **Include → Emails** with the new people's addresses; they sign in with a one-time code sent to their email and need no Cloudflare account. Then add them to `HOUSEHOLD_MEMBERS` with their own household name, for example `{"you@example.com": "home", "a@example.com": "family-2", "b@example.com": "family-2"}`. People with the same household name share months; different households never see each other's data. The Cloudflare account owner can see all data stored in the account.
 
 **Testing locally with Cloudflare's runtime.** Copy `.dev.vars.example` to `.dev.vars`, run `npm install` and `npm run dev`, then open http://localhost:8787. `.dev.vars` lets you skip the login on localhost only, and it is git-ignored.
 

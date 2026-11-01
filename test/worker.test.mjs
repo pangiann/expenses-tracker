@@ -19,15 +19,28 @@ test('unknown emails, invalid household names and a missing setting are refused'
   assert.equal(parseHouseholdMembers('not json').size, 0);
 });
 
-test('without Access settings every request is refused', async () => {
+test('the email comes from Cloudflare Access (ctx.access)', async () => {
   const request = new Request('https://expenses.example.workers.dev/api/live');
-  await assert.rejects(verifiedUserEmail(request, {}), AccessDeniedError);
+  const context = { access: { getIdentity: async () => ({ email: 'Me@Example.com' }) } };
+  assert.equal(await verifiedUserEmail(request, {}, context), 'me@example.com');
 });
 
-test('a request without an Access token is refused', async () => {
+test('a request Access did not authenticate is refused', async () => {
+  const request = new Request('https://expenses.example.workers.dev/api/live');
+  await assert.rejects(verifiedUserEmail(request, {}, {}), AccessDeniedError);
+  await assert.rejects(verifiedUserEmail(request, {}, undefined), AccessDeniedError);
+});
+
+test('a sign-in without an email is refused', async () => {
+  const request = new Request('https://expenses.example.workers.dev/api/live');
+  const context = { access: { getIdentity: async () => ({}) } };
+  await assert.rejects(verifiedUserEmail(request, {}, context), AccessDeniedError);
+});
+
+test('with the optional token secrets, a request without a token is refused', async () => {
   const request = new Request('https://expenses.example.workers.dev/api/live');
   const env = { ACCESS_TEAM_DOMAIN: 'https://team.cloudflareaccess.com', ACCESS_AUD: 'aud' };
-  await assert.rejects(verifiedUserEmail(request, env), AccessDeniedError);
+  await assert.rejects(verifiedUserEmail(request, env, {}), AccessDeniedError);
 });
 
 test('a forged token is refused', async () => {
@@ -36,14 +49,14 @@ test('a forged token is refused', async () => {
     headers: { 'Cf-Access-Jwt-Assertion': `eyJhbGciOiJub25lIn0.${forgedPayload}.` },
   });
   const env = { ACCESS_TEAM_DOMAIN: 'https://team.cloudflareaccess.com', ACCESS_AUD: 'aud' };
-  await assert.rejects(verifiedUserEmail(request, env), AccessDeniedError);
+  await assert.rejects(verifiedUserEmail(request, env, {}), AccessDeniedError);
 });
 
 test('the local test bypass works on localhost only', async () => {
   const env = { ACCESS_TEST_BYPASS_EMAIL: 'Me@Example.com' };
-  assert.equal(await verifiedUserEmail(new Request('http://localhost:8787/api/live'), env), 'me@example.com');
+  assert.equal(await verifiedUserEmail(new Request('http://localhost:8787/api/live'), env, {}), 'me@example.com');
   await assert.rejects(
-    verifiedUserEmail(new Request('https://expenses.example.workers.dev/api/live'), env), AccessDeniedError);
+    verifiedUserEmail(new Request('https://expenses.example.workers.dev/api/live'), env, {}), AccessDeniedError);
 });
 
 test('WebSockets opened by other websites are refused', () => {

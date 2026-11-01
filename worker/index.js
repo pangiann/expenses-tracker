@@ -21,17 +21,18 @@ export default {
   /**
    * @param {Request} request
    * @param {{ HOUSEHOLD: DurableObjectNamespace, ASSETS: Fetcher }} env
+   * @param {ExecutionContext} context  context.access identifies the signed-in user
    */
-  async fetch(request, env) {
+  async fetch(request, env, context) {
     const { pathname } = new URL(request.url);
-    if (pathname === LIVE_PATH) return openHouseholdConnection(request, env);
-    if (pathname === STATUS_PATH) return describeAccess(request, env);
+    if (pathname === LIVE_PATH) return openHouseholdConnection(request, env, context);
+    if (pathname === STATUS_PATH) return describeAccess(request, env, context);
     if (pathname.startsWith('/api/')) return textResponse('Not found', 404);
     return env.ASSETS.fetch(request);
   },
 };
 
-async function openHouseholdConnection(request, env) {
+async function openHouseholdConnection(request, env, context) {
   if (request.headers.get('Upgrade') !== 'websocket') {
     return textResponse('Connect with a WebSocket', 426);
   }
@@ -43,7 +44,7 @@ async function openHouseholdConnection(request, env) {
 
   let householdName;
   try {
-    const email = await verifiedUserEmail(request, env);
+    const email = await verifiedUserEmail(request, env, context);
     householdName = householdForEmail(email, env);
   } catch (error) {
     if (error instanceof AccessDeniedError || error instanceof UnknownMemberError) {
@@ -61,10 +62,10 @@ async function openHouseholdConnection(request, env) {
  * Tells the signed-in user why they can't connect, for example that their email isn't in
  * any household yet. Reveals nothing to strangers: Cloudflare Access stops them first.
  */
-async function describeAccess(request, env) {
+async function describeAccess(request, env, context) {
   let email;
   try {
-    email = await verifiedUserEmail(request, env);
+    email = await verifiedUserEmail(request, env, context);
   } catch (error) {
     if (error instanceof AccessDeniedError) return jsonResponse({ problem: error.problem }, 403);
     throw error;

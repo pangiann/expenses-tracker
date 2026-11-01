@@ -13,9 +13,8 @@ const REFUSED_RETRY_DELAY_MS = 20_000; // when the server refuses us, retrying f
 
 /** What to tell the user when the server explains why it refused the connection. */
 const PROBLEM_MESSAGES = {
-  'access-not-configured': () =>
-    'The login for this site isn\u2019t set up yet. In Cloudflare, add the ACCESS_TEAM_DOMAIN and ACCESS_AUD secrets to the Worker.',
-  'not-signed-in': () => 'You are signed out. Reload the page to sign in again.',
+  'access-not-enabled': () =>
+    'The login for this site isn\u2019t switched on. In Cloudflare, open the Worker\u2019s Access tab and protect it with Cloudflare Access.',
   'invalid-sign-in': () => 'Your sign-in could not be verified. Reload the page to sign in again.',
   'not-a-member': ({ email }) =>
     `${email} isn\u2019t part of a household yet. In Cloudflare, add it to the HOUSEHOLD_MEMBERS secret.`,

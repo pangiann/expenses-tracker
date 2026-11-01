@@ -1,22 +1,20 @@
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 
 /**
- * Verifies the Cloudflare Access login on a request and returns the user's email.
+ * Finds out who is signed in, using Cloudflare Access.
  *
- * Cloudflare Access sits in front of the Worker: it asks for an email, sends a one-time
- * code, and then adds a signed token (a JWT) to every request in the
- * Cf-Access-Jwt-Assertion header. Verifying that signature here means a request that
- * somehow skips Access (a misconfigured route, a forgotten policy) is still refused.
+ * Access sits in front of the Worker: it asks for an email (or a Cloudflare login) and
+ * only lets the request through after the person signs in. Cloudflare then tells the
+ * Worker who it is through ctx.access, which is undefined when Access did not
+ * authenticate the request. Without a signed-in user, every request is refused.
  *
- * Needs two settings in the Cloudflare dashboard (never in git):
- *   ACCESS_TEAM_DOMAIN  for example https://your-team.cloudflareaccess.com
- *   ACCESS_AUD          the application's "Application Audience (AUD) Tag"
- * Without them every request is refused.
+ * Fallback: if ctx.access isn't available, the Worker can verify the signed Access token
+ * itself when the secrets ACCESS_TEAM_DOMAIN and ACCESS_AUD are set. They are optional.
  */
+
 /** Why a request was refused, shown to the signed-in user so they know what to fix. */
 export const AccessProblem = Object.freeze({
-  NOT_CONFIGURED: 'access-not-configured',
-  NO_TOKEN: 'not-signed-in',
+  NOT_ENABLED: 'access-not-enabled',
   INVALID_TOKEN: 'invalid-sign-in',
 });
 
@@ -32,29 +30,39 @@ const keySetsByTeamDomain = new Map(); // cached per Worker instance
 /**
  * @param {Request} request
  * @param {object} env  Worker environment
+ * @param {ExecutionContext} context  Worker context; context.access is set by Cloudflare Access
  * @returns {Promise<string>} the signed-in user's email, lowercase
  * @throws {AccessDeniedError}
  */
-export async function verifiedUserEmail(request, env) {
+export async function verifiedUserEmail(request, env, context) {
   const testEmail = localTestBypassEmail(request, env);
   if (testEmail) return testEmail;
 
-  const teamDomain = env.ACCESS_TEAM_DOMAIN;
-  const audience = env.ACCESS_AUD;
-  if (!teamDomain || !audience) {
-    throw new AccessDeniedError('Cloudflare Access is not configured for this Worker', AccessProblem.NOT_CONFIGURED);
+  if (context?.access) {
+    const identity = await context.access.getIdentity();
+    return requireEmail(identity?.email);
   }
-  const token = request.headers.get('Cf-Access-Jwt-Assertion');
-  if (!token) throw new AccessDeniedError('Missing Cloudflare Access token', AccessProblem.NO_TOKEN);
+  if (env.ACCESS_TEAM_DOMAIN && env.ACCESS_AUD) {
+    return requireEmail(await emailFromAccessToken(request, env.ACCESS_TEAM_DOMAIN, env.ACCESS_AUD));
+  }
+  throw new AccessDeniedError('Cloudflare Access did not authenticate this request', AccessProblem.NOT_ENABLED);
+}
 
+function requireEmail(email) {
+  if (typeof email !== 'string' || email === '') {
+    throw new AccessDeniedError('The sign-in has no email', AccessProblem.INVALID_TOKEN);
+  }
+  return email.toLowerCase();
+}
+
+/** Verifies the signed token Access adds in the Cf-Access-Jwt-Assertion header. */
+async function emailFromAccessToken(request, teamDomain, audience) {
+  const token = request.headers.get('Cf-Access-Jwt-Assertion');
+  if (!token) throw new AccessDeniedError('Missing Cloudflare Access token', AccessProblem.NOT_ENABLED);
   try {
     const { payload } = await jwtVerify(token, keySetFor(teamDomain), { issuer: teamDomain, audience });
-    if (typeof payload.email !== 'string' || payload.email === '') {
-      throw new AccessDeniedError('Access token has no email', AccessProblem.INVALID_TOKEN);
-    }
-    return payload.email.toLowerCase();
+    return payload.email;
   } catch (error) {
-    if (error instanceof AccessDeniedError) throw error;
     throw new AccessDeniedError(`Invalid Cloudflare Access token: ${error.message}`, AccessProblem.INVALID_TOKEN);
   }
 }
