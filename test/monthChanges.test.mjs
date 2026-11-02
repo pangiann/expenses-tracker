@@ -166,3 +166,45 @@ test('expenses and budgets are refused for a category the month does not have', 
   applyMonthChange(month, { kind: ChangeKind.ADD_EXPENSE, expense: { ...groceries, categoryKey: 'kids' } });
   assert.equal(month.spentInCategory('kids'), 20);
 });
+
+test('adding a category puts it at the end with a budget of 0, once', () => {
+  const month = new MonthRecord({ month: '2026-11', expenses: [] });
+  const addKids = { kind: ChangeKind.ADD_CATEGORY, category: { id: 'kids', name: ' Kids ', color: '#f59e0b' } };
+  applyMonthChange(month, addKids);
+  applyMonthChange(month, addKids); // resent after a reconnect
+  assert.equal(month.categories.length, 12);
+  assert.deepEqual(month.categories[11], { id: 'kids', name: 'Kids', color: '#f59e0b' });
+  assert.equal(month.budgetFor('kids'), 0);
+  applyMonthChange(month, { kind: ChangeKind.ADD_EXPENSE,
+    expense: { id: 'expense-k', categoryKey: 'kids', amount: 15, description: 'toys', date: '2026-11-05' } });
+  assert.equal(month.spentInCategory('kids'), 15);
+  assert.equal(MonthRecord.createFromTemplate(month, '2026-12').findCategory('kids').name, 'Kids');
+});
+
+test('a new category gets a colour no other category in the month uses', () => {
+  const month = new MonthRecord({ month: '2026-11', expenses: [] });
+  const firstColor = month.pickCategoryColor();
+  applyMonthChange(month, { kind: ChangeKind.ADD_CATEGORY, category: { id: 'a', name: 'A', color: firstColor } });
+  assert.notEqual(month.pickCategoryColor(), firstColor);
+});
+
+test('malformed new categories are refused', () => {
+  const month = new MonthRecord({ month: '2026-11', expenses: [] });
+  for (const category of [
+    { id: 'x', name: '  ', color: '#f59e0b' },
+    { id: 'x', name: 'X', color: 'red' },
+    { id: 'x', name: 'X', color: '#f59e0b"><script>' },
+    { id: '', name: 'X', color: '#f59e0b' },
+  ]) {
+    assert.throws(() => applyMonthChange(month, { kind: ChangeKind.ADD_CATEGORY, category }), InvalidChangeError);
+  }
+  assert.equal(month.categories.length, 11);
+});
+
+test('two categories added at the same moment with the same colour end up with different colours', () => {
+  const month = new MonthRecord({ month: '2026-11', expenses: [] });
+  const sameColor = month.pickCategoryColor();
+  applyMonthChange(month, { kind: ChangeKind.ADD_CATEGORY, category: { id: 'kids', name: 'Kids', color: sameColor } });
+  applyMonthChange(month, { kind: ChangeKind.ADD_CATEGORY, category: { id: 'pets', name: 'Pets', color: sameColor } });
+  assert.notEqual(month.findCategory('kids').color, month.findCategory('pets').color);
+});

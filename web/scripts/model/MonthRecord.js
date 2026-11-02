@@ -1,4 +1,6 @@
-import { DEFAULT_CATEGORIES, RecurringCostList, DEFAULT_FIXED_COST_NAMES } from '../config/categories.js';
+import {
+  CATEGORY_COLOR_PALETTE, DEFAULT_CATEGORIES, DEFAULT_FIXED_COST_NAMES, MAX_CATEGORIES_PER_MONTH, RecurringCostList,
+} from '../config/categories.js';
 import { roundToCents, sumAmounts } from '../utils/money.js';
 
 /**
@@ -132,6 +134,26 @@ export class MonthRecord {
 
   findCategory(categoryId) {
     return this.categories.find((category) => category.id === categoryId);
+  }
+
+  /**
+   * Adds a category at the end of the list, with a budget of 0. Adding an id that already
+   * exists does nothing, so a resent change can't add two categories.
+   * If two people add a category at the same moment, both may pick the same colour; the
+   * second one then gets the next free colour instead.
+   */
+  addCategory({ id, name, color }) {
+    if (this.findCategory(id) || this.categories.length >= MAX_CATEGORIES_PER_MONTH) return;
+    const isColorTaken = this.categories.some((category) => category.color.toLowerCase() === color.toLowerCase());
+    this.categories.push({ id, name: name.trim(), color: isColorTaken ? this.pickCategoryColor() : color });
+    this.budgets[id] ??= 0;
+  }
+
+  /** The colour for a new category: the first palette colour this month doesn't use yet. */
+  pickCategoryColor() {
+    const usedColors = new Set(this.categories.map((category) => category.color.toLowerCase()));
+    return CATEGORY_COLOR_PALETTE.find((color) => !usedColors.has(color))
+      ?? CATEGORY_COLOR_PALETTE[this.categories.length % CATEGORY_COLOR_PALETTE.length];
   }
 
   budgetFor(categoryId) {

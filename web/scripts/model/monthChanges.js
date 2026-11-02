@@ -22,6 +22,7 @@ export const ChangeKind = Object.freeze({
   REMOVE_INCOME: 'removeIncome',
   CHANGE_INCOME_AMOUNT: 'changeIncomeAmount',
   CHANGE_EXPECTED_INCOME: 'changeExpectedIncome',
+  ADD_CATEGORY: 'addCategory',
   CHANGE_BUDGET: 'changeBudget',
   ADD_RECURRING_COST: 'addRecurringCost',
   REMOVE_RECURRING_COST: 'removeRecurringCost',
@@ -35,6 +36,7 @@ const MAX_AMOUNT = 10_000_000;
 const MAX_TEXT_LENGTH = 200;
 const MAX_ID_LENGTH = 64;
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const COLOR_PATTERN = /^#[0-9a-f]{6}$/i;
 const RECURRING_LIST_NAMES = new Set(Object.values(RecurringCostList));
 
 /**
@@ -83,6 +85,11 @@ export function applyMonthChange(monthRecord, change) {
       monthRecord.setExpectedIncome(requireAmount(change.amount));
       return;
 
+    case ChangeKind.ADD_CATEGORY: {
+      const { id, name, color } = change.category ?? {};
+      monthRecord.addCategory({ id: requireId(id), name: requireText(name), color: requireColor(color) });
+      return;
+    }
     case ChangeKind.CHANGE_BUDGET:
       monthRecord.setBudget(requireCategoryIn(monthRecord, change.categoryKey), requireAmount(change.amount));
       return;
@@ -137,6 +144,11 @@ function requireCategoryIn(monthRecord, value) {
   if (typeof value !== 'string' || !monthRecord.findCategory(value)) {
     throw new InvalidChangeError(`Unknown category: ${value}`);
   }
+  return value;
+}
+
+function requireColor(value) {
+  if (typeof value !== 'string' || !COLOR_PATTERN.test(value)) throw new InvalidChangeError(`Invalid colour: ${value}`);
   return value;
 }
 

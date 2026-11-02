@@ -116,7 +116,11 @@ export class ExpensesApp {
         this.#applyChange({ kind: ChangeKind.CHANGE_INCOME_AMOUNT, incomeId, amount }),
       changeExpectedIncome: (amount) => this.#applyChange({ kind: ChangeKind.CHANGE_EXPECTED_INCOME, amount }),
 
-      // Budgets
+      // Categories and budgets
+      addCategory: (name) => this.#applyChange({
+        kind: ChangeKind.ADD_CATEGORY,
+        category: { id: createUniqueId(), name, color: this.currentMonth.pickCategoryColor() },
+      }),
       changeBudget: (categoryKey, amount) => this.#applyChange({ kind: ChangeKind.CHANGE_BUDGET, categoryKey, amount }),
 
       // Fixed costs and subscriptions

@@ -24,6 +24,18 @@ export const DEFAULT_CATEGORIES = Object.freeze([
   { id: 'other',         nameId: 'category.other',         color: '#8a92a6' },
 ]);
 
+/**
+ * Colours for categories people add. A new category gets the first colour no category in
+ * the month uses yet (see pickCategoryColor in MonthRecord); after that they repeat.
+ */
+export const CATEGORY_COLOR_PALETTE = Object.freeze([
+  '#f59e0b', '#ef4444', '#10b981', '#6366f1', '#ec4899', '#06b6d4',
+  '#8b5cf6', '#65a30d', '#f97316', '#0891b2', '#be123c', '#4d7c0f',
+]);
+
+/** The most categories a month can have; the page stays usable well below this. */
+export const MAX_CATEGORIES_PER_MONTH = 40;
+
 /** The two lists of recurring costs. Values are the field names in the month file. */
 export const RecurringCostList = Object.freeze({
   FIXED_COSTS: 'fixed',

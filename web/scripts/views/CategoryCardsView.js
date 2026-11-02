@@ -6,7 +6,8 @@ import { InlineNumberEditor } from './InlineNumberEditor.js';
 import { renderEntryRows } from './entryRows.js';
 
 /**
- * One card per category with its budget, its expenses and a small add form.
+ * One card per category with its budget, its expenses and a small add form, followed by a
+ * "New category" card.
  *
  * The cards are redrawn on every change, so events are handled once on the container
  * ("event delegation"). Each clickable element carries data attributes that identify it:
@@ -20,6 +21,7 @@ export class CategoryCardsView {
    * @param {(expenseId: string) => void} actions.removeExpense
    * @param {(expenseId: string, amount: number) => void} actions.changeExpenseAmount
    * @param {(categoryKey: string, amount: number) => void} actions.changeBudget
+   * @param {(name: string) => void} actions.addCategory
    */
   constructor(actions) {
     this.actions = actions;
@@ -34,7 +36,7 @@ export class CategoryCardsView {
     this.monthRecord = monthRecord;
     this.container.innerHTML = monthRecord.categories
       .map((category) => this.#renderCard(category, monthRecord))
-      .join('');
+      .join('') + this.#renderNewCategoryCard();
   }
 
   // ----- Event handling -----
@@ -42,6 +44,11 @@ export class CategoryCardsView {
   #handleAddFormSubmit(submitEvent) {
     submitEvent.preventDefault();
     const addForm = submitEvent.target;
+    if (addForm.classList.contains('new-category-form')) {
+      const name = addForm.elements.name.value.trim();
+      if (name) this.actions.addCategory(name);
+      return;
+    }
     this.actions.addExpense({
       categoryKey: addForm.dataset.categoryId,
       amount: parseAmount(addForm.elements.amount.value),
@@ -79,6 +86,17 @@ export class CategoryCardsView {
   }
 
   // ----- HTML -----
+
+  #renderNewCategoryCard() {
+    return `
+      <form class="card new-category-card new-category-form" autocomplete="off">
+        <h2>${escapeHtml(t('categories.newTitle'))}</h2>
+        <div class="new-category-fields">
+          <input name="name" maxlength="40" placeholder="${escapeHtml(t('categories.namePlaceholder'))}" required>
+          <button type="submit" class="primary-button">${escapeHtml(t('common.add'))}</button>
+        </div>
+      </form>`;
+  }
 
   #renderCard(category, monthRecord) {
     const spent = monthRecord.spentInCategory(category.id);

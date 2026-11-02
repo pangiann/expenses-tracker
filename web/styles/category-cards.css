@@ -38,6 +38,20 @@
   border-top: 1px solid var(--color-border);
 }
 
+/* "New category" card at the end of the grid. */
+.new-category-card {
+  display: flex; flex-direction: column; justify-content: center; gap: 4px;
+  border: 2px dashed var(--color-border); box-shadow: none; background: transparent; min-height: 140px;
+}
+.new-category-card h2 { color: var(--color-text-muted); margin-bottom: 6px; }
+.new-category-fields { display: flex; gap: 8px; }
+.new-category-fields input {
+  flex: 1; min-width: 0; border: 1px solid var(--color-border); border-radius: 8px;
+  padding: 8px 10px; font: inherit; font-size: 14px; background: var(--color-card-background);
+}
+.new-category-fields input:focus { outline: 2px solid var(--color-accent); outline-offset: -1px; }
+.new-category-fields .primary-button { padding: 8px 14px; }
+
 .category-add-form {
   display: flex; gap: 6px; padding: 10px 18px 14px;
   border-top: 1px solid var(--color-border); background: #fafbfd;
