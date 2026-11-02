@@ -43,11 +43,12 @@ web/                      the page (HTML, CSS, JavaScript modules; no build step
   index.html
   backend.json            "cloud"; the local server answers this path with "local"
   i18n/en.json, el.json   display text for every string id
+  vendor/                 third-party code copied as-is (SortableJS); see vendor/README.md
   styles/                 one stylesheet per section of the page
   scripts/
     main.js               entry point: creates ExpensesApp
     ExpensesApp.js        controller: turns user actions into changes
-    config/               spending categories and list names
+    config/               default categories, colours and limits
     i18n/Translator.js    translations by string id (see "Languages" below)
     model/
       MonthRecord.js      one month's data and the rules for changing it
@@ -58,7 +59,7 @@ web/                      the page (HTML, CSS, JavaScript modules; no build step
       CloudMonthSync.js   Cloudflare backend: sends changes over a WebSocket, receives live updates
       PendingChangeStore.js  keeps unconfirmed changes in the browser, so offline edits survive a closed tab
       createMonthSync.js  picks the backend from backend.json
-    views/                one class per section of the page
+    views/                one class per section of the page; CategoryDragController reorders cards
     utils/                money, month-key, id and HTML helpers
 worker/                   Cloudflare Worker
   index.js                routing, login check, same-origin check
@@ -89,6 +90,12 @@ To add or change text, edit both files with the same id. `npm test` fails if the
 
 ## Data
 
+- **Categories** belong to each month. A new household starts with 11 defaults (Dinner/Drinks, Lunch, Supermarket, Transport, Travel, Entertainment, Health & sport, Home, Clothes, Gifts, Other), which show in the page language.
+  - **Add** one with the "New category" card at the end of the grid. Names are at most 20 characters and must differ from the month's other names, ignoring capitals.
+  - **Rename** one by clicking its name. A renamed default shows the typed name in every language.
+  - **Remove** one with the ✕ in its top-right corner, after a confirmation. The ✕ is greyed out, with the reason on hover or tap, while the category has expenses or is the last one.
+  - **Reorder** by dragging a card by its header. On a phone, hold the card for a moment first.
+  - Every change applies to the month on screen only. A month created later copies the latest earlier month's categories, budgets and order; existing months don't change.
 - **Income** is a list of entries, like expenses: a salary, each private lesson, and so on. Earned is their total.
 - Every item (expense, income entry, fixed cost, subscription) has an id. Changes name items by id, so two people editing different items never affect each other.
 - On start, the app opens the current month and creates it if it doesn't exist.
