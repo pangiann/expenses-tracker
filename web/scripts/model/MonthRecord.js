@@ -2,28 +2,35 @@ import { SPENDING_CATEGORIES, RecurringCostList, DEFAULT_FIXED_COST_NAMES } from
 import { roundToCents, sumAmounts } from '../utils/money.js';
 
 /**
- * Everything recorded for one month: income, category budgets, expenses,
+ * Everything recorded for one month: income entries, category budgets, expenses,
  * fixed costs and subscriptions.
  *
- * This class is the only place that changes month data. Views read from it and
- * call its methods; MonthRepository saves it with toJSON(), which produces exactly
- * the format of data/YYYY-MM.json:
+ * This class is the only place that changes month data. It runs in the browser and in
+ * the Cloudflare Worker. toJSON() produces the file format:
  *
  *   {
  *     "month": "2026-09",
- *     "income": { "expected": 4000, "actual": 3500 },
+ *     "income": { "expected": 4000, "actual": 3500,
+ *                 "entries": [ { "id": "...", "date": "2026-09-01", "description": "salary", "amount": 3500 } ] },
  *     "budgets": { "dinner": 100, "lunch": 50, ... },
  *     "expenses": [ { "id": "...", "date": "2026-09-14", "category": "lunch",
  *                     "description": "coffee", "amount": 5.5 } ],
  *     "fixed": [ { "id": "...", "name": "Rent", "amount": 900 } ],
  *     "subscriptions": [ { "id": "...", "name": "Music", "amount": 10 } ]
  *   }
+ *
+ * "actual" is the sum of the entries. It is still written so older files stay readable.
+ *
+ * Every item (expense, income entry, fixed cost) has an id, and every method finds items by
+ * id. Adding an item whose id already exists does nothing, and changing or removing an item
+ * that no longer exists does nothing, so applying the same change twice is harmless.
  */
 export class MonthRecord {
   /** @param {object} monthData  the parsed contents of a month file */
   constructor(monthData) {
     this.monthKey = monthData.month;
-    this.income = { expected: monthData.income?.expected ?? 0, actual: monthData.income?.actual ?? 0 };
+    this.expectedIncome = monthData.income?.expected ?? 0;
+    this.incomes = MonthRecord.#readIncomeEntries(monthData);
     this.budgets = { ...MonthRecord.#zeroBudgets(), ...monthData.budgets };
     this.expenses = (monthData.expenses ?? []).map((expense) => ({ ...expense }));
     this.recurringCosts = {
@@ -43,12 +50,12 @@ export class MonthRecord {
     });
   }
 
-  /** A new month that keeps the template's budgets, expected income and recurring costs, without expenses. */
+  /** A new month that keeps the template's budgets, expected income and recurring costs. */
   static createFromTemplate(templateRecord, monthKey) {
     const templateData = templateRecord.toJSON();
     return new MonthRecord({
       month: monthKey,
-      income: { expected: templateData.income.expected, actual: 0 },
+      income: { expected: templateData.income.expected, entries: [] },
       budgets: templateData.budgets,
       fixed: templateData.fixed,
       subscriptions: templateData.subscriptions,
@@ -57,19 +64,9 @@ export class MonthRecord {
 
   // ----- Expenses -----
 
-  /**
-   * Adds an expense. The id is created by the device that adds it (createUniqueId),
-   * so a change that is sent twice after a reconnect adds the expense only once.
-   */
   addExpense({ id, categoryKey, amount, description, date }) {
     if (!(amount > 0) || this.findExpense(id)) return;
-    this.expenses.push({
-      id,
-      date,
-      category: categoryKey,
-      description: description.trim(),
-      amount: roundToCents(amount),
-    });
+    this.expenses.push({ id, date, category: categoryKey, description: description.trim(), amount: roundToCents(amount) });
   }
 
   removeExpense(expenseId) {
@@ -87,16 +84,46 @@ export class MonthRecord {
 
   /** Expenses in one category, newest first; undated (imported) expenses come last. */
   expensesInCategory(categoryKey) {
-    return this.expenses
-      .filter((expense) => expense.category === categoryKey)
-      .sort((first, second) => (second.date ?? '').localeCompare(first.date ?? ''));
+    return MonthRecord.#newestFirst(this.expenses.filter((expense) => expense.category === categoryKey));
   }
 
   spentInCategory(categoryKey) {
     return sumAmounts(this.expensesInCategory(categoryKey).map((expense) => expense.amount));
   }
 
-  // ----- Budgets and income -----
+  // ----- Income -----
+
+  addIncome({ id, amount, description, date }) {
+    if (!(amount > 0) || this.findIncome(id)) return;
+    this.incomes.push({ id, date, description: description.trim(), amount: roundToCents(amount) });
+  }
+
+  removeIncome(incomeId) {
+    this.incomes = this.incomes.filter((income) => income.id !== incomeId);
+  }
+
+  findIncome(incomeId) {
+    return this.incomes.find((income) => income.id === incomeId);
+  }
+
+  updateIncomeAmount(incomeId, newAmount) {
+    const income = this.findIncome(incomeId);
+    if (income && newAmount > 0) income.amount = roundToCents(newAmount);
+  }
+
+  incomesNewestFirst() {
+    return MonthRecord.#newestFirst(this.incomes);
+  }
+
+  get totalIncome() {
+    return roundToCents(sumAmounts(this.incomes.map((income) => income.amount)));
+  }
+
+  setExpectedIncome(amount) {
+    if (amount >= 0) this.expectedIncome = roundToCents(amount);
+  }
+
+  // ----- Budgets -----
 
   budgetFor(categoryKey) {
     return this.budgets[categoryKey] ?? 0;
@@ -104,14 +131,6 @@ export class MonthRecord {
 
   setBudget(categoryKey, amount) {
     if (amount >= 0) this.budgets[categoryKey] = roundToCents(amount);
-  }
-
-  setActualIncome(amount) {
-    this.income.actual = amount >= 0 ? roundToCents(amount) : 0;
-  }
-
-  setExpectedIncome(amount) {
-    if (amount >= 0) this.income.expected = roundToCents(amount);
   }
 
   // ----- Fixed costs and subscriptions -----
@@ -125,7 +144,6 @@ export class MonthRecord {
     return this.recurringCosts[listName].find((cost) => cost.id === costId);
   }
 
-  /** Adding a row whose id already exists does nothing, so a resent change can't add two rows. */
   addRecurringCost(listName, { id, name }) {
     if (this.findRecurringCost(listName, id)) return;
     this.recurringCosts[listName].push({ id, name: name.trim(), amount: 0 });
@@ -135,7 +153,6 @@ export class MonthRecord {
     this.recurringCosts[listName] = this.recurringCosts[listName].filter((cost) => cost.id !== costId);
   }
 
-  /** Changing a row someone else removed does nothing. */
   renameRecurringCost(listName, costId, newName) {
     const cost = this.findRecurringCost(listName, costId);
     if (cost && newName.trim()) cost.name = newName.trim();
@@ -150,20 +167,19 @@ export class MonthRecord {
 
   calculateTotals() {
     const variableSpending = sumAmounts(this.expenses.map((expense) => expense.amount));
-    const recurringCostsTotal = sumAmounts(
-      Object.values(this.recurringCosts).flat().map((cost) => cost.amount));
-    const categoryBudgetsTotal = sumAmounts(Object.values(this.budgets));
+    const recurringCostsTotal = sumAmounts(Object.values(this.recurringCosts).flat().map((cost) => cost.amount));
+    const totalBudgeted = sumAmounts(Object.values(this.budgets)) + recurringCostsTotal;
     const totalSpent = variableSpending + recurringCostsTotal;
-    const saved = this.income.actual - totalSpent;
+    const saved = this.totalIncome - totalSpent;
 
     return {
       variableSpending,
       recurringCostsTotal,
       totalSpent,
-      totalBudgeted: categoryBudgetsTotal + recurringCostsTotal,
+      totalBudgeted,
       saved,
-      expectedSavings: this.income.expected - (categoryBudgetsTotal + recurringCostsTotal),
-      savingsRate: this.income.actual > 0 ? saved / this.income.actual : null,
+      expectedSavings: this.expectedIncome - totalBudgeted,
+      savingsRate: this.totalIncome > 0 ? saved / this.totalIncome : null,
     };
   }
 
@@ -174,7 +190,11 @@ export class MonthRecord {
     return {
       ...this.extraFields,
       month: this.monthKey,
-      income: { ...this.income },
+      income: {
+        expected: this.expectedIncome,
+        actual: this.totalIncome,
+        entries: this.incomes.map((income) => ({ ...income })),
+      },
       budgets: { ...this.budgets },
       expenses: this.expenses.map((expense) => ({ ...expense })),
       fixed: this.recurringCosts[RecurringCostList.FIXED_COSTS].map((cost) => ({ ...cost })),
@@ -182,7 +202,21 @@ export class MonthRecord {
     };
   }
 
-  // ----- Private helpers -----
+  // ----- Reading older files -----
+
+  /**
+   * Older files have one number, income.actual, instead of a list of entries. It becomes one
+   * entry. Its id is derived from the month, so the browser and the server turn the same file
+   * into the same entry and can both find it later.
+   */
+  static #readIncomeEntries(monthData) {
+    const income = monthData.income ?? {};
+    if (Array.isArray(income.entries)) return income.entries.map((entry) => ({ ...entry }));
+    if (income.actual > 0) {
+      return [{ id: `income-${monthData.month}-1`, date: null, description: '', amount: income.actual }];
+    }
+    return [];
+  }
 
   /**
    * Older files have fixed costs without ids. Each gets an id from its list and position,
@@ -190,6 +224,10 @@ export class MonthRecord {
    */
   static #readRecurringCosts(costs, listName) {
     return (costs ?? []).map((cost, position) => ({ ...cost, id: cost.id ?? `${listName}-${position + 1}` }));
+  }
+
+  static #newestFirst(items) {
+    return [...items].sort((first, second) => (second.date ?? '').localeCompare(first.date ?? ''));
   }
 
   static #zeroBudgets() {

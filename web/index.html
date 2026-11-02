@@ -49,9 +49,7 @@
     <section class="summary-cards">
       <div class="card summary-card">
         <div class="summary-card-label">Earned</div>
-        <div class="summary-card-value">
-          <span class="currency-symbol">€</span><input id="actualIncomeInput" type="number" step="0.01" min="0" class="income-input">
-        </div>
+        <div class="summary-card-value" id="totalIncomeValue"></div>
         <div class="summary-card-detail">Expected <span id="expectedIncomeSlot"></span></div>
       </div>
       <div class="card summary-card">
@@ -87,13 +85,30 @@
 
     <section class="month-details">
       <div id="categoryCards" class="category-cards"></div>
-      <aside id="recurringCostsPanel" class="card recurring-costs-panel">
-        <h2>Fixed costs</h2>
-        <ul id="fixedCostsList" class="recurring-cost-list"></ul>
-        <h3>Subscriptions</h3>
-        <ul id="subscriptionsList" class="recurring-cost-list"></ul>
-        <div class="recurring-costs-total">Total fixed <span id="recurringCostsTotal"></span></div>
-      </aside>
+      <div class="side-column">
+        <section class="card category-card income-card">
+          <div class="category-card-header income-card-header">
+            <div class="category-card-title">
+              <h2>Income</h2>
+              <span id="incomeTotal" class="category-card-spent"></span>
+            </div>
+          </div>
+          <ul id="incomeList" class="expense-list"></ul>
+          <form id="incomeAddForm" class="category-add-form" autocomplete="off">
+            <input name="description" placeholder="Description (e.g. lesson)">
+            <input name="amount" type="number" step="0.01" min="0" placeholder="€" required>
+            <button type="submit" title="Add">+</button>
+          </form>
+        </section>
+
+        <aside id="recurringCostsPanel" class="card recurring-costs-panel">
+          <h2>Fixed costs</h2>
+          <ul id="fixedCostsList" class="recurring-cost-list"></ul>
+          <h3>Subscriptions</h3>
+          <ul id="subscriptionsList" class="recurring-cost-list"></ul>
+          <div class="recurring-costs-total">Total fixed <span id="recurringCostsTotal"></span></div>
+        </aside>
+      </div>
     </section>
   </main>
 

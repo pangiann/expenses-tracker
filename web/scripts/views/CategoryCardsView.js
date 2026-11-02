@@ -1,15 +1,16 @@
 import { SPENDING_CATEGORIES } from '../config/categories.js';
 import { escapeHtml, getElement } from '../utils/html.js';
 import { formatEuros, parseAmount } from '../utils/money.js';
-import { defaultExpenseDate, formatShortDate } from '../utils/monthKeys.js';
+import { defaultExpenseDate } from '../utils/monthKeys.js';
 import { InlineNumberEditor } from './InlineNumberEditor.js';
+import { renderEntryRows } from './entryRows.js';
 
 /**
  * One card per category with its budget, its expenses and a small add form.
  *
  * The cards are redrawn on every change, so events are handled once on the container
  * ("event delegation"). Each clickable element carries data attributes that identify it:
- *   data-expense-id   which expense an amount or ✕ belongs to
+ *   data-entry-id     which expense an amount or ✕ belongs to
  *   data-category-key which category a budget or add form belongs to
  */
 export class CategoryCardsView {
@@ -52,14 +53,14 @@ export class CategoryCardsView {
   #handleClick(clickEvent) {
     const deleteButton = clickEvent.target.closest('.delete-button');
     if (deleteButton) {
-      this.actions.removeExpense(deleteButton.dataset.expenseId);
+      this.actions.removeExpense(deleteButton.dataset.entryId);
       return;
     }
 
-    const expenseAmountElement = clickEvent.target.closest('.expense-amount');
-    if (expenseAmountElement) {
-      const expenseId = expenseAmountElement.dataset.expenseId;
-      InlineNumberEditor.open(expenseAmountElement, {
+    const amountElement = clickEvent.target.closest('.entry-amount');
+    if (amountElement) {
+      const expenseId = amountElement.dataset.entryId;
+      InlineNumberEditor.open(amountElement, {
         currentValue: this.monthRecord.findExpense(expenseId).amount,
         onSave: (newAmount) => this.actions.changeExpenseAmount(expenseId, newAmount),
       });
@@ -80,7 +81,6 @@ export class CategoryCardsView {
   // ----- HTML -----
 
   #renderCard(category, monthRecord) {
-    const expenses = monthRecord.expensesInCategory(category.key);
     const spent = monthRecord.spentInCategory(category.key);
     const budget = monthRecord.budgetFor(category.key);
     const remaining = budget - spent;
@@ -98,33 +98,21 @@ export class CategoryCardsView {
           </div>
           <div class="category-card-budget-line">
             <span>Budget
-              <span class="click-to-edit category-budget" data-category-key="${category.key}" title="Click to edit">${formatEuros(budget)}</span>
+              <span class="click-to-edit category-budget" data-category-key="${category.key}"
+                    title="Click to edit">${formatEuros(budget)}</span>
             </span>
-            <span class="${isOverBudget ? 'is-negative' : 'is-positive'}">${remainingText}</span>
+            <span class="${isOverBudget ? 'is-negative' : 'is-positive'}">${escapeHtml(remainingText)}</span>
           </div>
           <div class="category-card-progress-track">
             <div class="category-card-progress-fill" style="width:${progressPercentage}%;background:${progressColor}"></div>
           </div>
         </div>
-        <ul class="expense-list">${this.#renderExpenseList(expenses)}</ul>
+        <ul class="expense-list">${renderEntryRows(monthRecord.expensesInCategory(category.key))}</ul>
         <form class="category-add-form" data-category-key="${category.key}" autocomplete="off">
           <input name="description" placeholder="Description">
           <input name="amount" type="number" step="0.01" min="0" placeholder="€" required>
           <button type="submit" title="Add">+</button>
         </form>
       </div>`;
-  }
-
-  #renderExpenseList(expenses) {
-    if (expenses.length === 0) return '<div class="expense-list-empty">Nothing yet</div>';
-    return expenses.map((expense) => `
-      <li class="expense-row">
-        <span class="expense-date">${formatShortDate(expense.date)}</span>
-        <span class="expense-description ${expense.description ? '' : 'is-empty'}">
-          ${expense.description ? escapeHtml(expense.description) : 'no description'}
-        </span>
-        <span class="click-to-edit expense-amount" data-expense-id="${expense.id}" title="Click to edit">${formatEuros(expense.amount)}</span>
-        <button class="delete-button" data-expense-id="${expense.id}" title="Delete">✕</button>
-      </li>`).join('');
   }
 }

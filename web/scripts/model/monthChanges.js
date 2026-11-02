@@ -1,5 +1,4 @@
 import { SPENDING_CATEGORIES, RecurringCostList } from '../config/categories.js';
-import { MonthRecord } from './MonthRecord.js';
 
 /**
  * Every edit to a month is described as a small "change" object, for example
@@ -9,8 +8,8 @@ import { MonthRecord } from './MonthRecord.js';
  * the same object to the server, which applies it to the stored month. Both sides run
  * applyMonthChange(), so they always agree on the result.
  *
- * Changes name their item by id, never by position, so a change still hits the right item
- * after someone else added or removed others.
+ * Every change names its item by id, never by position, so a change still hits the right
+ * item after someone else added or removed others. Applying a change twice is harmless.
  *
  * Changes arrive from the network, so applyMonthChange() checks every field first.
  */
@@ -18,9 +17,11 @@ export const ChangeKind = Object.freeze({
   ADD_EXPENSE: 'addExpense',
   REMOVE_EXPENSE: 'removeExpense',
   CHANGE_EXPENSE_AMOUNT: 'changeExpenseAmount',
-  CHANGE_BUDGET: 'changeBudget',
-  CHANGE_ACTUAL_INCOME: 'changeActualIncome',
+  ADD_INCOME: 'addIncome',
+  REMOVE_INCOME: 'removeIncome',
+  CHANGE_INCOME_AMOUNT: 'changeIncomeAmount',
   CHANGE_EXPECTED_INCOME: 'changeExpectedIncome',
+  CHANGE_BUDGET: 'changeBudget',
   ADD_RECURRING_COST: 'addRecurringCost',
   REMOVE_RECURRING_COST: 'removeRecurringCost',
   RENAME_RECURRING_COST: 'renameRecurringCost',
@@ -38,7 +39,7 @@ const RECURRING_LIST_NAMES = new Set(Object.values(RecurringCostList));
 
 /**
  * Applies one change to a month.
- * @param {MonthRecord} monthRecord
+ * @param {import('./MonthRecord.js').MonthRecord} monthRecord
  * @param {object} change
  * @throws {InvalidChangeError} when the change is malformed
  */
@@ -61,15 +62,31 @@ export function applyMonthChange(monthRecord, change) {
     case ChangeKind.CHANGE_EXPENSE_AMOUNT:
       monthRecord.updateExpenseAmount(requireId(change.expenseId), requireAmount(change.amount, { allowZero: false }));
       return;
-    case ChangeKind.CHANGE_BUDGET:
-      monthRecord.setBudget(requireCategory(change.categoryKey), requireAmount(change.amount));
+
+    case ChangeKind.ADD_INCOME: {
+      const { id, amount, description, date } = change.income ?? {};
+      monthRecord.addIncome({
+        id: requireId(id),
+        amount: requireAmount(amount, { allowZero: false }),
+        description: requireText(description ?? '', { allowEmpty: true }),
+        date: requireDateInMonth(date, monthRecord.monthKey),
+      });
       return;
-    case ChangeKind.CHANGE_ACTUAL_INCOME:
-      monthRecord.setActualIncome(requireAmount(change.amount));
+    }
+    case ChangeKind.REMOVE_INCOME:
+      monthRecord.removeIncome(requireId(change.incomeId));
+      return;
+    case ChangeKind.CHANGE_INCOME_AMOUNT:
+      monthRecord.updateIncomeAmount(requireId(change.incomeId), requireAmount(change.amount, { allowZero: false }));
       return;
     case ChangeKind.CHANGE_EXPECTED_INCOME:
       monthRecord.setExpectedIncome(requireAmount(change.amount));
       return;
+
+    case ChangeKind.CHANGE_BUDGET:
+      monthRecord.setBudget(requireCategory(change.categoryKey), requireAmount(change.amount));
+      return;
+
     case ChangeKind.ADD_RECURRING_COST: {
       const { id, name } = change.cost ?? {};
       monthRecord.addRecurringCost(requireListName(change.listName), { id: requireId(id), name: requireText(name) });
@@ -86,6 +103,7 @@ export function applyMonthChange(monthRecord, change) {
       monthRecord.setRecurringCostAmount(
         requireListName(change.listName), requireId(change.costId), requireAmount(change.amount));
       return;
+
     default:
       throw new InvalidChangeError(`Unknown change kind: ${change?.kind}`);
   }

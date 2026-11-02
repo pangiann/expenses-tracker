@@ -38,7 +38,6 @@
 
   .summary-cards { gap: 12px; }
   .summary-card-value { font-size: 20px; }
-  .income-input { width: 100%; min-width: 0; }
 
   .budget-bar-row { grid-template-columns: 92px minmax(0, 1fr) 124px; gap: 8px; font-size: 12px; }
 

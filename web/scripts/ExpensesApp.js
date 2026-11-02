@@ -7,6 +7,7 @@ import { AddMonthDialog } from './views/AddMonthDialog.js';
 import { BackupView } from './views/BackupView.js';
 import { BudgetBarsView } from './views/BudgetBarsView.js';
 import { CategoryCardsView } from './views/CategoryCardsView.js';
+import { IncomeView } from './views/IncomeView.js';
 import { MonthNavigationView } from './views/MonthNavigationView.js';
 import { QuickAddView } from './views/QuickAddView.js';
 import { RecurringCostsView } from './views/RecurringCostsView.js';
@@ -43,6 +44,7 @@ export class ExpensesApp {
       new BudgetBarsView(),
       new SpendingDonutView(),
       new CategoryCardsView(actions),
+      new IncomeView(actions),
       new RecurringCostsView(actions),
     ];
 
@@ -102,9 +104,17 @@ export class ExpensesApp {
       changeExpenseAmount: (expenseId, amount) =>
         this.#applyChange({ kind: ChangeKind.CHANGE_EXPENSE_AMOUNT, expenseId, amount }),
 
-      // Budgets and income
+      // Income
+      addIncome: ({ amount, description, date }) => this.#applyChange({
+        kind: ChangeKind.ADD_INCOME,
+        income: { id: createUniqueId(), amount, description, date },
+      }),
+      removeIncome: (incomeId) => this.#applyChange({ kind: ChangeKind.REMOVE_INCOME, incomeId }),
+      changeIncomeAmount: (incomeId, amount) =>
+        this.#applyChange({ kind: ChangeKind.CHANGE_INCOME_AMOUNT, incomeId, amount }),
+
+      // Budgets and expected income
       changeBudget: (categoryKey, amount) => this.#applyChange({ kind: ChangeKind.CHANGE_BUDGET, categoryKey, amount }),
-      changeActualIncome: (amount) => this.#applyChange({ kind: ChangeKind.CHANGE_ACTUAL_INCOME, amount }),
       changeExpectedIncome: (amount) => this.#applyChange({ kind: ChangeKind.CHANGE_EXPECTED_INCOME, amount }),
 
       // Fixed costs and subscriptions

@@ -1,6 +1,5 @@
 /* Fixed costs and subscriptions panel. */
 
-.recurring-costs-panel { position: sticky; top: 90px; }
 
 .recurring-cost-list { list-style: none; padding: 0; margin: 0; }
 .recurring-cost-row {

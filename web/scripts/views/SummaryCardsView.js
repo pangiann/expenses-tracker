@@ -1,16 +1,15 @@
 import { getElement } from '../utils/html.js';
-import { formatEuros, parseAmount } from '../utils/money.js';
+import { formatEuros } from '../utils/money.js';
 import { InlineNumberEditor } from './InlineNumberEditor.js';
 
-/** Earned, Spent, Saved and Savings rate cards. */
+/** Earned, Spent, Saved and Savings rate cards. Earned is the sum of the Income card's entries. */
 export class SummaryCardsView {
   /**
    * @param {object} actions
-   * @param {(amount: number) => void} actions.changeActualIncome
    * @param {(amount: number) => void} actions.changeExpectedIncome
    */
   constructor(actions) {
-    this.actualIncomeInput = getElement('actualIncomeInput');
+    this.totalIncomeValue = getElement('totalIncomeValue');
     this.expectedIncomeSlot = getElement('expectedIncomeSlot');
     this.totalSpentValue = getElement('totalSpentValue');
     this.totalBudgetedValue = getElement('totalBudgetedValue');
@@ -19,10 +18,6 @@ export class SummaryCardsView {
     this.savingsRateValue = getElement('savingsRateValue');
     this.variableSpendingValue = getElement('variableSpendingValue');
     this.currentExpectedIncome = 0;
-
-    this.actualIncomeInput.addEventListener('change', () => {
-      actions.changeActualIncome(parseAmount(this.actualIncomeInput.value) ?? 0);
-    });
 
     this.expectedIncomeSlot.addEventListener('click', (clickEvent) => {
       const expectedIncomeElement = clickEvent.target.closest('.click-to-edit');
@@ -37,14 +32,11 @@ export class SummaryCardsView {
 
   render(monthRecord) {
     const totals = monthRecord.calculateTotals();
-    this.currentExpectedIncome = monthRecord.income.expected;
+    this.currentExpectedIncome = monthRecord.expectedIncome;
 
-    // Don't overwrite the field while the user is typing in it.
-    if (document.activeElement !== this.actualIncomeInput) {
-      this.actualIncomeInput.value = monthRecord.income.actual || '';
-    }
+    this.totalIncomeValue.textContent = formatEuros(monthRecord.totalIncome);
     this.expectedIncomeSlot.innerHTML =
-      `<span class="click-to-edit" title="Click to edit">${formatEuros(monthRecord.income.expected)}</span>`;
+      `<span class="click-to-edit" title="Click to edit">${formatEuros(monthRecord.expectedIncome)}</span>`;
 
     this.totalSpentValue.textContent = formatEuros(totals.totalSpent);
     this.totalSpentValue.classList.toggle('is-negative', totals.totalSpent > totals.totalBudgeted);
@@ -55,8 +47,7 @@ export class SummaryCardsView {
     this.savedValue.classList.toggle('is-negative', totals.saved < 0);
     this.expectedSavingsValue.textContent = formatEuros(totals.expectedSavings);
 
-    this.savingsRateValue.textContent =
-      totals.savingsRate === null ? '–' : `${(totals.savingsRate * 100).toFixed(1)}%`;
+    this.savingsRateValue.textContent = totals.savingsRate === null ? '–' : `${(totals.savingsRate * 100).toFixed(1)}%`;
     this.variableSpendingValue.textContent = formatEuros(totals.variableSpending);
   }
 }
