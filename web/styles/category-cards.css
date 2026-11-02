@@ -11,7 +11,8 @@
 .category-card { padding: 0; overflow: hidden; display: flex; flex-direction: column; }
 .category-card-header { padding: 16px 18px 12px; border-top: 4px solid; }
 .category-card-title { display: flex; justify-content: space-between; align-items: baseline; }
-.category-card-title h2 { margin: 0; }
+.category-card-title { gap: 8px; }
+.category-card-title h2 { margin: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .category-card-spent { font-weight: 700; font-variant-numeric: tabular-nums; }
 .category-card-budget-line {
   font-size: 12px; color: var(--color-text-muted); margin-top: 4px;
@@ -51,6 +52,7 @@
 }
 .new-category-fields input:focus { outline: 2px solid var(--color-accent); outline-offset: -1px; }
 .new-category-fields .primary-button { padding: 8px 14px; }
+.new-category-error { color: var(--color-negative); font-size: 12px; margin: 4px 0 0; min-height: 1em; }
 
 .category-add-form {
   display: flex; gap: 6px; padding: 10px 18px 14px;

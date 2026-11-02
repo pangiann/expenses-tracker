@@ -33,6 +33,9 @@ export const CATEGORY_COLOR_PALETTE = Object.freeze([
   '#8b5cf6', '#65a30d', '#f97316', '#0891b2', '#be123c', '#4d7c0f',
 ]);
 
+/** Longest category name: what fits on one line of a card next to the amount, also on a phone. */
+export const MAX_CATEGORY_NAME_LENGTH = 20;
+
 /** The most categories a month can have; the page stays usable well below this. */
 export const MAX_CATEGORIES_PER_MONTH = 40;
 

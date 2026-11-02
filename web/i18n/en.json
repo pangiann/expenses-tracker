@@ -57,6 +57,7 @@
   "category.other": "Other",
 
   "categories.newTitle": "New category",
+  "categories.duplicateName": "You already have a category with this name.",
   "categories.namePlaceholder": "Category name",
 
   "categoryCard.budget": "Budget",

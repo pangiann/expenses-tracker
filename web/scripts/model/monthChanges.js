@@ -1,4 +1,4 @@
-import { RecurringCostList } from '../config/categories.js';
+import { MAX_CATEGORY_NAME_LENGTH, RecurringCostList } from '../config/categories.js';
 
 /**
  * Every edit to a month is described as a small "change" object, for example
@@ -87,7 +87,8 @@ export function applyMonthChange(monthRecord, change) {
 
     case ChangeKind.ADD_CATEGORY: {
       const { id, name, color } = change.category ?? {};
-      monthRecord.addCategory({ id: requireId(id), name: requireText(name), color: requireColor(color) });
+      if (monthRecord.findCategory(requireId(id))) return; // already added (a resent change)
+      monthRecord.addCategory({ id, name: requireCategoryName(monthRecord, name), color: requireColor(color) });
       return;
     }
     case ChangeKind.CHANGE_BUDGET:
@@ -145,6 +146,18 @@ function requireCategoryIn(monthRecord, value) {
     throw new InvalidChangeError(`Unknown category: ${value}`);
   }
   return value;
+}
+
+/**
+ * A category name: not empty, at most MAX_CATEGORY_NAME_LENGTH characters, and different
+ * from the month's other names, ignoring capitals and surrounding spaces. The server only
+ * knows the names people typed; the page also compares with the translated default names.
+ */
+function requireCategoryName(monthRecord, value) {
+  const trimmedName = requireText(value).trim();
+  if (trimmedName.length > MAX_CATEGORY_NAME_LENGTH) throw new InvalidChangeError('Category name too long');
+  if (monthRecord.hasCategoryNamed(trimmedName)) throw new InvalidChangeError('Category name already used');
+  return trimmedName;
 }
 
 function requireColor(value) {

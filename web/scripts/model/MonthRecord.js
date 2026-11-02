@@ -136,6 +136,18 @@ export class MonthRecord {
     return this.categories.find((category) => category.id === categoryId);
   }
 
+  /** True when a category someone created already has this name, ignoring capitals and spaces. */
+  hasCategoryNamed(name) {
+    const wantedName = MonthRecord.normalizeCategoryName(name);
+    return this.categories.some((category) => category.name !== undefined
+      && MonthRecord.normalizeCategoryName(category.name) === wantedName);
+  }
+
+  /** "  Kids " and "KIDS" count as the same name. */
+  static normalizeCategoryName(name) {
+    return name.trim().toLocaleLowerCase();
+  }
+
   /**
    * Adds a category at the end of the list, with a budget of 0. Adding an id that already
    * exists does nothing, so a resent change can't add two categories.

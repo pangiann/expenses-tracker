@@ -1,3 +1,5 @@
+import { MAX_CATEGORY_NAME_LENGTH } from '../config/categories.js';
+import { MonthRecord } from '../model/MonthRecord.js';
 import { categoryName, t } from '../i18n/Translator.js';
 import { escapeHtml, getElement } from '../utils/html.js';
 import { formatEuros, parseAmount } from '../utils/money.js';
@@ -46,7 +48,12 @@ export class CategoryCardsView {
     const addForm = submitEvent.target;
     if (addForm.classList.contains('new-category-form')) {
       const name = addForm.elements.name.value.trim();
-      if (name) this.actions.addCategory(name);
+      if (!name) return;
+      if (this.#isNameShown(name)) {
+        addForm.querySelector('.new-category-error').textContent = t('categories.duplicateName');
+        return;
+      }
+      this.actions.addCategory(name);
       return;
     }
     this.actions.addExpense({
@@ -87,14 +94,22 @@ export class CategoryCardsView {
 
   // ----- HTML -----
 
+  /** Compares with the names as shown on screen, so defaults count in the page language too. */
+  #isNameShown(name) {
+    const wantedName = MonthRecord.normalizeCategoryName(name);
+    return this.monthRecord.categories
+      .some((category) => MonthRecord.normalizeCategoryName(categoryName(category)) === wantedName);
+  }
+
   #renderNewCategoryCard() {
     return `
       <form class="card new-category-card new-category-form" autocomplete="off">
         <h2>${escapeHtml(t('categories.newTitle'))}</h2>
         <div class="new-category-fields">
-          <input name="name" maxlength="40" placeholder="${escapeHtml(t('categories.namePlaceholder'))}" required>
+          <input name="name" maxlength="${MAX_CATEGORY_NAME_LENGTH}" placeholder="${escapeHtml(t('categories.namePlaceholder'))}" required>
           <button type="submit" class="primary-button">${escapeHtml(t('common.add'))}</button>
         </div>
+        <p class="new-category-error" aria-live="polite"></p>
       </form>`;
   }
 

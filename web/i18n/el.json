@@ -57,6 +57,7 @@
   "category.other": "Άλλα",
 
   "categories.newTitle": "Νέα κατηγορία",
+  "categories.duplicateName": "Υπάρχει ήδη κατηγορία με αυτό το όνομα.",
   "categories.namePlaceholder": "Όνομα κατηγορίας",
 
   "categoryCard.budget": "Προϋπολογισμός",

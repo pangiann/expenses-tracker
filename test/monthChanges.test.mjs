@@ -208,3 +208,13 @@ test('two categories added at the same moment with the same colour end up with d
   applyMonthChange(month, { kind: ChangeKind.ADD_CATEGORY, category: { id: 'pets', name: 'Pets', color: sameColor } });
   assert.notEqual(month.findCategory('kids').color, month.findCategory('pets').color);
 });
+
+test('category names must be unique (ignoring capitals and spaces) and at most 20 characters', () => {
+  const month = new MonthRecord({ month: '2026-11', expenses: [] });
+  const add = (id, name) => applyMonthChange(month, { kind: ChangeKind.ADD_CATEGORY, category: { id, name, color: '#f59e0b' } });
+  add('kids', 'Kids');
+  assert.throws(() => add('kids-2', '  KIDS '), InvalidChangeError);
+  assert.throws(() => add('long', 'x'.repeat(21)), InvalidChangeError);
+  add('twenty', 'x'.repeat(20));
+  assert.deepEqual(month.categories.slice(11).map((category) => category.id), ['kids', 'twenty']);
+});
