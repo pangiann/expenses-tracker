@@ -1,7 +1,8 @@
 import { MonthRecord } from '../model/MonthRecord.js';
-import { applyMonthChange } from '../model/monthChanges.js';
+import { InvalidChangeError, applyMonthChange } from '../model/monthChanges.js';
 import { createUniqueId } from '../utils/ids.js';
 import { SaveStatus } from './AutoSaver.js';
+import { PendingChangeStore } from './PendingChangeStore.js';
 
 const LIVE_PATH = '/api/live';
 const KEEPALIVE_PING = 'ping'; // answered by the server platform without waking the household
@@ -33,6 +34,7 @@ const PROBLEM_MESSAGES = {
  * Changes are applied on screen immediately and kept in a pending list until the server
  * confirms them. When the server sends a newer month, pending changes are re-applied on
  * top, so someone else's update never hides an edit that is still on its way.
+ * The pending list is also kept in localStorage, so edits made offline survive a closed tab.
  */
 export class CloudMonthSync {
   /**
@@ -49,7 +51,7 @@ export class CloudMonthSync {
     this.isConnected = false;
     this.shownMonthKey = null;
     /** @type {{ changeId: string, monthKey: string, change: object }[]} sent but not yet confirmed */
-    this.pendingChanges = [];
+    this.pendingChanges = PendingChangeStore.load(); // includes edits from before a closed tab
     /** Requests waiting for a reply, keyed by the reply's message type. */
     this.replyWaiters = new Map();
     this.keepaliveTimer = null;
@@ -71,6 +73,7 @@ export class CloudMonthSync {
   sendChange(monthRecord, change) {
     const pendingChange = { changeId: createUniqueId(), monthKey: monthRecord.monthKey, change };
     this.pendingChanges.push(pendingChange);
+    PendingChangeStore.save(this.pendingChanges);
     this.onSaveStatus(SaveStatus.SAVING);
     this.#send({ type: 'change', changeId: pendingChange.changeId, month: pendingChange.monthKey, change });
   }
@@ -174,8 +177,15 @@ export class CloudMonthSync {
     if (monthData.month !== this.shownMonthKey) return; // an update for a month nobody here is viewing
 
     const monthRecord = new MonthRecord(monthData);
-    for (const pendingChange of this.pendingChanges) {
-      if (pendingChange.monthKey === monthRecord.monthKey) applyMonthChange(monthRecord, pendingChange.change);
+    for (const pendingChange of [...this.pendingChanges]) {
+      if (pendingChange.monthKey !== monthRecord.monthKey) continue;
+      try {
+        applyMonthChange(monthRecord, pendingChange.change);
+      } catch (error) {
+        if (!(error instanceof InvalidChangeError)) throw error;
+        // This edit can't apply to the newer month; the server will reject it too, so drop it.
+        this.#dropPendingChange(pendingChange.changeId);
+      }
     }
     this.onMonth(monthRecord, monthKeys);
     this.#reportStatus();
@@ -192,7 +202,14 @@ export class CloudMonthSync {
   /** The server handles changes in order, so confirming one confirms every earlier one too. */
   #forgetConfirmedChanges(confirmedChangeId) {
     const position = this.pendingChanges.findIndex((pending) => pending.changeId === confirmedChangeId);
-    if (position >= 0) this.pendingChanges.splice(0, position + 1);
+    if (position < 0) return;
+    this.pendingChanges.splice(0, position + 1);
+    PendingChangeStore.save(this.pendingChanges);
+  }
+
+  #dropPendingChange(changeId) {
+    this.pendingChanges = this.pendingChanges.filter((pending) => pending.changeId !== changeId);
+    PendingChangeStore.save(this.pendingChanges);
   }
 
   #reportStatus() {
