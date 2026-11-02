@@ -218,3 +218,27 @@ test('category names must be unique (ignoring capitals and spaces) and at most 2
   add('twenty', 'x'.repeat(20));
   assert.deepEqual(month.categories.slice(11).map((category) => category.id), ['kids', 'twenty']);
 });
+
+test('renaming a category keeps its id, expenses and budget', () => {
+  const month = new MonthRecord({ month: '2026-11', expenses: [], budgets: { dinner: 130 } });
+  applyMonthChange(month, { kind: ChangeKind.ADD_EXPENSE,
+    expense: { id: 'expense-d', categoryKey: 'dinner', amount: 30, description: 'pizza', date: '2026-11-02' } });
+  applyMonthChange(month, { kind: ChangeKind.RENAME_CATEGORY, categoryId: 'dinner', name: ' Eating out ' });
+  assert.deepEqual(month.findCategory('dinner'), { id: 'dinner', name: 'Eating out', color: '#e8618c' }); // no nameId: same name in every language
+  assert.equal(month.spentInCategory('dinner'), 30);
+  assert.equal(month.budgetFor('dinner'), 130);
+});
+
+test('renaming follows the name rules, but a category may keep its own name in other capitals', () => {
+  const month = new MonthRecord({ month: '2026-11', expenses: [] });
+  applyMonthChange(month, { kind: ChangeKind.ADD_CATEGORY, category: { id: 'kids', name: 'kids', color: '#f59e0b' } });
+  applyMonthChange(month, { kind: ChangeKind.ADD_CATEGORY, category: { id: 'pets', name: 'Pets', color: '#ef4444' } });
+  applyMonthChange(month, { kind: ChangeKind.RENAME_CATEGORY, categoryId: 'kids', name: 'Kids' });
+  assert.equal(month.findCategory('kids').name, 'Kids');
+  for (const name of ['PETS', '', 'x'.repeat(21)]) {
+    assert.throws(() => applyMonthChange(month, { kind: ChangeKind.RENAME_CATEGORY, categoryId: 'kids', name }), InvalidChangeError);
+  }
+  // Renaming a category someone else removed does nothing.
+  applyMonthChange(month, { kind: ChangeKind.RENAME_CATEGORY, categoryId: 'gone', name: 'Anything' });
+  assert.equal(month.categories.length, 13);
+});

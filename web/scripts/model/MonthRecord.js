@@ -136,11 +136,26 @@ export class MonthRecord {
     return this.categories.find((category) => category.id === categoryId);
   }
 
-  /** True when a category someone created already has this name, ignoring capitals and spaces. */
-  hasCategoryNamed(name) {
+  /**
+   * True when another category someone named already has this name, ignoring capitals and spaces.
+   * @param {string} [exceptCategoryId]  the category being renamed, which may keep its own name
+   */
+  hasCategoryNamed(name, exceptCategoryId) {
     const wantedName = MonthRecord.normalizeCategoryName(name);
-    return this.categories.some((category) => category.name !== undefined
+    return this.categories.some((category) => category.id !== exceptCategoryId && category.name !== undefined
       && MonthRecord.normalizeCategoryName(category.name) === wantedName);
+  }
+
+  /**
+   * Gives a category the name someone typed. A renamed default category drops its translated
+   * name, so it shows the typed name in every language. Renaming a category someone else
+   * just removed does nothing.
+   */
+  renameCategory(categoryId, newName) {
+    const category = this.findCategory(categoryId);
+    if (!category) return;
+    category.name = newName.trim();
+    delete category.nameId;
   }
 
   /** "  Kids " and "KIDS" count as the same name. */

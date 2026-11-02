@@ -5,6 +5,7 @@ import { escapeHtml, getElement } from '../utils/html.js';
 import { formatEuros, parseAmount } from '../utils/money.js';
 import { defaultExpenseDate } from '../utils/monthKeys.js';
 import { InlineNumberEditor } from './InlineNumberEditor.js';
+import { InlineTextEditor } from './InlineTextEditor.js';
 import { renderEntryRows } from './entryRows.js';
 
 /**
@@ -14,7 +15,7 @@ import { renderEntryRows } from './entryRows.js';
  * The cards are redrawn on every change, so events are handled once on the container
  * ("event delegation"). Each clickable element carries data attributes that identify it:
  *   data-entry-id     which expense an amount or ✕ belongs to
- *   data-category-id  which category a budget or add form belongs to
+ *   data-category-id  which category a name, budget or add form belongs to
  */
 export class CategoryCardsView {
   /**
@@ -24,6 +25,7 @@ export class CategoryCardsView {
    * @param {(expenseId: string, amount: number) => void} actions.changeExpenseAmount
    * @param {(categoryKey: string, amount: number) => void} actions.changeBudget
    * @param {(name: string) => void} actions.addCategory
+   * @param {(categoryId: string, name: string) => void} actions.renameCategory
    */
   constructor(actions) {
     this.actions = actions;
@@ -81,6 +83,18 @@ export class CategoryCardsView {
       return;
     }
 
+    const nameElement = clickEvent.target.closest('.category-name');
+    if (nameElement) {
+      const categoryId = nameElement.dataset.categoryId;
+      InlineTextEditor.open(nameElement, {
+        currentText: nameElement.textContent,
+        maxLength: MAX_CATEGORY_NAME_LENGTH,
+        validate: (newName) => (this.#isNameShown(newName, categoryId) ? t('categories.duplicateName') : null),
+        onSave: (newName) => this.actions.renameCategory(categoryId, newName),
+      });
+      return;
+    }
+
     const budgetElement = clickEvent.target.closest('.category-budget');
     if (budgetElement) {
       const categoryId = budgetElement.dataset.categoryId;
@@ -94,11 +108,14 @@ export class CategoryCardsView {
 
   // ----- HTML -----
 
-  /** Compares with the names as shown on screen, so defaults count in the page language too. */
-  #isNameShown(name) {
+  /**
+   * Compares with the names as shown on screen, so defaults count in the page language too.
+   * @param {string} [exceptCategoryId]  the category being renamed, which may keep its own name
+   */
+  #isNameShown(name, exceptCategoryId) {
     const wantedName = MonthRecord.normalizeCategoryName(name);
-    return this.monthRecord.categories
-      .some((category) => MonthRecord.normalizeCategoryName(categoryName(category)) === wantedName);
+    return this.monthRecord.categories.some((category) => category.id !== exceptCategoryId
+      && MonthRecord.normalizeCategoryName(categoryName(category)) === wantedName);
   }
 
   #renderNewCategoryCard() {
@@ -128,7 +145,8 @@ export class CategoryCardsView {
       <div class="card category-card">
         <div class="category-card-header" style="border-top-color:${category.color}">
           <div class="category-card-title">
-            <h2>${escapeHtml(categoryName(category))}</h2>
+            <h2 class="click-to-edit category-name" data-category-id="${escapeHtml(category.id)}"
+                title="${escapeHtml(t('common.clickToEdit'))}">${escapeHtml(categoryName(category))}</h2>
             <span class="category-card-spent">${formatEuros(spent)}</span>
           </div>
           <div class="category-card-budget-line">

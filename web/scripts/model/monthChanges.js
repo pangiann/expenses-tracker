@@ -23,6 +23,7 @@ export const ChangeKind = Object.freeze({
   CHANGE_INCOME_AMOUNT: 'changeIncomeAmount',
   CHANGE_EXPECTED_INCOME: 'changeExpectedIncome',
   ADD_CATEGORY: 'addCategory',
+  RENAME_CATEGORY: 'renameCategory',
   CHANGE_BUDGET: 'changeBudget',
   ADD_RECURRING_COST: 'addRecurringCost',
   REMOVE_RECURRING_COST: 'removeRecurringCost',
@@ -91,6 +92,12 @@ export function applyMonthChange(monthRecord, change) {
       monthRecord.addCategory({ id, name: requireCategoryName(monthRecord, name), color: requireColor(color) });
       return;
     }
+    case ChangeKind.RENAME_CATEGORY: {
+      const categoryId = requireId(change.categoryId);
+      if (!monthRecord.findCategory(categoryId)) return; // removed meanwhile
+      monthRecord.renameCategory(categoryId, requireCategoryName(monthRecord, change.name, categoryId));
+      return;
+    }
     case ChangeKind.CHANGE_BUDGET:
       monthRecord.setBudget(requireCategoryIn(monthRecord, change.categoryKey), requireAmount(change.amount));
       return;
@@ -153,10 +160,10 @@ function requireCategoryIn(monthRecord, value) {
  * from the month's other names, ignoring capitals and surrounding spaces. The server only
  * knows the names people typed; the page also compares with the translated default names.
  */
-function requireCategoryName(monthRecord, value) {
+function requireCategoryName(monthRecord, value, renamedCategoryId) {
   const trimmedName = requireText(value).trim();
   if (trimmedName.length > MAX_CATEGORY_NAME_LENGTH) throw new InvalidChangeError('Category name too long');
-  if (monthRecord.hasCategoryNamed(trimmedName)) throw new InvalidChangeError('Category name already used');
+  if (monthRecord.hasCategoryNamed(trimmedName, renamedCategoryId)) throw new InvalidChangeError('Category name already used');
   return trimmedName;
 }
 
