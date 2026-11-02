@@ -57,6 +57,9 @@
   "category.other": "Άλλα",
 
   "categories.newTitle": "Νέα κατηγορία",
+  "categories.remove": "Αφαίρεση κατηγορίας",
+  "categories.cannotRemoveHasExpenses": "Αυτή η κατηγορία έχει έξοδα. Διαγράψτε τα πρώτα για να την αφαιρέσετε.",
+  "categories.cannotRemoveLast": "Χρειάζεστε τουλάχιστον μία κατηγορία.",
   "categories.duplicateName": "Υπάρχει ήδη κατηγορία με αυτό το όνομα.",
   "categories.namePlaceholder": "Όνομα κατηγορίας",
 

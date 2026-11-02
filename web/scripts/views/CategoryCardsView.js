@@ -17,6 +17,12 @@ import { renderEntryRows } from './entryRows.js';
  *   data-entry-id     which expense an amount or ✕ belongs to
  *   data-category-id  which category a name, budget or add form belongs to
  */
+/** Why a category's ✕ is greyed out, as string ids. */
+const REMOVAL_BLOCKER_STRING_IDS = {
+  'has-expenses': 'categories.cannotRemoveHasExpenses',
+  'last-category': 'categories.cannotRemoveLast',
+};
+
 export class CategoryCardsView {
   /**
    * @param {object} actions
@@ -26,6 +32,7 @@ export class CategoryCardsView {
    * @param {(categoryKey: string, amount: number) => void} actions.changeBudget
    * @param {(name: string) => void} actions.addCategory
    * @param {(categoryId: string, name: string) => void} actions.renameCategory
+   * @param {(categoryId: string) => void} actions.removeCategory
    */
   constructor(actions) {
     this.actions = actions;
@@ -67,6 +74,16 @@ export class CategoryCardsView {
   }
 
   #handleClick(clickEvent) {
+    const removeCategoryButton = clickEvent.target.closest('.category-remove-button');
+    if (removeCategoryButton) {
+      const categoryId = removeCategoryButton.dataset.categoryId;
+      const blocker = this.monthRecord.categoryRemovalBlocker(categoryId);
+      // Touch screens can't show the hover explanation, so a tap on a greyed-out ✕ shows it.
+      if (blocker) alert(t(REMOVAL_BLOCKER_STRING_IDS[blocker]));
+      else this.actions.removeCategory(categoryId);
+      return;
+    }
+
     const deleteButton = clickEvent.target.closest('.delete-button');
     if (deleteButton) {
       this.actions.removeExpense(deleteButton.dataset.entryId);
@@ -137,6 +154,8 @@ export class CategoryCardsView {
     const isOverBudget = remaining < 0;
     const progressPercentage = budget > 0 ? Math.min(spent / budget, 1) * 100 : 0;
     const progressColor = isOverBudget ? 'var(--color-negative)' : category.color;
+    const removalBlocker = monthRecord.categoryRemovalBlocker(category.id);
+    const removeTitle = removalBlocker ? t(REMOVAL_BLOCKER_STRING_IDS[removalBlocker]) : t('categories.remove');
     const remainingText = isOverBudget
       ? t('categoryCard.over', { amount: formatEuros(-remaining) })
       : t('categoryCard.left', { amount: formatEuros(remaining) });
@@ -148,6 +167,9 @@ export class CategoryCardsView {
             <h2 class="click-to-edit category-name" data-category-id="${escapeHtml(category.id)}"
                 title="${escapeHtml(t('common.clickToEdit'))}">${escapeHtml(categoryName(category))}</h2>
             <span class="category-card-spent">${formatEuros(spent)}</span>
+            <button type="button" class="category-remove-button ${removalBlocker ? 'is-blocked' : ''}"
+                    data-category-id="${escapeHtml(category.id)}" aria-disabled="${Boolean(removalBlocker)}"
+                    title="${escapeHtml(removeTitle)}" aria-label="${escapeHtml(removeTitle)}">✕</button>
           </div>
           <div class="category-card-budget-line">
             <span>${escapeHtml(t('categoryCard.budget'))}

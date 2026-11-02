@@ -242,3 +242,26 @@ test('renaming follows the name rules, but a category may keep its own name in o
   applyMonthChange(month, { kind: ChangeKind.RENAME_CATEGORY, categoryId: 'gone', name: 'Anything' });
   assert.equal(month.categories.length, 13);
 });
+
+test('an empty category can be removed, with its budget; removing it again does nothing', () => {
+  const month = new MonthRecord({ month: '2026-11', expenses: [], budgets: { gifts: 60 } });
+  applyMonthChange(month, { kind: ChangeKind.REMOVE_CATEGORY, categoryId: 'gifts' });
+  applyMonthChange(month, { kind: ChangeKind.REMOVE_CATEGORY, categoryId: 'gifts' }); // resent
+  assert.equal(month.findCategory('gifts'), undefined);
+  assert.equal(month.budgets.gifts, undefined);
+  assert.equal(month.categories.length, 10);
+  assert.equal(MonthRecord.createFromTemplate(month, '2026-12').findCategory('gifts'), undefined);
+});
+
+test('a category with expenses, or the last category, cannot be removed', () => {
+  const month = new MonthRecord({ month: '2026-11', expenses: [
+    { id: 'e1', category: 'lunch', description: 'coffee', amount: 3, date: '2026-11-02' },
+  ] });
+  assert.equal(month.categoryRemovalBlocker('lunch'), 'has-expenses');
+  assert.throws(() => applyMonthChange(month, { kind: ChangeKind.REMOVE_CATEGORY, categoryId: 'lunch' }), InvalidChangeError);
+  assert.ok(month.findCategory('lunch'));
+
+  const onlyOne = new MonthRecord({ month: '2026-11', expenses: [], categories: [{ id: 'kids', name: 'Kids', color: '#f59e0b' }] });
+  assert.equal(onlyOne.categoryRemovalBlocker('kids'), 'last-category');
+  assert.throws(() => applyMonthChange(onlyOne, { kind: ChangeKind.REMOVE_CATEGORY, categoryId: 'kids' }), InvalidChangeError);
+});

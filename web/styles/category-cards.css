@@ -16,6 +16,20 @@
 /* The clickable name has padding for its hover box; pull it back so the text lines up with "Budget". */
 .category-card-title h2.category-name { margin: -1px 0 -1px -4px; }
 .category-card-spent { font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* ✕ that removes a category: in the card's top-right corner, outside the text so nothing shifts;
+   shown on hover, greyed out while the category can't be removed. */
+.category-card-header { position: relative; }
+.category-remove-button {
+  position: absolute; top: 3px; right: 5px;
+  border: 0; background: none; padding: 2px 4px; font-size: 12px; line-height: 1;
+  color: #c0c4d0; cursor: pointer; visibility: hidden;
+}
+.category-card:hover .category-remove-button,
+.category-remove-button:focus-visible { visibility: visible; }
+.category-remove-button:hover { color: var(--color-negative); }
+.category-remove-button.is-blocked { color: #dfe2ea; cursor: not-allowed; }
+.category-remove-button.is-blocked:hover { color: #dfe2ea; }
 .category-card-budget-line {
   font-size: 12px; color: var(--color-text-muted); margin-top: 4px;
   display: flex; justify-content: space-between; gap: 8px;

@@ -24,6 +24,7 @@ export const ChangeKind = Object.freeze({
   CHANGE_EXPECTED_INCOME: 'changeExpectedIncome',
   ADD_CATEGORY: 'addCategory',
   RENAME_CATEGORY: 'renameCategory',
+  REMOVE_CATEGORY: 'removeCategory',
   CHANGE_BUDGET: 'changeBudget',
   ADD_RECURRING_COST: 'addRecurringCost',
   REMOVE_RECURRING_COST: 'removeRecurringCost',
@@ -96,6 +97,15 @@ export function applyMonthChange(monthRecord, change) {
       const categoryId = requireId(change.categoryId);
       if (!monthRecord.findCategory(categoryId)) return; // removed meanwhile
       monthRecord.renameCategory(categoryId, requireCategoryName(monthRecord, change.name, categoryId));
+      return;
+    }
+    case ChangeKind.REMOVE_CATEGORY: {
+      const categoryId = requireId(change.categoryId);
+      if (!monthRecord.findCategory(categoryId)) return; // already removed
+      // Someone may have added an expense meanwhile; then the category stays.
+      const blocker = monthRecord.categoryRemovalBlocker(categoryId);
+      if (blocker) throw new InvalidChangeError(`Category can't be removed: ${blocker}`);
+      monthRecord.removeCategory(categoryId);
       return;
     }
     case ChangeKind.CHANGE_BUDGET:

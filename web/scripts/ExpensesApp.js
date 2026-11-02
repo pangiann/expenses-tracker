@@ -122,6 +122,7 @@ export class ExpensesApp {
         category: { id: createUniqueId(), name, color: this.currentMonth.pickCategoryColor() },
       }),
       renameCategory: (categoryId, name) => this.#applyChange({ kind: ChangeKind.RENAME_CATEGORY, categoryId, name }),
+      removeCategory: (categoryId) => this.#applyChange({ kind: ChangeKind.REMOVE_CATEGORY, categoryId }),
       changeBudget: (categoryKey, amount) => this.#applyChange({ kind: ChangeKind.CHANGE_BUDGET, categoryKey, amount }),
 
       // Fixed costs and subscriptions

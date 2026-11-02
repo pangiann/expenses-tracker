@@ -176,6 +176,19 @@ export class MonthRecord {
     this.budgets[id] ??= 0;
   }
 
+  /** Why a category can't be removed: 'has-expenses', 'last-category', or null when it can. */
+  categoryRemovalBlocker(categoryId) {
+    if (this.expenses.some((expense) => expense.category === categoryId)) return 'has-expenses';
+    if (this.categories.length <= 1) return 'last-category';
+    return null;
+  }
+
+  /** Removes an empty category and its budget. Removing one that is already gone does nothing. */
+  removeCategory(categoryId) {
+    this.categories = this.categories.filter((category) => category.id !== categoryId);
+    delete this.budgets[categoryId];
+  }
+
   /** The colour for a new category: the first palette colour this month doesn't use yet. */
   pickCategoryColor() {
     const usedColors = new Set(this.categories.map((category) => category.color.toLowerCase()));
