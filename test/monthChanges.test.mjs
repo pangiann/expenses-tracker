@@ -265,3 +265,27 @@ test('a category with expenses, or the last category, cannot be removed', () => 
   assert.equal(onlyOne.categoryRemovalBlocker('kids'), 'last-category');
   assert.throws(() => applyMonthChange(onlyOne, { kind: ChangeKind.REMOVE_CATEGORY, categoryId: 'kids' }), InvalidChangeError);
 });
+
+test('moving a category puts it before another one, or last', () => {
+  const month = new MonthRecord({ month: '2026-11', expenses: [] });
+  const order = () => month.categories.map((category) => category.id);
+  const move = (categoryId, beforeCategoryId) =>
+    applyMonthChange(month, { kind: ChangeKind.MOVE_CATEGORY, categoryId, beforeCategoryId });
+  move('other', 'dinner');
+  assert.deepEqual(order().slice(0, 3), ['other', 'dinner', 'lunch']);
+  move('other', null);
+  assert.equal(order().at(-1), 'other');
+  move('lunch', 'gone'); // the target was removed meanwhile: goes last
+  assert.equal(order().at(-1), 'lunch');
+  move('gone', 'dinner'); // moving a removed category does nothing
+  move('dinner', 'dinner');
+  assert.equal(order().length, 11);
+  assert.deepEqual(MonthRecord.createFromTemplate(month, '2026-12').categories.map((category) => category.id), order());
+});
+
+test('two people moving categories at once both take effect in arrival order', () => {
+  const month = new MonthRecord({ month: '2026-11', expenses: [] });
+  applyMonthChange(month, { kind: ChangeKind.MOVE_CATEGORY, categoryId: 'travel', beforeCategoryId: 'dinner' });
+  applyMonthChange(month, { kind: ChangeKind.MOVE_CATEGORY, categoryId: 'gifts', beforeCategoryId: 'dinner' });
+  assert.deepEqual(month.categories.slice(0, 3).map((category) => category.id), ['travel', 'gifts', 'dinner']);
+});

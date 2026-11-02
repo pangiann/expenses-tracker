@@ -20,13 +20,26 @@
 /* ✕ that removes a category: in the card's top-right corner, outside the text so nothing shifts;
    shown on hover, greyed out while the category can't be removed. */
 .category-card-header { position: relative; }
+
+/* ⋮⋮ handle for dragging a card to another place: top-left corner, shown on hover. */
+.category-drag-handle {
+  position: absolute; top: 0; left: 2px; padding: 4px 8px; /* about a fingertip wide */
+  border: 0; background: none; color: #9aa0b2; font-size: 15px; font-weight: 700; line-height: 1; letter-spacing: -3px;
+  cursor: grab; touch-action: none; opacity: 0; /* transparent, not hidden, so the keyboard can reach it */
+}
+.category-card:hover .category-drag-handle,
+.category-drag-handle:focus-visible { opacity: 1; }
+.category-drag-handle:hover { color: var(--color-accent); }
+.category-cards.is-reordering { user-select: none; cursor: grabbing; }
+.category-cards.is-reordering .category-drag-handle { cursor: grabbing; }
+.category-card.is-dragging { opacity: .65; box-shadow: 0 8px 28px rgba(20, 25, 50, .18); }
 .category-remove-button {
   position: absolute; top: 3px; right: 5px;
   border: 0; background: none; padding: 2px 4px; font-size: 12px; line-height: 1;
-  color: #c0c4d0; cursor: pointer; visibility: hidden;
+  color: #c0c4d0; cursor: pointer; opacity: 0; /* transparent, not hidden, so the keyboard can reach it */
 }
 .category-card:hover .category-remove-button,
-.category-remove-button:focus-visible { visibility: visible; }
+.category-remove-button:focus-visible { opacity: 1; }
 .category-remove-button:hover { color: var(--color-negative); }
 .category-remove-button.is-blocked { color: #dfe2ea; cursor: not-allowed; }
 .category-remove-button.is-blocked:hover { color: #dfe2ea; }

@@ -61,6 +61,7 @@
   "categories.confirmRemove": "Remove the category “{name}” from this month?",
   "categories.cannotRemoveHasExpenses": "This category has expenses. Delete them first to remove it.",
   "categories.cannotRemoveLast": "You need at least one category.",
+  "categories.dragToReorder": "Drag to reorder (or use the arrow keys)",
   "categories.duplicateName": "You already have a category with this name.",
   "categories.namePlaceholder": "Category name",
 

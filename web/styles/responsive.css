@@ -56,6 +56,7 @@
 
 /* Touch screens have no hover, so the ✕ buttons are always shown. */
 @media (hover: none) {
-  .delete-button,
-  .category-remove-button { visibility: visible; }
+  .delete-button { visibility: visible; }
+  .category-remove-button,
+  .category-drag-handle { opacity: 1; }
 }

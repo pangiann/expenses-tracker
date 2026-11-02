@@ -61,6 +61,7 @@
   "categories.confirmRemove": "Να αφαιρεθεί η κατηγορία «{name}» από αυτόν τον μήνα;",
   "categories.cannotRemoveHasExpenses": "Αυτή η κατηγορία έχει έξοδα. Διαγράψτε τα πρώτα για να την αφαιρέσετε.",
   "categories.cannotRemoveLast": "Χρειάζεστε τουλάχιστον μία κατηγορία.",
+  "categories.dragToReorder": "Σύρετε για αλλαγή σειράς (ή με τα βελάκια)",
   "categories.duplicateName": "Υπάρχει ήδη κατηγορία με αυτό το όνομα.",
   "categories.namePlaceholder": "Όνομα κατηγορίας",
 

@@ -6,6 +6,7 @@ import { formatEuros, parseAmount } from '../utils/money.js';
 import { defaultExpenseDate } from '../utils/monthKeys.js';
 import { InlineNumberEditor } from './InlineNumberEditor.js';
 import { InlineTextEditor } from './InlineTextEditor.js';
+import { CategoryDragController } from './CategoryDragController.js';
 import { renderEntryRows } from './entryRows.js';
 
 /**
@@ -33,21 +34,52 @@ export class CategoryCardsView {
    * @param {(name: string) => void} actions.addCategory
    * @param {(categoryId: string, name: string) => void} actions.renameCategory
    * @param {(categoryId: string) => void} actions.removeCategory
+   * @param {(categoryId: string, beforeCategoryId: string | null) => void} actions.moveCategory
    */
   constructor(actions) {
     this.actions = actions;
     this.container = getElement('categoryCards');
     this.monthRecord = null;
 
+    /** A month that arrived during a drag; drawn when the drag ends, so the cards don't jump. */
+    this.monthWaitingForDragEnd = null;
+    this.focusedHandleCategoryId = null;
+    this.dragController = new CategoryDragController(this.container, {
+      onMove: (categoryId, beforeCategoryId) => {
+        this.focusedHandleCategoryId = this.container.contains(document.activeElement) ? categoryId : null;
+        this.actions.moveCategory(categoryId, beforeCategoryId);
+      },
+      onDragEnd: () => this.#drawWaitingMonth(),
+    });
+
     this.container.addEventListener('submit', (submitEvent) => this.#handleAddFormSubmit(submitEvent));
     this.container.addEventListener('click', (clickEvent) => this.#handleClick(clickEvent));
   }
 
   render(monthRecord) {
+    if (this.dragController.isDragging) {
+      this.monthWaitingForDragEnd = monthRecord;
+      return;
+    }
+    this.monthWaitingForDragEnd = null;
     this.monthRecord = monthRecord;
     this.container.innerHTML = monthRecord.categories
       .map((category) => this.#renderCard(category, monthRecord))
       .join('') + this.#renderNewCategoryCard();
+    this.#restoreHandleFocus();
+  }
+
+  #drawWaitingMonth() {
+    if (this.monthWaitingForDragEnd) this.render(this.monthWaitingForDragEnd);
+  }
+
+  /** After moving a card with the arrow keys, keep focus on its handle so the next key press works. */
+  #restoreHandleFocus() {
+    if (!this.focusedHandleCategoryId) return;
+    const handle = [...this.container.querySelectorAll('.category-drag-handle')]
+      .find((element) => element.dataset.categoryId === this.focusedHandleCategoryId);
+    this.focusedHandleCategoryId = null;
+    handle?.focus();
   }
 
   // ----- Event handling -----
@@ -165,8 +197,10 @@ export class CategoryCardsView {
       : t('categoryCard.left', { amount: formatEuros(remaining) });
 
     return `
-      <div class="card category-card">
+      <div class="card category-card" data-category-id="${escapeHtml(category.id)}">
         <div class="category-card-header" style="border-top-color:${category.color}">
+          <button type="button" class="category-drag-handle" data-category-id="${escapeHtml(category.id)}"
+                  title="${escapeHtml(t('categories.dragToReorder'))}" aria-label="${escapeHtml(t('categories.dragToReorder'))}">⋮⋮</button>
           <div class="category-card-title">
             <h2 class="click-to-edit category-name" data-category-id="${escapeHtml(category.id)}"
                 title="${escapeHtml(t('common.clickToEdit'))}">${escapeHtml(categoryName(category))}</h2>

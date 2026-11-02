@@ -189,6 +189,20 @@ export class MonthRecord {
     delete this.budgets[categoryId];
   }
 
+  /**
+   * Moves a category so it sits just before another one, or last when beforeCategoryId is null
+   * or no longer exists. Saying "before X" instead of "to position 3" keeps the intended order
+   * when someone else moves, adds or removes categories at the same moment.
+   */
+  moveCategory(categoryId, beforeCategoryId) {
+    const movedCategory = this.findCategory(categoryId);
+    if (!movedCategory || categoryId === beforeCategoryId) return;
+    const remainingCategories = this.categories.filter((category) => category.id !== categoryId);
+    const targetPosition = remainingCategories.findIndex((category) => category.id === beforeCategoryId);
+    remainingCategories.splice(targetPosition < 0 ? remainingCategories.length : targetPosition, 0, movedCategory);
+    this.categories = remainingCategories;
+  }
+
   /** The colour for a new category: the first palette colour this month doesn't use yet. */
   pickCategoryColor() {
     const usedColors = new Set(this.categories.map((category) => category.color.toLowerCase()));

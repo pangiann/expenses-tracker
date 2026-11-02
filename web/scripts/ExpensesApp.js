@@ -123,6 +123,8 @@ export class ExpensesApp {
       }),
       renameCategory: (categoryId, name) => this.#applyChange({ kind: ChangeKind.RENAME_CATEGORY, categoryId, name }),
       removeCategory: (categoryId) => this.#applyChange({ kind: ChangeKind.REMOVE_CATEGORY, categoryId }),
+      moveCategory: (categoryId, beforeCategoryId) =>
+        this.#applyChange({ kind: ChangeKind.MOVE_CATEGORY, categoryId, beforeCategoryId }),
       changeBudget: (categoryKey, amount) => this.#applyChange({ kind: ChangeKind.CHANGE_BUDGET, categoryKey, amount }),
 
       // Fixed costs and subscriptions

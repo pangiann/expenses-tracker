@@ -25,6 +25,7 @@ export const ChangeKind = Object.freeze({
   ADD_CATEGORY: 'addCategory',
   RENAME_CATEGORY: 'renameCategory',
   REMOVE_CATEGORY: 'removeCategory',
+  MOVE_CATEGORY: 'moveCategory',
   CHANGE_BUDGET: 'changeBudget',
   ADD_RECURRING_COST: 'addRecurringCost',
   REMOVE_RECURRING_COST: 'removeRecurringCost',
@@ -106,6 +107,11 @@ export function applyMonthChange(monthRecord, change) {
       const blocker = monthRecord.categoryRemovalBlocker(categoryId);
       if (blocker) throw new InvalidChangeError(`Category can't be removed: ${blocker}`);
       monthRecord.removeCategory(categoryId);
+      return;
+    }
+    case ChangeKind.MOVE_CATEGORY: {
+      const beforeCategoryId = change.beforeCategoryId === null ? null : requireId(change.beforeCategoryId);
+      monthRecord.moveCategory(requireId(change.categoryId), beforeCategoryId);
       return;
     }
     case ChangeKind.CHANGE_BUDGET:
