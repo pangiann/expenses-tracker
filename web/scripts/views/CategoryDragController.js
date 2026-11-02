@@ -1,9 +1,9 @@
-import Sortable from '../../vendor/sortablejs/sortable.esm.js';
+import Sortable from 'sortablejs';
 
 /**
  * Reorders category cards by dragging them by their header, the way Chrome reorders tabs:
  * the card lifts and follows the pointer, the other cards slide aside to make room, and the
- * card glides into its slot when dropped. SortableJS (web/vendor/sortablejs) does the moving
+ * card glides into its slot when dropped. SortableJS (npm package sortablejs) does the moving
  * and the animation; this class only decides what can move and reports the result.
  *
  * - A click that doesn't move (5 px) stays a click, so the name and budget can still be edited.

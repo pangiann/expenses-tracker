@@ -7,6 +7,8 @@
     "node": ">=20"
   },
   "scripts": {
+    "build": "esbuild web/scripts/main.js --bundle --format=esm --target=es2022 --sourcemap --outfile=web/dist/main.js",
+    "watch": "npm run build -- --watch",
     "dev": "wrangler dev",
     "test": "node --test test/",
     "deploy": "wrangler deploy"
@@ -15,6 +17,7 @@
     "jose": "^6.0.0"
   },
   "devDependencies": {
+    "esbuild": "0.28.2",
     "sortablejs": "1.15.7",
     "wrangler": "^4.40.0"
   }
