@@ -7,6 +7,8 @@
   display: grid; grid-template-columns: 120px 1fr 150px; align-items: center; gap: 12px;
   font-size: 13px; white-space: nowrap;
 }
+/* Long category names end with "…" instead of running into the bar. */
+.budget-bar-row > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .budget-bar-track { height: 12px; background: var(--color-track); border-radius: 6px; overflow: hidden; }
 .budget-bar-fill { height: 100%; border-radius: 6px; transition: width .3s; }
 .budget-bar-amount { text-align: right; color: var(--color-text-muted); font-variant-numeric: tabular-nums; }
@@ -18,7 +20,9 @@
 .spending-donut-caption { font-size: 7px; fill: var(--color-text-muted); }
 
 .spending-donut-legend { list-style: none; padding: 0; margin: 0; font-size: 13px; display: grid; gap: 6px; flex: 1; }
-.spending-donut-legend li { display: flex; align-items: center; gap: 8px; }
+.spending-donut-legend li { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.spending-donut-legend-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.spending-donut-legend-value { flex-shrink: 0; }
 .spending-donut-legend-value { margin-left: auto; color: var(--color-text-muted); font-variant-numeric: tabular-nums; }
 .spending-donut-legend-empty { color: var(--color-text-muted); }
 .color-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }

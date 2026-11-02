@@ -62,7 +62,7 @@ export class SpendingDonutView {
         return `
           <li>
             <span class="color-dot" style="background:${slice.category.color}"></span>
-            ${escapeHtml(categoryName(slice.category))}
+            <span class="spending-donut-legend-name">${escapeHtml(categoryName(slice.category))}</span>
             <span class="spending-donut-legend-value">${percentage}% · ${formatEuros(slice.amount)}</span>
           </li>`;
       })
