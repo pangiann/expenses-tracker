@@ -1,9 +1,9 @@
-import { SPENDING_CATEGORIES, RecurringCostList, DEFAULT_FIXED_COST_NAMES } from '../config/categories.js';
+import { DEFAULT_CATEGORIES, RecurringCostList, DEFAULT_FIXED_COST_NAMES } from '../config/categories.js';
 import { roundToCents, sumAmounts } from '../utils/money.js';
 
 /**
- * Everything recorded for one month: income entries, category budgets, expenses,
- * fixed costs and subscriptions.
+ * Everything recorded for one month: income entries, spending categories with their
+ * budgets, expenses, fixed costs and subscriptions.
  *
  * This class is the only place that changes month data. It runs in the browser and in
  * the Cloudflare Worker. toJSON() produces the file format:
@@ -12,6 +12,8 @@ import { roundToCents, sumAmounts } from '../utils/money.js';
  *     "month": "2026-09",
  *     "income": { "expected": 4000, "actual": 3500,
  *                 "entries": [ { "id": "...", "date": "2026-09-01", "description": "salary", "amount": 3500 } ] },
+ *     "categories": [ { "id": "dinner", "nameId": "category.dinner", "color": "#e8618c" },
+ *                     { "id": "...", "name": "Kids", "color": "#f59e0b" }, ... ],
  *     "budgets": { "dinner": 100, "lunch": 50, ... },
  *     "expenses": [ { "id": "...", "date": "2026-09-14", "category": "lunch",
  *                     "description": "coffee", "amount": 5.5 } ],
@@ -20,6 +22,7 @@ import { roundToCents, sumAmounts } from '../utils/money.js';
  *   }
  *
  * "actual" is the sum of the entries. It is still written so older files stay readable.
+ * The order of "categories" is the order on screen.
  *
  * Every item (expense, income entry, fixed cost) has an id, and every method finds items by
  * id. Adding an item whose id already exists does nothing, and changing or removing an item
@@ -31,7 +34,8 @@ export class MonthRecord {
     this.monthKey = monthData.month;
     this.expectedIncome = monthData.income?.expected ?? 0;
     this.incomes = MonthRecord.#readIncomeEntries(monthData);
-    this.budgets = { ...MonthRecord.#zeroBudgets(), ...monthData.budgets };
+    this.categories = MonthRecord.#readCategories(monthData);
+    this.budgets = { ...MonthRecord.#zeroBudgets(this.categories), ...monthData.budgets };
     this.expenses = (monthData.expenses ?? []).map((expense) => ({ ...expense }));
     this.recurringCosts = {
       [RecurringCostList.FIXED_COSTS]: MonthRecord.#readRecurringCosts(monthData.fixed, RecurringCostList.FIXED_COSTS),
@@ -50,12 +54,13 @@ export class MonthRecord {
     });
   }
 
-  /** A new month that keeps the template's budgets, expected income and recurring costs. */
+  /** A new month that keeps the template's categories, budgets, expected income and recurring costs. */
   static createFromTemplate(templateRecord, monthKey) {
     const templateData = templateRecord.toJSON();
     return new MonthRecord({
       month: monthKey,
       income: { expected: templateData.income.expected, entries: [] },
+      categories: templateData.categories,
       budgets: templateData.budgets,
       fixed: templateData.fixed,
       subscriptions: templateData.subscriptions,
@@ -64,9 +69,9 @@ export class MonthRecord {
 
   // ----- Expenses -----
 
-  addExpense({ id, categoryKey, amount, description, date }) {
+  addExpense({ id, categoryId, amount, description, date }) {
     if (!(amount > 0) || this.findExpense(id)) return;
-    this.expenses.push({ id, date, category: categoryKey, description: description.trim(), amount: roundToCents(amount) });
+    this.expenses.push({ id, date, category: categoryId, description: description.trim(), amount: roundToCents(amount) });
   }
 
   removeExpense(expenseId) {
@@ -83,12 +88,12 @@ export class MonthRecord {
   }
 
   /** Expenses in one category, newest first; undated (imported) expenses come last. */
-  expensesInCategory(categoryKey) {
-    return MonthRecord.#newestFirst(this.expenses.filter((expense) => expense.category === categoryKey));
+  expensesInCategory(categoryId) {
+    return MonthRecord.#newestFirst(this.expenses.filter((expense) => expense.category === categoryId));
   }
 
-  spentInCategory(categoryKey) {
-    return sumAmounts(this.expensesInCategory(categoryKey).map((expense) => expense.amount));
+  spentInCategory(categoryId) {
+    return sumAmounts(this.expensesInCategory(categoryId).map((expense) => expense.amount));
   }
 
   // ----- Income -----
@@ -123,14 +128,18 @@ export class MonthRecord {
     if (amount >= 0) this.expectedIncome = roundToCents(amount);
   }
 
-  // ----- Budgets -----
+  // ----- Categories and budgets -----
 
-  budgetFor(categoryKey) {
-    return this.budgets[categoryKey] ?? 0;
+  findCategory(categoryId) {
+    return this.categories.find((category) => category.id === categoryId);
   }
 
-  setBudget(categoryKey, amount) {
-    if (amount >= 0) this.budgets[categoryKey] = roundToCents(amount);
+  budgetFor(categoryId) {
+    return this.budgets[categoryId] ?? 0;
+  }
+
+  setBudget(categoryId, amount) {
+    if (amount >= 0) this.budgets[categoryId] = roundToCents(amount);
   }
 
   // ----- Fixed costs and subscriptions -----
@@ -168,7 +177,8 @@ export class MonthRecord {
   calculateTotals() {
     const variableSpending = sumAmounts(this.expenses.map((expense) => expense.amount));
     const recurringCostsTotal = sumAmounts(Object.values(this.recurringCosts).flat().map((cost) => cost.amount));
-    const totalBudgeted = sumAmounts(Object.values(this.budgets)) + recurringCostsTotal;
+    const categoryBudgetsTotal = sumAmounts(this.categories.map((category) => this.budgetFor(category.id)));
+    const totalBudgeted = categoryBudgetsTotal + recurringCostsTotal;
     const totalSpent = variableSpending + recurringCostsTotal;
     const saved = this.totalIncome - totalSpent;
 
@@ -195,6 +205,7 @@ export class MonthRecord {
         actual: this.totalIncome,
         entries: this.incomes.map((income) => ({ ...income })),
       },
+      categories: this.categories.map((category) => ({ ...category })),
       budgets: { ...this.budgets },
       expenses: this.expenses.map((expense) => ({ ...expense })),
       fixed: this.recurringCosts[RecurringCostList.FIXED_COSTS].map((cost) => ({ ...cost })),
@@ -230,12 +241,18 @@ export class MonthRecord {
     return [...items].sort((first, second) => (second.date ?? '').localeCompare(first.date ?? ''));
   }
 
-  static #zeroBudgets() {
-    return Object.fromEntries(SPENDING_CATEGORIES.map((category) => [category.key, 0]));
+  /** Older files have no category list: they used the default categories. */
+  static #readCategories(monthData) {
+    const categories = Array.isArray(monthData.categories) ? monthData.categories : DEFAULT_CATEGORIES;
+    return categories.map((category) => ({ ...category }));
+  }
+
+  static #zeroBudgets(categories) {
+    return Object.fromEntries(categories.map((category) => [category.id, 0]));
   }
 
   static #unknownFields(monthData) {
-    const knownFields = new Set(['month', 'income', 'budgets', 'expenses', 'fixed', 'subscriptions']);
+    const knownFields = new Set(['month', 'income', 'categories', 'budgets', 'expenses', 'fixed', 'subscriptions']);
     return Object.fromEntries(Object.entries(monthData).filter(([fieldName]) => !knownFields.has(fieldName)));
   }
 }

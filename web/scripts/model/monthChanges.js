@@ -1,4 +1,4 @@
-import { SPENDING_CATEGORIES, RecurringCostList } from '../config/categories.js';
+import { RecurringCostList } from '../config/categories.js';
 
 /**
  * Every edit to a month is described as a small "change" object, for example
@@ -12,6 +12,7 @@ import { SPENDING_CATEGORIES, RecurringCostList } from '../config/categories.js'
  * item after someone else added or removed others. Applying a change twice is harmless.
  *
  * Changes arrive from the network, so applyMonthChange() checks every field first.
+ * (Changes name a category in the field `categoryKey`; it holds the category's id.)
  */
 export const ChangeKind = Object.freeze({
   ADD_EXPENSE: 'addExpense',
@@ -34,7 +35,6 @@ const MAX_AMOUNT = 10_000_000;
 const MAX_TEXT_LENGTH = 200;
 const MAX_ID_LENGTH = 64;
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-const CATEGORY_KEYS = new Set(SPENDING_CATEGORIES.map((category) => category.key));
 const RECURRING_LIST_NAMES = new Set(Object.values(RecurringCostList));
 
 /**
@@ -49,7 +49,7 @@ export function applyMonthChange(monthRecord, change) {
       const { id, categoryKey, amount, description, date } = change.expense ?? {};
       monthRecord.addExpense({
         id: requireId(id),
-        categoryKey: requireCategory(categoryKey),
+        categoryId: requireCategoryIn(monthRecord, categoryKey),
         amount: requireAmount(amount, { allowZero: false }),
         description: requireText(description ?? '', { allowEmpty: true }),
         date: requireDateInMonth(date, monthRecord.monthKey),
@@ -84,7 +84,7 @@ export function applyMonthChange(monthRecord, change) {
       return;
 
     case ChangeKind.CHANGE_BUDGET:
-      monthRecord.setBudget(requireCategory(change.categoryKey), requireAmount(change.amount));
+      monthRecord.setBudget(requireCategoryIn(monthRecord, change.categoryKey), requireAmount(change.amount));
       return;
 
     case ChangeKind.ADD_RECURRING_COST: {
@@ -132,8 +132,11 @@ function requireId(value) {
   return value;
 }
 
-function requireCategory(value) {
-  if (!CATEGORY_KEYS.has(value)) throw new InvalidChangeError(`Unknown category: ${value}`);
+/** The category must exist in this month (each month has its own list). */
+function requireCategoryIn(monthRecord, value) {
+  if (typeof value !== 'string' || !monthRecord.findCategory(value)) {
+    throw new InvalidChangeError(`Unknown category: ${value}`);
+  }
   return value;
 }
 

@@ -136,3 +136,33 @@ test('isMonthData accepts month files and rejects anything else', () => {
   assert.equal(isMonthData({ month: '2026-11' }), false);
   assert.equal(isMonthData(null), false);
 });
+
+test('an older file without a category list gets the 11 default categories', () => {
+  const month = new MonthRecord({ month: '2026-08', expenses: [], budgets: { dinner: 130 } });
+  assert.equal(month.categories.length, 11);
+  assert.equal(month.categories[0].id, 'dinner');
+  assert.equal(month.budgetFor('dinner'), 130);
+  assert.equal(month.toJSON().categories.length, 11);
+});
+
+test('a month keeps its own category list, and a new month copies it', () => {
+  const october = new MonthRecord({
+    month: '2026-10',
+    expenses: [],
+    categories: [{ id: 'kids', name: 'Kids', color: '#f59e0b' }, { id: 'other', nameId: 'category.other', color: '#8a92a6' }],
+    budgets: { kids: 100, other: 20 },
+  });
+  const november = MonthRecord.createFromTemplate(october, '2026-11');
+  assert.deepEqual(november.categories.map((category) => category.id), ['kids', 'other']);
+  assert.equal(november.budgetFor('kids'), 100);
+  assert.equal(november.calculateTotals().totalBudgeted, 120);
+});
+
+test('expenses and budgets are refused for a category the month does not have', () => {
+  const month = new MonthRecord({ month: '2026-10', expenses: [], categories: [{ id: 'kids', name: 'Kids', color: '#f59e0b' }] });
+  const groceries = { id: 'expense-9', categoryKey: 'supermarket', amount: 20, description: '', date: '2026-10-02' };
+  assert.throws(() => applyMonthChange(month, { kind: ChangeKind.ADD_EXPENSE, expense: groceries }), InvalidChangeError);
+  assert.throws(() => applyMonthChange(month, { kind: ChangeKind.CHANGE_BUDGET, categoryKey: 'supermarket', amount: 5 }), InvalidChangeError);
+  applyMonthChange(month, { kind: ChangeKind.ADD_EXPENSE, expense: { ...groceries, categoryKey: 'kids' } });
+  assert.equal(month.spentInCategory('kids'), 20);
+});

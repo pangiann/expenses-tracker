@@ -3,7 +3,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { test } from 'node:test';
 
-import { SPENDING_CATEGORIES } from '../web/scripts/config/categories.js';
+import { DEFAULT_CATEGORIES } from '../web/scripts/config/categories.js';
 
 const WEB_DIR = new URL('../web/', import.meta.url).pathname;
 const readTranslations = (language) => JSON.parse(readFileSync(join(WEB_DIR, 'i18n', `${language}.json`), 'utf8'));
@@ -27,7 +27,7 @@ function usedStringIds() {
     for (const [, id] of readFileSync(file, 'utf8').matchAll(/'(error\.\w+)'/g)) ids.add(id);
   }
   for (const [, id] of readFileSync(join(WEB_DIR, 'index.html'), 'utf8').matchAll(/data-i18n(?:-[\w-]+)?="([\w.]+)"/g)) ids.add(id);
-  for (const category of SPENDING_CATEGORIES) ids.add(`category.${category.key}`);
+  for (const category of DEFAULT_CATEGORIES) ids.add(category.nameId);
   for (let monthNumber = 1; monthNumber <= 12; monthNumber += 1) ids.add(`month.${monthNumber}`);
   return ids;
 }

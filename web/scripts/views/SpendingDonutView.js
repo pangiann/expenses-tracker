@@ -1,4 +1,3 @@
-import { SPENDING_CATEGORIES } from '../config/categories.js';
 import { categoryName, t } from '../i18n/Translator.js';
 import { escapeHtml, getElement } from '../utils/html.js';
 import { formatEuros, sumAmounts } from '../utils/money.js';
@@ -17,8 +16,8 @@ export class SpendingDonutView {
   }
 
   render(monthRecord) {
-    const slices = SPENDING_CATEGORIES
-      .map((category) => ({ category, amount: monthRecord.spentInCategory(category.key) }))
+    const slices = monthRecord.categories
+      .map((category) => ({ category, amount: monthRecord.spentInCategory(category.id) }))
       .filter((slice) => slice.amount > 0);
     const totalAmount = sumAmounts(slices.map((slice) => slice.amount));
 

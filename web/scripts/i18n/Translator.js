@@ -114,9 +114,9 @@ export function t(stringId, values) {
   return translator.translate(stringId, values);
 }
 
-/** Display name of a spending category, for example t('category.dinner'). */
+/** Display name of a category: the name someone typed, or the translation of a default one. */
 export function categoryName(category) {
-  return t(`category.${category.key}`);
+  return category.name ?? t(category.nameId);
 }
 
 /** Month name in the nominative form used for titles: 1 -> "January" / "Ιανουάριος". */

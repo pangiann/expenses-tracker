@@ -1,4 +1,3 @@
-import { SPENDING_CATEGORIES } from '../config/categories.js';
 import { categoryName } from '../i18n/Translator.js';
 import { escapeHtml, getElement } from '../utils/html.js';
 import { formatEuros } from '../utils/money.js';
@@ -10,14 +9,14 @@ export class BudgetBarsView {
   }
 
   render(monthRecord) {
-    this.container.innerHTML = SPENDING_CATEGORIES
+    this.container.innerHTML = monthRecord.categories
       .map((category) => this.#renderBar(category, monthRecord))
       .join('');
   }
 
   #renderBar(category, monthRecord) {
-    const spent = monthRecord.spentInCategory(category.key);
-    const budget = monthRecord.budgetFor(category.key);
+    const spent = monthRecord.spentInCategory(category.id);
+    const budget = monthRecord.budgetFor(category.id);
     const isOverBudget = spent > budget;
     const fillPercentage = budget > 0 ? Math.min(spent / budget, 1) * 100 : (spent > 0 ? 100 : 0);
     const fillColor = isOverBudget ? 'var(--color-negative)' : category.color;
