@@ -1,12 +1,18 @@
 #!/bin/zsh
 # Builds Expenses.app and installs it in ~/Applications.
-# Run again only after changing mac/Sources or moving the project folder;
-# changes to web/, server/ and data/ need no rebuild.
+# Run again only after changing mac/Sources, moving the project folder, or changing the
+# Node.js install; changes to web/, server/ and data/ need no rebuild (the app rebuilds the
+# page with `npm run build` every time it starts).
 set -euo pipefail
 
 MAC_DIR="${0:A:h}"
 PROJECT_DIR="${MAC_DIR:h}"
 DEST="$HOME/Applications/Expenses.app"
+
+# Apps opened from Finder don't get the Terminal's PATH, so record where npm and node are.
+NPM_PATH="$(command -v npm)" || { echo "npm not found. Install Node.js first." >&2; exit 1; }
+NODE_DIR="$(dirname "$(command -v node)")"
+(cd "$PROJECT_DIR" && npm install --silent && npm run build --silent)
 
 # Build in a temporary folder that is deleted afterwards, so Spotlight only ever finds the installed app.
 BUILD_DIR="$(mktemp -d)"
@@ -37,6 +43,8 @@ cat > "$OUT/Contents/Info.plist" <<EOF
   <key>NSAppTransportSecurity</key>
   <dict><key>NSAllowsLocalNetworking</key><true/></dict>
   <key>ExpensesProjectDir</key><string>$PROJECT_DIR</string>
+  <key>ExpensesNpmPath</key><string>$NPM_PATH</string>
+  <key>ExpensesNodeDir</key><string>$NODE_DIR</string>
 </dict>
 </plist>
 EOF

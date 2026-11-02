@@ -14,11 +14,51 @@ final class LocalServer {
     var onUnexpectedExit: ((Int32) -> Void)?
 
     private let projectDirectory: URL
+    private let npmExecutable: URL?          // recorded by mac/build.sh
+    private let nodeDirectory: String?
     private var serverProcess: Process?     // set only when this app started the server
     private var isStoppingOnPurpose = false
 
-    init(projectDirectory: URL) {
+    init(projectDirectory: URL, npmExecutable: URL?, nodeDirectory: String?) {
         self.projectDirectory = projectDirectory
+        self.npmExecutable = npmExecutable
+        self.nodeDirectory = nodeDirectory
+    }
+
+    /**
+     Bundles the page (`npm run build`, web/scripts -> web/dist) so edits to the page show up.
+     Takes well under a second. Runs off the main thread; calls `completion` on the main thread
+     with nil on success or an error message.
+     */
+    func buildPage(completion: @escaping (String?) -> Void) {
+        guard let npmExecutable else {
+            return completion("npm's location is unknown. Rebuild the app with mac/build.sh.")
+        }
+        DispatchQueue.global().async {
+            let process = Process()
+            process.executableURL = npmExecutable
+            process.arguments = ["run", "build", "--silent"]
+            process.currentDirectoryURL = self.projectDirectory
+            var environment = ProcessInfo.processInfo.environment
+            environment["PATH"] = [self.nodeDirectory, "/usr/bin", "/bin"].compactMap { $0 }.joined(separator: ":")
+            process.environment = environment
+            process.standardInput = FileHandle.nullDevice
+            let logFile = try? self.openLogFile()
+            process.standardOutput = logFile
+            process.standardError = logFile
+
+            var failure: String?
+            do {
+                try process.run()
+                process.waitUntilExit()
+                if process.terminationStatus != 0 {
+                    failure = "The page could not be built (npm run build failed). See \(self.logFileURL.path)."
+                }
+            } catch {
+                failure = "Could not run npm: \(error.localizedDescription)"
+            }
+            DispatchQueue.main.async { completion(failure) }
+        }
     }
 
     /// True when a server answers on the port, whoever started it.

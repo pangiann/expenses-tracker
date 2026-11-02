@@ -10,8 +10,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     override init() {
         // mac/build.sh writes the project folder into Info.plist under this key.
-        let projectPath = Bundle.main.object(forInfoDictionaryKey: "ExpensesProjectDir") as? String ?? ""
-        localServer = LocalServer(projectDirectory: URL(fileURLWithPath: projectPath))
+        let info = Bundle.main.infoDictionary ?? [:]
+        let projectPath = info["ExpensesProjectDir"] as? String ?? ""
+        localServer = LocalServer(
+            projectDirectory: URL(fileURLWithPath: projectPath),
+            npmExecutable: (info["ExpensesNpmPath"] as? String).map { URL(fileURLWithPath: $0) },
+            nodeDirectory: info["ExpensesNodeDir"] as? String)
         super.init()
     }
 
@@ -31,11 +35,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         startServerAndShowPage()
     }
 
+    /// Builds the page first, so the window always shows the latest code in web/scripts.
     private func startServerAndShowPage() {
+        mainWindow.showMessage("Starting…")
+        localServer.buildPage { [weak self] buildError in
+            guard let self else { return }
+            if let buildError { return self.mainWindow.showMessage(buildError) }
+            self.startServerIfNeededAndShowPage()
+        }
+    }
+
+    private func startServerIfNeededAndShowPage() {
         if localServer.isResponding() {  // already running, for example started from Terminal
             return mainWindow.loadExpensesPage()
         }
-        mainWindow.showMessage("Starting…")
         do {
             try localServer.start()
         } catch {
