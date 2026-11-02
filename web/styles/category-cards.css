@@ -15,8 +15,10 @@
 .category-card-spent { font-weight: 700; font-variant-numeric: tabular-nums; }
 .category-card-budget-line {
   font-size: 12px; color: var(--color-text-muted); margin-top: 4px;
-  display: flex; justify-content: space-between;
+  display: flex; justify-content: space-between; gap: 8px;
 }
+/* Longer languages wrap this line; keep the "left / over" amount against the right edge. */
+.category-card-budget-line > span:last-child { text-align: right; }
 .category-card-budget-line .is-negative { font-weight: 600; }
 .category-card-progress-track { height: 5px; background: var(--color-track); border-radius: 3px; margin-top: 10px; overflow: hidden; }
 .category-card-progress-fill { height: 100%; }
