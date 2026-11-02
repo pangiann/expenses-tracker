@@ -42,11 +42,13 @@ Everything fits in Cloudflare's free plan. The page files are static assets, whi
 web/                      the page (HTML, CSS, JavaScript modules; no build step)
   index.html
   backend.json            "cloud"; the local server answers this path with "local"
+  i18n/en.json, el.json   display text for every string id
   styles/                 one stylesheet per section of the page
   scripts/
     main.js               entry point: creates ExpensesApp
     ExpensesApp.js        controller: turns user actions into changes
     config/               spending categories and list names
+    i18n/Translator.js    translations by string id (see "Languages" below)
     model/
       MonthRecord.js      one month's data and the rules for changing it
       monthChanges.js     every kind of change, checked and applied the same way everywhere
@@ -54,6 +56,7 @@ web/                      the page (HTML, CSS, JavaScript modules; no build step
     services/
       LocalMonthSync.js   local backend: saves the whole month to the Python server
       CloudMonthSync.js   Cloudflare backend: sends changes over a WebSocket, receives live updates
+      PendingChangeStore.js  keeps unconfirmed changes in the browser, so offline edits survive a closed tab
       createMonthSync.js  picks the backend from backend.json
     views/                one class per section of the page
     utils/                money, month-key, id and HTML helpers
@@ -78,8 +81,16 @@ data/                     your local month files (not in git)
 
 A Durable Object handles one message at a time, so two people editing at once never overwrite each other. A change that isn't confirmed yet stays pending and is re-applied on top of any update from someone else, then resent after a lost connection. Expense ids are created on the device, so a resent expense is only added once.
 
+## Languages
+
+The page is in English and Greek; the EN / ΕΛ picker in the top bar switches between them and the choice is remembered. The code contains no display text, only string ids such as `summary.earned`. Each language has one file, `web/i18n/en.json` and `web/i18n/el.json`, that maps every id to its text. In the HTML, elements name their id with `data-i18n` (text), `data-i18n-placeholder`, `data-i18n-title` or `data-i18n-aria-label`; in JavaScript, `t('summary.earned')`. English is the fallback for a missing translation.
+
+To add or change text, edit both files with the same id. `npm test` fails if the files don't have the same ids, if a placeholder like `{amount}` differs, or if the page uses an id that has no text. To add a language, add its file and an entry in `SUPPORTED_LANGUAGES` in `Translator.js`.
+
 ## Data
 
+- **Income** is a list of entries, like expenses: a salary, each private lesson, and so on. Earned is their total.
+- Every item (expense, income entry, fixed cost, subscription) has an id. Changes name items by id, so two people editing different items never affect each other.
 - On start, the app opens the current month and creates it if it doesn't exist.
 - A new month copies the budgets, expected income, fixed costs and subscriptions from the closest earlier month. If no month exists yet, it starts from zero.
 - Use **‹ ›** to move between saved months and **+** to add any month.
