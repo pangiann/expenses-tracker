@@ -7,11 +7,22 @@ An expenses tracker where you log expenses by category, set monthly budgets and 
 
 ## Run it locally
 
-**Mac app:** build it once with `mac/build.sh`, then open **Expenses** from `~/Applications`. The app starts the server, shows the page in its own window, and stops the server when you quit.
+You need Node.js (for `npm`) and Python 3. Run `npm install` once.
 
-**Browser:** run `python3 server/main.py`. It opens http://127.0.0.1:8765. Press Ctrl+C to stop.
+**Mac app:** build it once with `mac/build.sh`, then open **Expenses** from `~/Applications`. The app builds the page, starts the server, shows the page in its own window, and stops the server when you quit. Because it builds on every start (and on ⌘R), edits to `web/` show up after reopening or ⌘R.
 
-The local server listens on 127.0.0.1 only, so other machines can't reach it. It needs Python 3 and nothing else. Months are saved in `data/`, which is in `.gitignore`.
+**Browser:** run `npm run build`, then `python3 server/main.py`. It opens http://127.0.0.1:8765. Press Ctrl+C to stop.
+
+The local server listens on 127.0.0.1 only, so other machines can't reach it. Months are saved in `data/`, which is in `.gitignore`.
+
+## Build
+
+The page's JavaScript lives in `web/scripts/` and imports npm packages by name, for example `import Sortable from 'sortablejs'`. `npm run build` uses esbuild to bundle it, together with the packages it imports from `node_modules/`, into `web/dist/main.js`, which `index.html` loads. `web/dist/` is generated and git-ignored.
+
+- `npm run build` builds once; `npm run watch` rebuilds on every save while you work on the page.
+- `wrangler deploy` and `wrangler dev` run the build first (`build.command` in `wrangler.jsonc`), so Cloudflare builds on every deploy with no dashboard setting.
+- The Mac app runs the same build when it starts. `mac/build.sh` records where `npm` and `node` are, because apps opened from Finder don't get the Terminal's PATH; run it again if you reinstall or move Node.js.
+- To add a library: `npm install --save-dev <package>`, then import it by name.
 
 ## Deploy to Cloudflare
 
@@ -39,11 +50,10 @@ Everything fits in Cloudflare's free plan. The page files are static assets, whi
 ## Project layout
 
 ```
-web/                      the page (HTML, CSS, JavaScript modules; no build step)
+web/                      the page (HTML, CSS, JavaScript modules; bundled into web/dist/ by `npm run build`)
   index.html
   backend.json            "cloud"; the local server answers this path with "local"
   i18n/en.json, el.json   display text for every string id
-  vendor/                 third-party code copied as-is (SortableJS); see vendor/README.md
   styles/                 one stylesheet per section of the page
   scripts/
     main.js               entry point: creates ExpensesApp
