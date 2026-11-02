@@ -15,6 +15,7 @@
     "jose": "^6.0.0"
   },
   "devDependencies": {
+    "sortablejs": "1.15.7",
     "wrangler": "^4.40.0"
   }
 }
