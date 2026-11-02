@@ -1,5 +1,6 @@
 import { SPENDING_CATEGORIES } from '../config/categories.js';
-import { getElement } from '../utils/html.js';
+import { categoryName } from '../i18n/Translator.js';
+import { escapeHtml, getElement } from '../utils/html.js';
 import { parseAmount } from '../utils/money.js';
 import { defaultExpenseDate, monthDateRange } from '../utils/monthKeys.js';
 
@@ -18,7 +19,7 @@ export class QuickAddView {
     this.shownMonthKey = null;
 
     this.categorySelect.innerHTML = SPENDING_CATEGORIES
-      .map((category) => `<option value="${category.key}">${category.displayName}</option>`)
+      .map((category) => `<option value="${category.key}">${escapeHtml(categoryName(category))}</option>`)
       .join('');
 
     this.form.addEventListener('submit', (submitEvent) => {

@@ -1,5 +1,6 @@
 import { SPENDING_CATEGORIES } from '../config/categories.js';
-import { getElement } from '../utils/html.js';
+import { categoryName } from '../i18n/Translator.js';
+import { escapeHtml, getElement } from '../utils/html.js';
 import { formatEuros } from '../utils/money.js';
 
 /** One bar per category: spent compared to budget, red when over budget. */
@@ -23,7 +24,7 @@ export class BudgetBarsView {
 
     return `
       <div class="budget-bar-row">
-        <span>${category.displayName}</span>
+        <span>${escapeHtml(categoryName(category))}</span>
         <div class="budget-bar-track">
           <div class="budget-bar-fill" style="width:${fillPercentage}%;background:${fillColor}"></div>
         </div>

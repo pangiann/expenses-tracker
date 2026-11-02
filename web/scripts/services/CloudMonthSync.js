@@ -1,5 +1,6 @@
 import { MonthRecord } from '../model/MonthRecord.js';
 import { InvalidChangeError, applyMonthChange } from '../model/monthChanges.js';
+import { t } from '../i18n/Translator.js';
 import { createUniqueId } from '../utils/ids.js';
 import { SaveStatus } from './AutoSaver.js';
 import { PendingChangeStore } from './PendingChangeStore.js';
@@ -12,15 +13,12 @@ const STATUS_PATH = '/api/status';
 const RECONNECT_DELAY_MS = 2_000;
 const REFUSED_RETRY_DELAY_MS = 20_000; // when the server refuses us, retrying fast won't help
 
-/** What to tell the user when the server explains why it refused the connection. */
-const PROBLEM_MESSAGES = {
-  'access-needs-token-settings': () =>
-    'You are signed in, but the Worker can\u2019t read your sign-in yet. In Cloudflare, add the ACCESS_TEAM_DOMAIN and ACCESS_AUD secrets to the Worker.',
-  'access-not-enabled': () =>
-    'The login for this site isn\u2019t switched on. In Cloudflare, open the Worker\u2019s Access tab and protect it with Cloudflare Access.',
-  'invalid-sign-in': ({ reason }) => `Your sign-in could not be verified (${reason}). Check the ACCESS_TEAM_DOMAIN and ACCESS_AUD secrets, then reload.`,
-  'not-a-member': ({ email }) =>
-    `${email} isn\u2019t part of a household yet. In Cloudflare, add it to the HOUSEHOLD_MEMBERS secret.`,
+/** String id of the message shown when the server explains why it refused the connection. */
+const PROBLEM_STRING_IDS = {
+  'access-needs-token-settings': 'error.accessNeedsTokenSettings',
+  'access-not-enabled': 'error.accessNotEnabled',
+  'invalid-sign-in': 'error.invalidSignIn',
+  'not-a-member': 'error.notAMember',
 };
 
 /**
@@ -59,7 +57,7 @@ export class CloudMonthSync {
   }
 
   get startupErrorMessage() {
-    return 'Could not connect. Check your internet connection and reload the page.';
+    return t('error.cloudUnreachable');
   }
 
   async openMonth(monthKey) {
@@ -140,11 +138,11 @@ export class CloudMonthSync {
       const response = await fetch(STATUS_PATH, { cache: 'no-store' });
       if (response.ok) return false; // signed in and a member: the drop was a network problem
       const details = await response.json();
-      const describe = PROBLEM_MESSAGES[details.problem];
-      this.onConnectionProblem(describe ? describe(details) : 'The server refused the connection.');
+      const stringId = PROBLEM_STRING_IDS[details.problem] ?? 'error.refused';
+      this.onConnectionProblem(t(stringId, { email: details.email ?? '', reason: details.reason ?? '' }));
       return true;
     } catch {
-      this.onConnectionProblem('Could not reach the server. Check your internet connection.');
+      this.onConnectionProblem(t('error.cloudUnreachable'));
       return false;
     }
   }

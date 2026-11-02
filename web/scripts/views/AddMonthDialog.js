@@ -1,4 +1,5 @@
-import { getElement } from '../utils/html.js';
+import { t } from '../i18n/Translator.js';
+import { escapeHtml, getElement } from '../utils/html.js';
 import { buildMonthKey, monthNames, parseMonthKey } from '../utils/monthKeys.js';
 
 const EARLIEST_YEAR = 1900;
@@ -17,7 +18,7 @@ export class AddMonthDialog {
     this.errorMessage = getElement('addMonthError');
 
     this.monthSelect.innerHTML = monthNames()
-      .map((monthName, monthIndex) => `<option value="${monthIndex + 1}">${monthName}</option>`)
+      .map((monthName, monthIndex) => `<option value="${monthIndex + 1}">${escapeHtml(monthName)}</option>`)
       .join('');
 
     getElement('addMonthCancelButton').addEventListener('click', () => this.close());
@@ -25,7 +26,7 @@ export class AddMonthDialog {
       submitEvent.preventDefault();
       const year = Number.parseInt(this.yearInput.value, 10);
       if (!(year >= EARLIEST_YEAR && year <= LATEST_YEAR)) {
-        this.errorMessage.textContent = 'Enter a valid year.';
+        this.errorMessage.textContent = t('addMonth.invalidYear');
         return;
       }
       this.close();

@@ -1,5 +1,6 @@
 import { ChangeKind, InvalidChangeError, applyMonthChange } from './model/monthChanges.js';
 import { isMonthData } from './model/monthValidation.js';
+import { t, translator } from './i18n/Translator.js';
 import { createMonthSync } from './services/createMonthSync.js';
 import { createUniqueId } from './utils/ids.js';
 import { currentMonthKey, nextMonthKey, todayAsIsoDate } from './utils/monthKeys.js';
@@ -8,6 +9,7 @@ import { BackupView } from './views/BackupView.js';
 import { BudgetBarsView } from './views/BudgetBarsView.js';
 import { CategoryCardsView } from './views/CategoryCardsView.js';
 import { IncomeView } from './views/IncomeView.js';
+import { LanguageView } from './views/LanguageView.js';
 import { MonthNavigationView } from './views/MonthNavigationView.js';
 import { QuickAddView } from './views/QuickAddView.js';
 import { RecurringCostsView } from './views/RecurringCostsView.js';
@@ -20,6 +22,9 @@ import { SummaryCardsView } from './views/SummaryCardsView.js';
  *
  *   view event -> action below -> change object -> applyMonthChange() on screen
  *                                               -> sync.sendChange() to storage
+ *
+ * New items (expenses, income entries, fixed costs) get their id here, on the device,
+ * so the same change can be sent twice without creating two items.
  *
  * The sync is LocalMonthSync (Mac app, files on disk) or CloudMonthSync (Cloudflare,
  * shared live). When the stored month changes, the sync calls #showMonth().
@@ -38,6 +43,7 @@ export class ExpensesApp {
     this.monthNavigationView = new MonthNavigationView(actions);
     this.addMonthDialog = new AddMonthDialog(actions);
     this.backupView = new BackupView(actions);
+    this.languageView = new LanguageView(actions);
     this.views = [
       new QuickAddView(actions),
       new SummaryCardsView(actions),
@@ -54,20 +60,19 @@ export class ExpensesApp {
   /** Connects to storage and shows the current month, creating it if needed. */
   async start() {
     if (location.protocol === 'file:') {
-      this.monthNavigationView.showTitle('Expenses');
-      this.statusView.showError('Open the tracker through its server, not as a file.');
+      this.statusView.showError(t('error.openedAsFile'));
       return;
     }
     try {
       this.sync = await createMonthSync({
         onMonth: (monthRecord, savedMonthKeys) => this.#showMonth(monthRecord, savedMonthKeys),
         onSaveStatus: (saveStatus) => this.statusView.showSaveStatus(saveStatus),
-        onConnectionProblem: (message) => this.statusView.showErrorText(message),
+        onConnectionProblem: (message) => this.statusView.showError(message),
       });
       await this.sync.openMonth(currentMonthKey());
     } catch (error) {
       console.error(error);
-      this.statusView.showError(this.sync?.startupErrorMessage ?? 'Could not start. Reload the page.');
+      this.statusView.showError(this.sync?.startupErrorMessage ?? t('error.startFailed'));
     }
   }
 
@@ -93,13 +98,10 @@ export class ExpensesApp {
       addMonth: (monthKey) => this.sync.openMonth(monthKey), // creates it when missing
 
       // Expenses
-      addExpense: ({ categoryKey, amount, description, date }) => {
-        if (!(amount > 0)) return;
-        this.#applyChange({
-          kind: ChangeKind.ADD_EXPENSE,
-          expense: { id: createUniqueId(), categoryKey, amount, description, date },
-        });
-      },
+      addExpense: ({ categoryKey, amount, description, date }) => this.#applyChange({
+        kind: ChangeKind.ADD_EXPENSE,
+        expense: { id: createUniqueId(), categoryKey, amount, description, date },
+      }),
       removeExpense: (expenseId) => this.#applyChange({ kind: ChangeKind.REMOVE_EXPENSE, expenseId }),
       changeExpenseAmount: (expenseId, amount) =>
         this.#applyChange({ kind: ChangeKind.CHANGE_EXPENSE_AMOUNT, expenseId, amount }),
@@ -112,16 +114,16 @@ export class ExpensesApp {
       removeIncome: (incomeId) => this.#applyChange({ kind: ChangeKind.REMOVE_INCOME, incomeId }),
       changeIncomeAmount: (incomeId, amount) =>
         this.#applyChange({ kind: ChangeKind.CHANGE_INCOME_AMOUNT, incomeId, amount }),
-
-      // Budgets and expected income
-      changeBudget: (categoryKey, amount) => this.#applyChange({ kind: ChangeKind.CHANGE_BUDGET, categoryKey, amount }),
       changeExpectedIncome: (amount) => this.#applyChange({ kind: ChangeKind.CHANGE_EXPECTED_INCOME, amount }),
+
+      // Budgets
+      changeBudget: (categoryKey, amount) => this.#applyChange({ kind: ChangeKind.CHANGE_BUDGET, categoryKey, amount }),
 
       // Fixed costs and subscriptions
       addRecurringCost: (listName) => this.#applyChange({
         kind: ChangeKind.ADD_RECURRING_COST,
         listName,
-        cost: { id: createUniqueId(), name: 'New item' },
+        cost: { id: createUniqueId(), name: t('recurring.newItem') },
       }),
       removeRecurringCost: (listName, costId) =>
         this.#applyChange({ kind: ChangeKind.REMOVE_RECURRING_COST, listName, costId }),
@@ -130,9 +132,10 @@ export class ExpensesApp {
       changeRecurringCostAmount: (listName, costId, amount) =>
         this.#applyChange({ kind: ChangeKind.CHANGE_RECURRING_COST_AMOUNT, listName, costId, amount }),
 
-      // Backups
+      // Backups and language
       exportBackup: () => this.#exportBackup(),
       importBackup: (fileText) => this.#importBackup(fileText),
+      changeLanguage: (language) => this.#changeLanguage(language),
     };
   }
 
@@ -152,6 +155,13 @@ export class ExpensesApp {
   #renderAll() {
     this.monthNavigationView.render(this.currentMonth.monthKey, this.savedMonthKeys);
     for (const view of this.views) view.render(this.currentMonth);
+  }
+
+  /** Reloads the page in the new language, after saving any edit still waiting. */
+  async #changeLanguage(language) {
+    await this.sync?.flushPendingChanges();
+    translator.saveLanguage(language);
+    location.reload();
   }
 
   // ----- Backups -----
@@ -174,12 +184,13 @@ export class ExpensesApp {
       months = null;
     }
     if (!Array.isArray(months) || months.length === 0 || !months.every(isMonthData)) {
-      alert('This file is not an expenses backup.');
+      alert(t('backup.notABackup'));
       return;
     }
     const monthList = months.map((monthData) => monthData.month).sort();
-    const confirmation = `Import ${months.length} months (${monthList[0]} to ${monthList[monthList.length - 1]})?\n`
-      + 'Months in the file replace the same months here.';
+    const confirmation = t('backup.confirmImport', {
+      count: months.length, first: monthList[0], last: monthList[monthList.length - 1],
+    });
     if (!confirm(confirmation)) return;
 
     await this.sync.importMonths(months);

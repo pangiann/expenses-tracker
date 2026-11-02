@@ -1,4 +1,5 @@
 import { RecurringCostList } from '../config/categories.js';
+import { t } from '../i18n/Translator.js';
 import { escapeHtml, getElement } from '../utils/html.js';
 import { formatEuros, parseAmount } from '../utils/money.js';
 
@@ -90,11 +91,11 @@ export class RecurringCostsView {
           <input class="recurring-cost-name" value="${escapeHtml(cost.name)}" ${rowAttributes} data-field="name">
           <label class="recurring-cost-amount">€<input type="number" step="0.01" min="0" value="${cost.amount}"
                  ${rowAttributes} data-field="amount" style="width:${RecurringCostsView.#widthForValue(cost.amount)}"></label>
-          <button class="delete-button" ${rowAttributes} title="${'Remove'}">✕</button>
+          <button class="delete-button" ${rowAttributes} title="${escapeHtml(t('recurring.remove'))}">✕</button>
         </li>`;
     });
     rows.push(`<li class="recurring-cost-add-row">
-      <button class="text-button" data-add-to-list="${listName}">+ Add</button></li>`);
+      <button class="text-button" data-add-to-list="${listName}">${escapeHtml(t('recurring.add'))}</button></li>`);
     return rows.join('');
   }
 }

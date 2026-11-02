@@ -29,8 +29,4 @@ export class MonthNavigationView {
     this.previousButton.disabled = position <= 0;
     this.nextButton.disabled = position < 0 || position >= savedMonthKeys.length - 1;
   }
-
-  showTitle(text) {
-    this.titleElement.textContent = text;
-  }
 }

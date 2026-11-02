@@ -39,7 +39,7 @@ export class IncomeView {
   render(monthRecord) {
     this.monthRecord = monthRecord;
     this.totalElement.textContent = formatEuros(monthRecord.totalIncome);
-    this.listElement.innerHTML = renderEntryRows(monthRecord.incomesNewestFirst(), 'Income');
+    this.listElement.innerHTML = renderEntryRows(monthRecord.incomesNewestFirst(), 'income.untitled');
   }
 
   #handleClick(clickEvent) {

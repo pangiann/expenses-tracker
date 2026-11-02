@@ -1,4 +1,5 @@
 import { SPENDING_CATEGORIES } from '../config/categories.js';
+import { categoryName, t } from '../i18n/Translator.js';
 import { escapeHtml, getElement } from '../utils/html.js';
 import { formatEuros, parseAmount } from '../utils/money.js';
 import { defaultExpenseDate } from '../utils/monthKeys.js';
@@ -87,19 +88,21 @@ export class CategoryCardsView {
     const isOverBudget = remaining < 0;
     const progressPercentage = budget > 0 ? Math.min(spent / budget, 1) * 100 : 0;
     const progressColor = isOverBudget ? 'var(--color-negative)' : category.color;
-    const remainingText = isOverBudget ? `${formatEuros(-remaining)} over` : `${formatEuros(remaining)} left`;
+    const remainingText = isOverBudget
+      ? t('categoryCard.over', { amount: formatEuros(-remaining) })
+      : t('categoryCard.left', { amount: formatEuros(remaining) });
 
     return `
       <div class="card category-card">
         <div class="category-card-header" style="border-top-color:${category.color}">
           <div class="category-card-title">
-            <h2>${category.displayName}</h2>
+            <h2>${escapeHtml(categoryName(category))}</h2>
             <span class="category-card-spent">${formatEuros(spent)}</span>
           </div>
           <div class="category-card-budget-line">
-            <span>Budget
+            <span>${escapeHtml(t('categoryCard.budget'))}
               <span class="click-to-edit category-budget" data-category-key="${category.key}"
-                    title="Click to edit">${formatEuros(budget)}</span>
+                    title="${escapeHtml(t('common.clickToEdit'))}">${formatEuros(budget)}</span>
             </span>
             <span class="${isOverBudget ? 'is-negative' : 'is-positive'}">${escapeHtml(remainingText)}</span>
           </div>
@@ -109,9 +112,9 @@ export class CategoryCardsView {
         </div>
         <ul class="expense-list">${renderEntryRows(monthRecord.expensesInCategory(category.key))}</ul>
         <form class="category-add-form" data-category-key="${category.key}" autocomplete="off">
-          <input name="description" placeholder="Description">
+          <input name="description" placeholder="${escapeHtml(t('common.descriptionPlaceholder'))}">
           <input name="amount" type="number" step="0.01" min="0" placeholder="€" required>
-          <button type="submit" title="Add">+</button>
+          <button type="submit" title="${escapeHtml(t('common.add'))}">+</button>
         </form>
       </div>`;
   }

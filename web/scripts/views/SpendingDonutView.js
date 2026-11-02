@@ -1,5 +1,6 @@
 import { SPENDING_CATEGORIES } from '../config/categories.js';
-import { getElement } from '../utils/html.js';
+import { categoryName, t } from '../i18n/Translator.js';
+import { escapeHtml, getElement } from '../utils/html.js';
 import { formatEuros, sumAmounts } from '../utils/money.js';
 
 // Chart geometry inside the SVG's 120 x 120 viewBox.
@@ -50,11 +51,11 @@ export class SpendingDonutView {
   #renderCenterLabel(totalAmount) {
     return `
       <text x="${CHART_CENTER}" y="60" text-anchor="middle" class="spending-donut-total">${formatEuros(totalAmount)}</text>
-      <text x="${CHART_CENTER}" y="71" text-anchor="middle" class="spending-donut-caption">variable spending</text>`;
+      <text x="${CHART_CENTER}" y="71" text-anchor="middle" class="spending-donut-caption">${escapeHtml(t('charts.variableSpendingCaption'))}</text>`;
   }
 
   #renderLegend(slices, totalAmount) {
-    if (slices.length === 0) return '<li class="spending-donut-legend-empty">No expenses yet</li>';
+    if (slices.length === 0) return `<li class="spending-donut-legend-empty">${escapeHtml(t('charts.noExpensesYet'))}</li>`;
     return [...slices]
       .sort((first, second) => second.amount - first.amount)
       .map((slice) => {
@@ -62,7 +63,7 @@ export class SpendingDonutView {
         return `
           <li>
             <span class="color-dot" style="background:${slice.category.color}"></span>
-            ${slice.category.displayName}
+            ${escapeHtml(categoryName(slice.category))}
             <span class="spending-donut-legend-value">${percentage}% · ${formatEuros(slice.amount)}</span>
           </li>`;
       })

@@ -24,6 +24,7 @@
   .brand-icon { width: 22px; height: 22px; }
   .top-bar-actions { grid-area: actions; justify-content: flex-end; gap: 6px; }
   .top-bar-actions .secondary-button { padding: 5px 9px; font-size: 12px; }
+  .top-bar-actions .language-select { padding: 4px 6px; font-size: 13px !important; }
   .save-status { min-width: 0; font-size: 11px; }
   .month-navigation { grid-area: months; justify-content: space-between; gap: 8px; }
   .month-navigation h1 { font-size: 18px; min-width: 0; flex: 1; }

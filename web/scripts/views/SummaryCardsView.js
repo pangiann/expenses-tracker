@@ -1,5 +1,6 @@
+import { t } from '../i18n/Translator.js';
 import { getElement } from '../utils/html.js';
-import { formatEuros } from '../utils/money.js';
+import { formatEuros, formatPercent } from '../utils/money.js';
 import { InlineNumberEditor } from './InlineNumberEditor.js';
 
 /** Earned, Spent, Saved and Savings rate cards. Earned is the sum of the Income card's entries. */
@@ -36,7 +37,7 @@ export class SummaryCardsView {
 
     this.totalIncomeValue.textContent = formatEuros(monthRecord.totalIncome);
     this.expectedIncomeSlot.innerHTML =
-      `<span class="click-to-edit" title="Click to edit">${formatEuros(monthRecord.expectedIncome)}</span>`;
+      `<span class="click-to-edit" title="${t('common.clickToEdit')}">${formatEuros(monthRecord.expectedIncome)}</span>`;
 
     this.totalSpentValue.textContent = formatEuros(totals.totalSpent);
     this.totalSpentValue.classList.toggle('is-negative', totals.totalSpent > totals.totalBudgeted);
@@ -47,7 +48,7 @@ export class SummaryCardsView {
     this.savedValue.classList.toggle('is-negative', totals.saved < 0);
     this.expectedSavingsValue.textContent = formatEuros(totals.expectedSavings);
 
-    this.savingsRateValue.textContent = totals.savingsRate === null ? '–' : `${(totals.savingsRate * 100).toFixed(1)}%`;
+    this.savingsRateValue.textContent = totals.savingsRate === null ? '–' : formatPercent(totals.savingsRate);
     this.variableSpendingValue.textContent = formatEuros(totals.variableSpending);
   }
 }

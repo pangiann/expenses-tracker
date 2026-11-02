@@ -1,12 +1,13 @@
+import { t } from '../i18n/Translator.js';
 import { getElement } from '../utils/html.js';
 import { SaveStatus } from '../services/AutoSaver.js';
 
 const SAVE_STATUS_DISPLAY = {
-  [SaveStatus.SAVED]: { text: 'Saved ✓', cssClass: 'is-saved' },
-  [SaveStatus.UNSAVED]: { text: 'Unsaved…', cssClass: '' },
-  [SaveStatus.SAVING]: { text: 'Saving…', cssClass: '' },
-  [SaveStatus.FAILED]: { text: 'Not saved', cssClass: 'is-failed' },
-  [SaveStatus.OFFLINE]: { text: 'Offline, reconnecting…', cssClass: 'is-failed' },
+  [SaveStatus.SAVED]: { stringId: 'status.saved', cssClass: 'is-saved' },
+  [SaveStatus.UNSAVED]: { stringId: 'status.unsaved', cssClass: '' },
+  [SaveStatus.SAVING]: { stringId: 'status.saving', cssClass: '' },
+  [SaveStatus.FAILED]: { stringId: 'status.failed', cssClass: 'is-failed' },
+  [SaveStatus.OFFLINE]: { stringId: 'status.offline', cssClass: 'is-failed' },
 };
 
 /** The save status in the top bar and the red error banner under it. */
@@ -18,18 +19,12 @@ export class StatusView {
 
   showSaveStatus(saveStatus) {
     const display = SAVE_STATUS_DISPLAY[saveStatus];
-    this.saveStatusElement.textContent = display.text;
+    this.saveStatusElement.textContent = t(display.stringId);
     this.saveStatusElement.className = `save-status ${display.cssClass}`;
   }
 
-  /** @param {string} trustedHtml  fixed app text only, never user input */
-  showError(trustedHtml) {
-    this.errorBanner.innerHTML = trustedHtml;
-    this.errorBanner.hidden = false;
-  }
-
   /** @param {string | null} text  shown as plain text; null hides the banner */
-  showErrorText(text) {
+  showError(text) {
     this.errorBanner.textContent = text ?? '';
     this.errorBanner.hidden = text === null;
   }

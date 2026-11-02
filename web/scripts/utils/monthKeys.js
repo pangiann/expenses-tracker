@@ -2,6 +2,7 @@
  * A month key is the "YYYY-MM" string used as the month file name (data/2026-09.json).
  * Keys sort chronologically as plain strings.
  */
+import { monthName } from '../i18n/Translator.js';
 
 function padToTwoDigits(number) {
   return String(number).padStart(2, '0');
@@ -31,16 +32,15 @@ export function nextMonthKey(monthKey) {
   return monthNumber === 12 ? buildMonthKey(year + 1, 1) : buildMonthKey(year, monthNumber + 1);
 }
 
-/** "2026-09" -> "September 2026" */
+/** "2026-09" -> "September 2026" / "Σεπτέμβριος 2026" */
 export function formatMonthTitle(monthKey) {
   const { year, monthNumber } = parseMonthKey(monthKey);
-  return new Date(year, monthNumber - 1, 1).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+  return `${monthName(monthNumber)} ${year}`;
 }
 
-/** Month names January to December. */
+/** Month names January to December, in the page language. */
 export function monthNames() {
-  return Array.from({ length: 12 }, (_, monthIndex) =>
-    new Date(2000, monthIndex, 1).toLocaleDateString('en-GB', { month: 'long' }));
+  return Array.from({ length: 12 }, (_, monthIndex) => monthName(monthIndex + 1));
 }
 
 /** First and last day of the month as "YYYY-MM-DD". */

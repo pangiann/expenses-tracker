@@ -2,6 +2,7 @@ import { MonthRecord } from '../model/MonthRecord.js';
 import { closestSavedMonthKey } from '../model/monthValidation.js';
 import { AutoSaver } from './AutoSaver.js';
 import { MonthRepository } from './MonthRepository.js';
+import { t } from '../i18n/Translator.js';
 
 /**
  * Backend for the local Python server (server/main.py) used by the Mac app.
@@ -23,7 +24,7 @@ export class LocalMonthSync {
   }
 
   get startupErrorMessage() {
-    return 'Could not load your data. Is the server running? Start it with <code>python3 server/main.py</code>';
+    return t('error.localServerDown');
   }
 
   /** Shows a month, creating it from the closest saved month if it doesn't exist yet. */
