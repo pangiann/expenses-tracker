@@ -9,7 +9,9 @@ final class MainWindowController: NSObject, WKUIDelegate, WKNavigationDelegate, 
 
     override init() {
         let configuration = WKWebViewConfiguration()
-        configuration.websiteDataStore = .nonPersistent()  // the page keeps nothing in WebKit; data lives in data/
+        // Normal storage, so the page remembers small preferences such as the language.
+        // Expenses themselves live in data/, never in WebKit.
+        configuration.websiteDataStore = .default()
         webView = WKWebView(frame: .zero, configuration: configuration)
 
         window = NSWindow(
