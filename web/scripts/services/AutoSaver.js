@@ -23,6 +23,8 @@ export class AutoSaver {
     this.onStatusChange = onStatusChange;
     this.pendingMonthRecord = null;
     this.pendingTimer = null;
+    /** @type {Promise<void> | null} the save that is running right now */
+    this.runningSave = null;
   }
 
   get hasPendingSave() {
@@ -36,23 +38,36 @@ export class AutoSaver {
     this.onStatusChange(SaveStatus.UNSAVED);
   }
 
-  /** Saves the pending change right now, if there is one. */
+  /**
+   * Saves the pending change right now, and returns once everything is written: also a save
+   * the timer already started. (The Mac app relies on this before it stops the server.)
+   */
   async flush() {
-    if (!this.hasPendingSave) return;
-    const monthRecord = this.pendingMonthRecord;
-    this.#clearPending();
-    await this.saveNow(monthRecord);
+    if (this.hasPendingSave) {
+      const monthRecord = this.pendingMonthRecord;
+      this.#clearPending();
+      await this.saveNow(monthRecord);
+    } else if (this.runningSave) {
+      await this.runningSave;
+    }
   }
 
   async saveNow(monthRecord) {
-    this.onStatusChange(SaveStatus.SAVING);
-    try {
-      await this.repository.save(monthRecord);
-      this.onStatusChange(SaveStatus.SAVED);
-    } catch (error) {
-      console.error(error);
-      this.onStatusChange(SaveStatus.FAILED);
-    }
+    const previousSave = this.runningSave;
+    const save = (async () => {
+      await previousSave; // one save at a time, in order
+      this.onStatusChange(SaveStatus.SAVING);
+      try {
+        await this.repository.save(monthRecord);
+        this.onStatusChange(SaveStatus.SAVED);
+      } catch (error) {
+        console.error(error);
+        this.onStatusChange(SaveStatus.FAILED);
+      }
+    })();
+    this.runningSave = save;
+    await save;
+    if (this.runningSave === save) this.runningSave = null;
   }
 
   /** Used when the page is closing: no time to wait for an answer. */
