@@ -22,6 +22,7 @@
 .category-card-header { position: relative; }
 
 /* Dragging cards by their header (see CategoryDragController). */
+.is-dragging-category, .is-dragging-category * { -webkit-user-select: none; user-select: none; cursor: grabbing; }
 .category-card-header { cursor: grab; }
 .category-card-header input, .category-card-header button { cursor: auto; }
 /* The gap where the dragged card will land. */

@@ -10,6 +10,8 @@ import Sortable from '../../vendor/sortablejs/sortable.esm.js';
  * - On touch screens the card lifts after holding it for a moment, so swiping still scrolls.
  * - Near the top or bottom of the window the page scrolls by itself.
  * - The "New category" card can't move and always stays last.
+ * - Text can't be selected while dragging (WebKit, used by the Mac app, would otherwise
+ *   highlight every card the pointer passes over).
  *
  * When a drag changes the order, onMove(categoryId, beforeCategoryId) reports it: the id of the
  * category the card now sits before, or null when it is last.
@@ -49,6 +51,8 @@ export class CategoryDragController {
       scrollSpeed: 16,
       bubbleScroll: true,
 
+      onChoose: () => CategoryDragController.#setTextSelectionBlocked(true),
+      onUnchoose: () => CategoryDragController.#setTextSelectionBlocked(false),
       onStart: () => {
         this.isDragging = true;
       },
@@ -63,6 +67,12 @@ export class CategoryDragController {
         onMove(endEvent.item.dataset.categoryId, CategoryDragController.#beforeIdOf(endEvent.item));
       },
     });
+  }
+
+  /** Stops text selection on the whole page while a card is held, and clears what was selected. */
+  static #setTextSelectionBlocked(isBlocked) {
+    document.documentElement.classList.toggle('is-dragging-category', isBlocked);
+    window.getSelection()?.removeAllRanges();
   }
 
   /** The id of the category card right after this one, or null when it is the last. */
