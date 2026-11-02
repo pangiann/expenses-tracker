@@ -6,16 +6,16 @@ import { formatEuros, parseAmount } from '../utils/money.js';
  * Fixed costs and subscriptions panel. Every row's name and amount can be edited,
  * rows can be removed with ✕ and added with "+ Add".
  *
- * Each input carries data-list-name (which list) and data-position (which row),
- * so one change handler can update the right entry.
+ * Each input carries data-list-name (which list) and data-cost-id (which row), so a change
+ * reaches the right row even if someone else added or removed rows meanwhile.
  */
 export class RecurringCostsView {
   /**
    * @param {object} actions
    * @param {(listName: string) => void} actions.addRecurringCost
-   * @param {(listName: string, position: number) => void} actions.removeRecurringCost
-   * @param {(listName: string, position: number, name: string) => void} actions.renameRecurringCost
-   * @param {(listName: string, position: number, amount: number) => void} actions.changeRecurringCostAmount
+   * @param {(listName: string, costId: string) => void} actions.removeRecurringCost
+   * @param {(listName: string, costId: string, name: string) => void} actions.renameRecurringCost
+   * @param {(listName: string, costId: string, amount: number) => void} actions.changeRecurringCostAmount
    */
   constructor(actions) {
     this.actions = actions;
@@ -41,19 +41,19 @@ export class RecurringCostsView {
   // ----- Event handling -----
 
   #handleChange(changedInput) {
-    const { listName, position, field } = changedInput.dataset;
+    const { listName, costId, field } = changedInput.dataset;
     if (!listName) return;
     if (field === 'name') {
-      this.actions.renameRecurringCost(listName, Number(position), changedInput.value);
+      this.actions.renameRecurringCost(listName, costId, changedInput.value);
     } else {
-      this.actions.changeRecurringCostAmount(listName, Number(position), parseAmount(changedInput.value) ?? 0);
+      this.actions.changeRecurringCostAmount(listName, costId, parseAmount(changedInput.value) ?? 0);
     }
   }
 
   #handleClick(clickEvent) {
     const deleteButton = clickEvent.target.closest('.delete-button');
     if (deleteButton) {
-      this.actions.removeRecurringCost(deleteButton.dataset.listName, Number(deleteButton.dataset.position));
+      this.actions.removeRecurringCost(deleteButton.dataset.listName, deleteButton.dataset.costId);
       return;
     }
 
@@ -83,16 +83,18 @@ export class RecurringCostsView {
   // ----- HTML -----
 
   #renderList(listName, costs) {
-    const rows = costs.map((cost, position) => `
-      <li class="recurring-cost-row">
-        <input class="recurring-cost-name" value="${escapeHtml(cost.name)}"
-               data-list-name="${listName}" data-position="${position}" data-field="name">
-        <label class="recurring-cost-amount">€<input type="number" step="0.01" min="0" value="${cost.amount}"
-               data-list-name="${listName}" data-position="${position}" data-field="amount"
-               style="width:${RecurringCostsView.#widthForValue(cost.amount)}"></label>
-        <button class="delete-button" data-list-name="${listName}" data-position="${position}" title="Remove">✕</button>
-      </li>`);
-    rows.push(`<li class="recurring-cost-add-row"><button class="text-button" data-add-to-list="${listName}">+ Add</button></li>`);
+    const rows = costs.map((cost) => {
+      const rowAttributes = `data-list-name="${listName}" data-cost-id="${escapeHtml(cost.id)}"`;
+      return `
+        <li class="recurring-cost-row">
+          <input class="recurring-cost-name" value="${escapeHtml(cost.name)}" ${rowAttributes} data-field="name">
+          <label class="recurring-cost-amount">€<input type="number" step="0.01" min="0" value="${cost.amount}"
+                 ${rowAttributes} data-field="amount" style="width:${RecurringCostsView.#widthForValue(cost.amount)}"></label>
+          <button class="delete-button" ${rowAttributes} title="${'Remove'}">✕</button>
+        </li>`;
+    });
+    rows.push(`<li class="recurring-cost-add-row">
+      <button class="text-button" data-add-to-list="${listName}">+ Add</button></li>`);
     return rows.join('');
   }
 }

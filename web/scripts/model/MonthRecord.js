@@ -15,8 +15,8 @@ import { roundToCents, sumAmounts } from '../utils/money.js';
  *     "budgets": { "dinner": 100, "lunch": 50, ... },
  *     "expenses": [ { "id": "...", "date": "2026-09-14", "category": "lunch",
  *                     "description": "coffee", "amount": 5.5 } ],
- *     "fixed": [ { "name": "Rent", "amount": 900 } ],
- *     "subscriptions": [ { "name": "Music", "amount": 10 } ]
+ *     "fixed": [ { "id": "...", "name": "Rent", "amount": 900 } ],
+ *     "subscriptions": [ { "id": "...", "name": "Music", "amount": 10 } ]
  *   }
  */
 export class MonthRecord {
@@ -27,8 +27,9 @@ export class MonthRecord {
     this.budgets = { ...MonthRecord.#zeroBudgets(), ...monthData.budgets };
     this.expenses = (monthData.expenses ?? []).map((expense) => ({ ...expense }));
     this.recurringCosts = {
-      [RecurringCostList.FIXED_COSTS]: (monthData.fixed ?? []).map((cost) => ({ ...cost })),
-      [RecurringCostList.SUBSCRIPTIONS]: (monthData.subscriptions ?? []).map((cost) => ({ ...cost })),
+      [RecurringCostList.FIXED_COSTS]: MonthRecord.#readRecurringCosts(monthData.fixed, RecurringCostList.FIXED_COSTS),
+      [RecurringCostList.SUBSCRIPTIONS]:
+        MonthRecord.#readRecurringCosts(monthData.subscriptions, RecurringCostList.SUBSCRIPTIONS),
     };
     // Fields this version doesn't know about (for example "importedFrom") are kept as they are.
     this.extraFields = MonthRecord.#unknownFields(monthData);
@@ -120,21 +121,29 @@ export class MonthRecord {
     return this.recurringCosts[listName];
   }
 
-  addRecurringCost(listName) {
-    this.recurringCosts[listName].push({ name: 'New item', amount: 0 });
+  findRecurringCost(listName, costId) {
+    return this.recurringCosts[listName].find((cost) => cost.id === costId);
   }
 
-  removeRecurringCost(listName, position) {
-    this.recurringCosts[listName].splice(position, 1);
+  /** Adding a row whose id already exists does nothing, so a resent change can't add two rows. */
+  addRecurringCost(listName, { id, name }) {
+    if (this.findRecurringCost(listName, id)) return;
+    this.recurringCosts[listName].push({ id, name: name.trim(), amount: 0 });
   }
 
-  renameRecurringCost(listName, position, newName) {
-    const trimmedName = newName.trim();
-    if (trimmedName) this.recurringCosts[listName][position].name = trimmedName;
+  removeRecurringCost(listName, costId) {
+    this.recurringCosts[listName] = this.recurringCosts[listName].filter((cost) => cost.id !== costId);
   }
 
-  setRecurringCostAmount(listName, position, amount) {
-    this.recurringCosts[listName][position].amount = amount >= 0 ? roundToCents(amount) : 0;
+  /** Changing a row someone else removed does nothing. */
+  renameRecurringCost(listName, costId, newName) {
+    const cost = this.findRecurringCost(listName, costId);
+    if (cost && newName.trim()) cost.name = newName.trim();
+  }
+
+  setRecurringCostAmount(listName, costId, amount) {
+    const cost = this.findRecurringCost(listName, costId);
+    if (cost) cost.amount = amount >= 0 ? roundToCents(amount) : 0;
   }
 
   // ----- Totals (always calculated, never stored) -----
@@ -174,6 +183,14 @@ export class MonthRecord {
   }
 
   // ----- Private helpers -----
+
+  /**
+   * Older files have fixed costs without ids. Each gets an id from its list and position,
+   * for example "fixed-1": the same on every device, and saved with the month from then on.
+   */
+  static #readRecurringCosts(costs, listName) {
+    return (costs ?? []).map((cost, position) => ({ ...cost, id: cost.id ?? `${listName}-${position + 1}` }));
+  }
 
   static #zeroBudgets() {
     return Object.fromEntries(SPENDING_CATEGORIES.map((category) => [category.key, 0]));

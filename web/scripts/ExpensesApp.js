@@ -108,13 +108,17 @@ export class ExpensesApp {
       changeExpectedIncome: (amount) => this.#applyChange({ kind: ChangeKind.CHANGE_EXPECTED_INCOME, amount }),
 
       // Fixed costs and subscriptions
-      addRecurringCost: (listName) => this.#applyChange({ kind: ChangeKind.ADD_RECURRING_COST, listName }),
-      removeRecurringCost: (listName, position) =>
-        this.#applyChange({ kind: ChangeKind.REMOVE_RECURRING_COST, listName, position }),
-      renameRecurringCost: (listName, position, name) =>
-        this.#applyChange({ kind: ChangeKind.RENAME_RECURRING_COST, listName, position, name }),
-      changeRecurringCostAmount: (listName, position, amount) =>
-        this.#applyChange({ kind: ChangeKind.CHANGE_RECURRING_COST_AMOUNT, listName, position, amount }),
+      addRecurringCost: (listName) => this.#applyChange({
+        kind: ChangeKind.ADD_RECURRING_COST,
+        listName,
+        cost: { id: createUniqueId(), name: 'New item' },
+      }),
+      removeRecurringCost: (listName, costId) =>
+        this.#applyChange({ kind: ChangeKind.REMOVE_RECURRING_COST, listName, costId }),
+      renameRecurringCost: (listName, costId, name) =>
+        this.#applyChange({ kind: ChangeKind.RENAME_RECURRING_COST, listName, costId, name }),
+      changeRecurringCostAmount: (listName, costId, amount) =>
+        this.#applyChange({ kind: ChangeKind.CHANGE_RECURRING_COST_AMOUNT, listName, costId, amount }),
 
       // Backups
       exportBackup: () => this.#exportBackup(),

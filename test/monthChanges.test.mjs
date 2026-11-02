@@ -10,7 +10,7 @@ const novemberWithRent = () => new MonthRecord({
   income: { expected: 4000, actual: 0 },
   budgets: { dinner: 130 },
   expenses: [],
-  fixed: [{ name: 'Rent', amount: 1000 }],
+  fixed: [{ id: 'rent', name: 'Rent', amount: 1000 }, { id: 'internet', name: 'Internet', amount: 30 }],
   subscriptions: [],
 });
 
@@ -36,8 +36,8 @@ test('budgets, income and recurring costs change through the same path', () => {
   const month = novemberWithRent();
   applyMonthChange(month, { kind: ChangeKind.CHANGE_BUDGET, categoryKey: 'travel', amount: 200 });
   applyMonthChange(month, { kind: ChangeKind.CHANGE_ACTUAL_INCOME, amount: 3000 });
-  applyMonthChange(month, { kind: ChangeKind.RENAME_RECURRING_COST, listName: 'fixed', position: 0, name: 'Flat' });
-  applyMonthChange(month, { kind: ChangeKind.ADD_RECURRING_COST, listName: 'subscriptions' });
+  applyMonthChange(month, { kind: ChangeKind.RENAME_RECURRING_COST, listName: 'fixed', costId: 'rent', name: 'Flat' });
+  applyMonthChange(month, { kind: ChangeKind.ADD_RECURRING_COST, listName: 'subscriptions', cost: { id: 'gym', name: 'Gym' } });
   assert.equal(month.budgetFor('travel'), 200);
   assert.equal(month.income.actual, 3000);
   assert.equal(month.recurringCostsIn('fixed')[0].name, 'Flat');
@@ -54,13 +54,37 @@ test('malformed changes from the network are refused', () => {
     { kind: ChangeKind.ADD_EXPENSE, expense: { ...coffee, date: '2026-12-01' } }, // not in November
     { kind: ChangeKind.ADD_EXPENSE, expense: { ...coffee, description: 'x'.repeat(500) } },
     { kind: ChangeKind.CHANGE_BUDGET, categoryKey: 'lunch', amount: Number.POSITIVE_INFINITY },
-    { kind: ChangeKind.REMOVE_RECURRING_COST, listName: 'fixed', position: 5 },
-    { kind: ChangeKind.REMOVE_RECURRING_COST, listName: '__proto__', position: 0 },
+    { kind: ChangeKind.ADD_RECURRING_COST, listName: 'fixed', cost: { id: 'x', name: '   ' } },
+    { kind: ChangeKind.REMOVE_RECURRING_COST, listName: '__proto__', costId: 'rent' },
   ];
   for (const change of refusedChanges) {
     assert.throws(() => applyMonthChange(month, change), InvalidChangeError, JSON.stringify(change));
   }
   assert.equal(month.expenses.length, 0);
+});
+
+test('fixed costs are found by id, so edits hit the right row after others are removed', () => {
+  const month = novemberWithRent();
+  applyMonthChange(month, { kind: ChangeKind.REMOVE_RECURRING_COST, listName: 'fixed', costId: 'rent' });
+  applyMonthChange(month, { kind: ChangeKind.RENAME_RECURRING_COST, listName: 'fixed', costId: 'internet', name: 'Fibre' });
+  applyMonthChange(month, { kind: ChangeKind.CHANGE_RECURRING_COST_AMOUNT, listName: 'fixed', costId: 'internet', amount: 35 });
+  assert.deepEqual(month.recurringCostsIn('fixed'), [{ id: 'internet', name: 'Fibre', amount: 35 }]);
+  // Editing a row someone else removed does nothing instead of failing.
+  applyMonthChange(month, { kind: ChangeKind.RENAME_RECURRING_COST, listName: 'fixed', costId: 'rent', name: 'Flat' });
+  assert.equal(month.recurringCostsIn('fixed').length, 1);
+});
+
+test('adding the same fixed cost twice keeps one row', () => {
+  const month = novemberWithRent();
+  const addGym = { kind: ChangeKind.ADD_RECURRING_COST, listName: 'subscriptions', cost: { id: 'gym', name: 'Gym' } };
+  applyMonthChange(month, addGym);
+  applyMonthChange(month, addGym);
+  assert.equal(month.recurringCostsIn('subscriptions').length, 1);
+});
+
+test('older fixed costs without ids get the same ids on every device', () => {
+  const oldFile = { month: '2026-08', expenses: [], fixed: [{ name: 'Rent', amount: 880 }, { name: 'Internet', amount: 30 }] };
+  assert.deepEqual(new MonthRecord(oldFile).recurringCostsIn('fixed').map((cost) => cost.id), ['fixed-1', 'fixed-2']);
 });
 
 test('a new month copies budgets and recurring costs, not expenses or earned income', () => {

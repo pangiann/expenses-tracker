@@ -9,6 +9,9 @@ import { MonthRecord } from './MonthRecord.js';
  * the same object to the server, which applies it to the stored month. Both sides run
  * applyMonthChange(), so they always agree on the result.
  *
+ * Changes name their item by id, never by position, so a change still hits the right item
+ * after someone else added or removed others.
+ *
  * Changes arrive from the network, so applyMonthChange() checks every field first.
  */
 export const ChangeKind = Object.freeze({
@@ -67,26 +70,22 @@ export function applyMonthChange(monthRecord, change) {
     case ChangeKind.CHANGE_EXPECTED_INCOME:
       monthRecord.setExpectedIncome(requireAmount(change.amount));
       return;
-    case ChangeKind.ADD_RECURRING_COST:
-      monthRecord.addRecurringCost(requireListName(change.listName));
-      return;
-    case ChangeKind.REMOVE_RECURRING_COST: {
-      const listName = requireListName(change.listName);
-      monthRecord.removeRecurringCost(listName, requirePosition(monthRecord, listName, change.position));
+    case ChangeKind.ADD_RECURRING_COST: {
+      const { id, name } = change.cost ?? {};
+      monthRecord.addRecurringCost(requireListName(change.listName), { id: requireId(id), name: requireText(name) });
       return;
     }
-    case ChangeKind.RENAME_RECURRING_COST: {
-      const listName = requireListName(change.listName);
+    case ChangeKind.REMOVE_RECURRING_COST:
+      monthRecord.removeRecurringCost(requireListName(change.listName), requireId(change.costId));
+      return;
+    case ChangeKind.RENAME_RECURRING_COST:
       monthRecord.renameRecurringCost(
-        listName, requirePosition(monthRecord, listName, change.position), requireText(change.name));
+        requireListName(change.listName), requireId(change.costId), requireText(change.name));
       return;
-    }
-    case ChangeKind.CHANGE_RECURRING_COST_AMOUNT: {
-      const listName = requireListName(change.listName);
+    case ChangeKind.CHANGE_RECURRING_COST_AMOUNT:
       monthRecord.setRecurringCostAmount(
-        listName, requirePosition(monthRecord, listName, change.position), requireAmount(change.amount));
+        requireListName(change.listName), requireId(change.costId), requireAmount(change.amount));
       return;
-    }
     default:
       throw new InvalidChangeError(`Unknown change kind: ${change?.kind}`);
   }
@@ -122,14 +121,6 @@ function requireCategory(value) {
 
 function requireListName(value) {
   if (!RECURRING_LIST_NAMES.has(value)) throw new InvalidChangeError(`Unknown list: ${value}`);
-  return value;
-}
-
-function requirePosition(monthRecord, listName, value) {
-  const listLength = monthRecord.recurringCostsIn(listName).length;
-  if (!Number.isInteger(value) || value < 0 || value >= listLength) {
-    throw new InvalidChangeError(`Invalid position: ${value}`);
-  }
   return value;
 }
 
