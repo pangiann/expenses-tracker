@@ -58,6 +58,7 @@
 
   "categories.newTitle": "Νέα κατηγορία",
   "categories.remove": "Αφαίρεση κατηγορίας",
+  "categories.confirmRemove": "Να αφαιρεθεί η κατηγορία «{name}» από αυτόν τον μήνα;",
   "categories.cannotRemoveHasExpenses": "Αυτή η κατηγορία έχει έξοδα. Διαγράψτε τα πρώτα για να την αφαιρέσετε.",
   "categories.cannotRemoveLast": "Χρειάζεστε τουλάχιστον μία κατηγορία.",
   "categories.duplicateName": "Υπάρχει ήδη κατηγορία με αυτό το όνομα.",

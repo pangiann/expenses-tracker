@@ -79,8 +79,12 @@ export class CategoryCardsView {
       const categoryId = removeCategoryButton.dataset.categoryId;
       const blocker = this.monthRecord.categoryRemovalBlocker(categoryId);
       // Touch screens can't show the hover explanation, so a tap on a greyed-out ✕ shows it.
-      if (blocker) alert(t(REMOVAL_BLOCKER_STRING_IDS[blocker]));
-      else this.actions.removeCategory(categoryId);
+      if (blocker) {
+        alert(t(REMOVAL_BLOCKER_STRING_IDS[blocker]));
+        return;
+      }
+      const name = categoryName(this.monthRecord.findCategory(categoryId));
+      if (confirm(t('categories.confirmRemove', { name }))) this.actions.removeCategory(categoryId);
       return;
     }
 
