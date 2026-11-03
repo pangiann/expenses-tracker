@@ -4,8 +4,80 @@ import {
   DEFAULT_FIXED_COST_NAMES,
   MAX_CATEGORIES_PER_MONTH,
   RecurringCostList,
+  type Category,
+  type RecurringCostListName,
 } from './categories.ts';
 import { roundToCents, sumAmounts } from './amounts.ts';
+
+export interface Expense {
+  id: string;
+  /** "YYYY-MM-DD"; missing on some expenses imported from the old spreadsheet */
+  date?: string | null;
+  /** the category's id */
+  category: string;
+  description: string;
+  amount: number;
+}
+
+export interface IncomeEntry {
+  id: string;
+  date?: string | null;
+  description: string;
+  amount: number;
+}
+
+/** A fixed cost or a subscription. */
+export interface RecurringCost {
+  id: string;
+  name: string;
+  amount: number;
+}
+
+/** A month as saved: what toJSON() returns and what the Worker stores. */
+export interface MonthData {
+  month: string;
+  income: { expected: number; actual: number; entries: IncomeEntry[] };
+  categories: Category[];
+  budgets: Record<string, number>;
+  expenses: Expense[];
+  fixed: RecurringCost[];
+  subscriptions: RecurringCost[];
+  /** Fields this version doesn't know about are kept as they are. */
+  [extraField: string]: unknown;
+}
+
+/**
+ * A month as it may arrive from an older file or an import: everything except the month key
+ * is optional, income may be a single number, and fixed costs may lack ids.
+ */
+export interface StoredMonthData {
+  month: string;
+  income?: { expected?: number; actual?: number; entries?: IncomeEntry[] };
+  categories?: Category[];
+  budgets?: Record<string, number>;
+  expenses?: Expense[];
+  fixed?: StoredRecurringCost[];
+  subscriptions?: StoredRecurringCost[];
+  [extraField: string]: unknown;
+}
+
+type StoredRecurringCost = Omit<RecurringCost, 'id'> & { id?: string };
+
+export interface MonthTotals {
+  variableSpending: number;
+  recurringCostsTotal: number;
+  totalSpent: number;
+  totalBudgeted: number;
+  saved: number;
+  expectedSavings: number;
+  /** saved / income, or null without income */
+  savingsRate: number | null;
+}
+
+/** Why a category can't be removed. */
+export type CategoryRemovalBlocker = 'has-expenses' | 'last-category';
+
+const KNOWN_FIELDS = new Set(['month', 'income', 'categories', 'budgets', 'expenses', 'fixed', 'subscriptions']);
 
 /**
  * Everything recorded for one month: income entries, spending categories with their
@@ -35,8 +107,18 @@ import { roundToCents, sumAmounts } from './amounts.ts';
  * that no longer exists does nothing, so applying the same change twice is harmless.
  */
 export class MonthRecord {
-  /** @param {object} monthData  the parsed contents of a month file */
-  constructor(monthData) {
+  readonly monthKey: string;
+  expectedIncome: number;
+  incomes: IncomeEntry[];
+  categories: Category[];
+  budgets: Record<string, number>;
+  expenses: Expense[];
+  recurringCosts: Record<RecurringCostListName, RecurringCost[]>;
+  /** Fields this version doesn't know about (for example "importedFrom"), kept as they are. */
+  private readonly extraFields: Record<string, unknown>;
+
+  /** @param monthData  the parsed contents of a month file */
+  constructor(monthData: StoredMonthData) {
     this.monthKey = monthData.month;
     this.expectedIncome = monthData.income?.expected ?? 0;
     this.incomes = MonthRecord.#readIncomeEntries(monthData);
@@ -50,12 +132,11 @@ export class MonthRecord {
         RecurringCostList.SUBSCRIPTIONS,
       ),
     };
-    // Fields this version doesn't know about (for example "importedFrom") are kept as they are.
     this.extraFields = MonthRecord.#unknownFields(monthData);
   }
 
   /** A month for a brand-new user: no budgets, no expenses. */
-  static createEmpty(monthKey) {
+  static createEmpty(monthKey: string): MonthRecord {
     return new MonthRecord({
       month: monthKey,
       fixed: DEFAULT_FIXED_COST_NAMES.map((name) => ({ name, amount: 0 })),
@@ -63,7 +144,7 @@ export class MonthRecord {
   }
 
   /** A new month that keeps the template's categories, budgets, expected income and recurring costs. */
-  static createFromTemplate(templateRecord, monthKey) {
+  static createFromTemplate(templateRecord: MonthRecord, monthKey: string): MonthRecord {
     const templateData = templateRecord.toJSON();
     return new MonthRecord({
       month: monthKey,
@@ -77,7 +158,19 @@ export class MonthRecord {
 
   // ----- Expenses -----
 
-  addExpense({ id, categoryId, amount, description, date }) {
+  addExpense({
+    id,
+    categoryId,
+    amount,
+    description,
+    date,
+  }: {
+    id: string;
+    categoryId: string;
+    amount: number;
+    description: string;
+    date: string;
+  }): void {
     if (!(amount > 0) || this.findExpense(id)) return;
     this.expenses.push({
       id,
@@ -88,71 +181,81 @@ export class MonthRecord {
     });
   }
 
-  removeExpense(expenseId) {
+  removeExpense(expenseId: string): void {
     this.expenses = this.expenses.filter((expense) => expense.id !== expenseId);
   }
 
-  findExpense(expenseId) {
+  findExpense(expenseId: string): Expense | undefined {
     return this.expenses.find((expense) => expense.id === expenseId);
   }
 
-  updateExpenseAmount(expenseId, newAmount) {
+  updateExpenseAmount(expenseId: string, newAmount: number): void {
     const expense = this.findExpense(expenseId);
     if (expense && newAmount > 0) expense.amount = roundToCents(newAmount);
   }
 
   /** Expenses in one category, newest first; undated (imported) expenses come last. */
-  expensesInCategory(categoryId) {
+  expensesInCategory(categoryId: string): Expense[] {
     return MonthRecord.#newestFirst(this.expenses.filter((expense) => expense.category === categoryId));
   }
 
-  spentInCategory(categoryId) {
+  spentInCategory(categoryId: string): number {
     return sumAmounts(this.expensesInCategory(categoryId).map((expense) => expense.amount));
   }
 
   // ----- Income -----
 
-  addIncome({ id, amount, description, date }) {
+  addIncome({
+    id,
+    amount,
+    description,
+    date,
+  }: {
+    id: string;
+    amount: number;
+    description: string;
+    date: string;
+  }): void {
     if (!(amount > 0) || this.findIncome(id)) return;
     this.incomes.push({ id, date, description: description.trim(), amount: roundToCents(amount) });
   }
 
-  removeIncome(incomeId) {
+  removeIncome(incomeId: string): void {
     this.incomes = this.incomes.filter((income) => income.id !== incomeId);
   }
 
-  findIncome(incomeId) {
+  findIncome(incomeId: string): IncomeEntry | undefined {
     return this.incomes.find((income) => income.id === incomeId);
   }
 
-  updateIncomeAmount(incomeId, newAmount) {
+  updateIncomeAmount(incomeId: string, newAmount: number): void {
     const income = this.findIncome(incomeId);
     if (income && newAmount > 0) income.amount = roundToCents(newAmount);
   }
 
-  incomesNewestFirst() {
+  incomesNewestFirst(): IncomeEntry[] {
     return MonthRecord.#newestFirst(this.incomes);
   }
 
-  get totalIncome() {
+  get totalIncome(): number {
     return roundToCents(sumAmounts(this.incomes.map((income) => income.amount)));
   }
 
-  setExpectedIncome(amount) {
+  setExpectedIncome(amount: number): void {
     if (amount >= 0) this.expectedIncome = roundToCents(amount);
   }
 
   // ----- Categories and budgets -----
 
-  findCategory(categoryId) {
+  findCategory(categoryId: string): Category | undefined {
     return this.categories.find((category) => category.id === categoryId);
   }
 
   /**
    * True when another category someone named already has this name, ignoring capitals and spaces.
-   * @param {string} [exceptCategoryId]  the category being renamed, which may keep its own name
+   * @param exceptCategoryId  the category being renamed, which may keep its own name
    */
-  hasCategoryNamed(name, exceptCategoryId) {
+  hasCategoryNamed(name: string, exceptCategoryId?: string): boolean {
     const wantedName = MonthRecord.normalizeCategoryName(name);
     return this.categories.some(
       (category) =>
@@ -167,7 +270,7 @@ export class MonthRecord {
    * name, so it shows the typed name in every language. Renaming a category someone else
    * just removed does nothing.
    */
-  renameCategory(categoryId, newName) {
+  renameCategory(categoryId: string, newName: string): void {
     const category = this.findCategory(categoryId);
     if (!category) return;
     category.name = newName.trim();
@@ -175,7 +278,7 @@ export class MonthRecord {
   }
 
   /** "  Kids " and "KIDS" count as the same name. */
-  static normalizeCategoryName(name) {
+  static normalizeCategoryName(name: string): string {
     return name.trim().toLocaleLowerCase();
   }
 
@@ -185,22 +288,22 @@ export class MonthRecord {
    * If two people add a category at the same moment, both may pick the same colour; the
    * second one then gets the next free colour instead.
    */
-  addCategory({ id, name, color }) {
+  addCategory({ id, name, color }: { id: string; name: string; color: string }): void {
     if (this.findCategory(id) || this.categories.length >= MAX_CATEGORIES_PER_MONTH) return;
     const isColorTaken = this.categories.some((category) => category.color.toLowerCase() === color.toLowerCase());
     this.categories.push({ id, name: name.trim(), color: isColorTaken ? this.pickCategoryColor() : color });
     this.budgets[id] ??= 0;
   }
 
-  /** Why a category can't be removed: 'has-expenses', 'last-category', or null when it can. */
-  categoryRemovalBlocker(categoryId) {
+  /** Why a category can't be removed, or null when it can. */
+  categoryRemovalBlocker(categoryId: string): CategoryRemovalBlocker | null {
     if (this.expenses.some((expense) => expense.category === categoryId)) return 'has-expenses';
     if (this.categories.length <= 1) return 'last-category';
     return null;
   }
 
   /** Removes an empty category and its budget. Removing one that is already gone does nothing. */
-  removeCategory(categoryId) {
+  removeCategory(categoryId: string): void {
     this.categories = this.categories.filter((category) => category.id !== categoryId);
     delete this.budgets[categoryId];
   }
@@ -210,7 +313,7 @@ export class MonthRecord {
    * or no longer exists. Saying "before X" instead of "to position 3" keeps the intended order
    * when someone else moves, adds or removes categories at the same moment.
    */
-  moveCategory(categoryId, beforeCategoryId) {
+  moveCategory(categoryId: string, beforeCategoryId: string | null): void {
     const movedCategory = this.findCategory(categoryId);
     if (!movedCategory || categoryId === beforeCategoryId) return;
     const remainingCategories = this.categories.filter((category) => category.id !== categoryId);
@@ -220,55 +323,55 @@ export class MonthRecord {
   }
 
   /** The colour for a new category: the first palette colour this month doesn't use yet. */
-  pickCategoryColor() {
+  pickCategoryColor(): string {
     const usedColors = new Set(this.categories.map((category) => category.color.toLowerCase()));
     return (
       CATEGORY_COLOR_PALETTE.find((color) => !usedColors.has(color)) ??
-      CATEGORY_COLOR_PALETTE[this.categories.length % CATEGORY_COLOR_PALETTE.length]
+      // The palette is never empty, so this index always exists.
+      CATEGORY_COLOR_PALETTE[this.categories.length % CATEGORY_COLOR_PALETTE.length]!
     );
   }
 
-  budgetFor(categoryId) {
+  budgetFor(categoryId: string): number {
     return this.budgets[categoryId] ?? 0;
   }
 
-  setBudget(categoryId, amount) {
+  setBudget(categoryId: string, amount: number): void {
     if (amount >= 0) this.budgets[categoryId] = roundToCents(amount);
   }
 
   // ----- Fixed costs and subscriptions -----
 
-  /** @param {string} listName  one of RecurringCostList */
-  recurringCostsIn(listName) {
+  recurringCostsIn(listName: RecurringCostListName): RecurringCost[] {
     return this.recurringCosts[listName];
   }
 
-  findRecurringCost(listName, costId) {
+  findRecurringCost(listName: RecurringCostListName, costId: string): RecurringCost | undefined {
     return this.recurringCosts[listName].find((cost) => cost.id === costId);
   }
 
-  addRecurringCost(listName, { id, name }) {
+  addRecurringCost(listName: RecurringCostListName, { id, name }: { id: string; name: string }): void {
     if (this.findRecurringCost(listName, id)) return;
     this.recurringCosts[listName].push({ id, name: name.trim(), amount: 0 });
   }
 
-  removeRecurringCost(listName, costId) {
+  removeRecurringCost(listName: RecurringCostListName, costId: string): void {
     this.recurringCosts[listName] = this.recurringCosts[listName].filter((cost) => cost.id !== costId);
   }
 
-  renameRecurringCost(listName, costId, newName) {
+  renameRecurringCost(listName: RecurringCostListName, costId: string, newName: string): void {
     const cost = this.findRecurringCost(listName, costId);
     if (cost && newName.trim()) cost.name = newName.trim();
   }
 
-  setRecurringCostAmount(listName, costId, amount) {
+  setRecurringCostAmount(listName: RecurringCostListName, costId: string, amount: number): void {
     const cost = this.findRecurringCost(listName, costId);
     if (cost) cost.amount = amount >= 0 ? roundToCents(amount) : 0;
   }
 
   // ----- Totals (always calculated, never stored) -----
 
-  calculateTotals() {
+  calculateTotals(): MonthTotals {
     const variableSpending = sumAmounts(this.expenses.map((expense) => expense.amount));
     const recurringCostsTotal = sumAmounts(
       Object.values(this.recurringCosts)
@@ -294,7 +397,7 @@ export class MonthRecord {
   // ----- Saving -----
 
   /** The month in file format; JSON.stringify calls this automatically. */
-  toJSON() {
+  toJSON(): MonthData {
     return {
       ...this.extraFields,
       month: this.monthKey,
@@ -318,10 +421,10 @@ export class MonthRecord {
    * entry. Its id is derived from the month, so the browser and the server turn the same file
    * into the same entry and can both find it later.
    */
-  static #readIncomeEntries(monthData) {
+  static #readIncomeEntries(monthData: StoredMonthData): IncomeEntry[] {
     const income = monthData.income ?? {};
     if (Array.isArray(income.entries)) return income.entries.map((entry) => ({ ...entry }));
-    if (income.actual > 0) {
+    if (income.actual !== undefined && income.actual > 0) {
       return [{ id: `income-${monthData.month}-1`, date: null, description: '', amount: income.actual }];
     }
     return [];
@@ -331,26 +434,28 @@ export class MonthRecord {
    * Older files have fixed costs without ids. Each gets an id from its list and position,
    * for example "fixed-1": the same on every device, and saved with the month from then on.
    */
-  static #readRecurringCosts(costs, listName) {
+  static #readRecurringCosts(
+    costs: StoredRecurringCost[] | undefined,
+    listName: RecurringCostListName,
+  ): RecurringCost[] {
     return (costs ?? []).map((cost, position) => ({ ...cost, id: cost.id ?? `${listName}-${position + 1}` }));
   }
 
-  static #newestFirst(items) {
+  static #newestFirst<Item extends { date?: string | null }>(items: Item[]): Item[] {
     return [...items].sort((first, second) => (second.date ?? '').localeCompare(first.date ?? ''));
   }
 
   /** Older files have no category list: they used the default categories. */
-  static #readCategories(monthData) {
+  static #readCategories(monthData: StoredMonthData): Category[] {
     const categories = Array.isArray(monthData.categories) ? monthData.categories : DEFAULT_CATEGORIES;
     return categories.map((category) => ({ ...category }));
   }
 
-  static #zeroBudgets(categories) {
+  static #zeroBudgets(categories: Category[]): Record<string, number> {
     return Object.fromEntries(categories.map((category) => [category.id, 0]));
   }
 
-  static #unknownFields(monthData) {
-    const knownFields = new Set(['month', 'income', 'categories', 'budgets', 'expenses', 'fixed', 'subscriptions']);
-    return Object.fromEntries(Object.entries(monthData).filter(([fieldName]) => !knownFields.has(fieldName)));
+  static #unknownFields(monthData: StoredMonthData): Record<string, unknown> {
+    return Object.fromEntries(Object.entries(monthData).filter(([fieldName]) => !KNOWN_FIELDS.has(fieldName)));
   }
 }

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'vitest';
 
-import { MonthRecord } from '../shared/month/month-record.js';
+import { MonthRecord } from '../shared/month/month-record.ts';
 import { ChangeKind, InvalidChangeError, applyMonthChange } from '../shared/month/month-changes.js';
 import { closestSavedMonthKey, isMonthData } from '../shared/month/month-validation.ts';
 

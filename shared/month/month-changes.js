@@ -44,7 +44,7 @@ const RECURRING_LIST_NAMES = new Set(Object.values(RecurringCostList));
 
 /**
  * Applies one change to a month.
- * @param {import('./month-record.js').MonthRecord} monthRecord
+ * @param {import('./month-record.ts').MonthRecord} monthRecord
  * @param {object} change
  * @throws {InvalidChangeError} when the change is malformed
  */

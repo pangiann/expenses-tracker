@@ -34,7 +34,7 @@ export class ExpensesApp {
     this.statusView = new StatusView();
     this.sync = null;
 
-    /** @type {import('../../shared/month/month-record.js').MonthRecord | null} the month on screen */
+    /** @type {import('../../shared/month/month-record.ts').MonthRecord | null} the month on screen */
     this.currentMonth = null;
     /** @type {string[]} saved months, oldest first */
     this.savedMonthKeys = [];

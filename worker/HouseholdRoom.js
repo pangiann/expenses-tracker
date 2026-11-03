@@ -15,7 +15,7 @@
  *   { type: 'changeApplied', changeId }                    to the sender, if it no longer views that month
  *   { type: 'exportData', months } / { type: 'importDone', count } / { type: 'error', message, changeId? }
  */
-import { MonthRecord } from '../shared/month/month-record.js';
+import { MonthRecord } from '../shared/month/month-record.ts';
 import { InvalidChangeError, applyMonthChange } from '../shared/month/month-changes.js';
 import { closestSavedMonthKey, isMonthData, isValidMonthKey } from '../shared/month/month-validation.ts';
 
