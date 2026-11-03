@@ -34,7 +34,8 @@ export class SpendingDonutView {
       const circle = this.#ringCircle(
         slice.category.color,
         `stroke-dasharray="${sliceLength} ${RING_CIRCUMFERENCE - sliceLength}"`,
-        `stroke-dashoffset="${-distanceAlongRing}"`);
+        `stroke-dashoffset="${-distanceAlongRing}"`,
+      );
       distanceAlongRing += sliceLength;
       return circle;
     });
@@ -54,7 +55,8 @@ export class SpendingDonutView {
   }
 
   #renderLegend(slices, totalAmount) {
-    if (slices.length === 0) return `<li class="spending-donut-legend-empty">${escapeHtml(t('charts.noExpensesYet'))}</li>`;
+    if (slices.length === 0)
+      return `<li class="spending-donut-legend-empty">${escapeHtml(t('charts.noExpensesYet'))}</li>`;
     return [...slices]
       .sort((first, second) => second.amount - first.amount)
       .map((slice) => {

@@ -11,10 +11,12 @@ export function isValidMonthKey(monthKey) {
 
 /** True when the data has the basic shape of a month file. */
 export function isMonthData(monthData) {
-  return monthData !== null
-    && typeof monthData === 'object'
-    && isValidMonthKey(monthData.month)
-    && Array.isArray(monthData.expenses);
+  return (
+    monthData !== null &&
+    typeof monthData === 'object' &&
+    isValidMonthKey(monthData.month) &&
+    Array.isArray(monthData.expenses)
+  );
 }
 
 /**

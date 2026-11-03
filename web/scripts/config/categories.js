@@ -11,17 +11,17 @@
  * Categories people create store a `name` instead.
  */
 export const DEFAULT_CATEGORIES = Object.freeze([
-  { id: 'dinner',        nameId: 'category.dinner',        color: '#e8618c' },
-  { id: 'lunch',         nameId: 'category.lunch',         color: '#f39c38' },
-  { id: 'supermarket',   nameId: 'category.supermarket',   color: '#22a879' },
-  { id: 'transport',     nameId: 'category.transport',     color: '#4f6bed' }, // getting around town
-  { id: 'travel',        nameId: 'category.travel',        color: '#0ea5e9' }, // trips, flights, ferries
+  { id: 'dinner', nameId: 'category.dinner', color: '#e8618c' },
+  { id: 'lunch', nameId: 'category.lunch', color: '#f39c38' },
+  { id: 'supermarket', nameId: 'category.supermarket', color: '#22a879' },
+  { id: 'transport', nameId: 'category.transport', color: '#4f6bed' }, // getting around town
+  { id: 'travel', nameId: 'category.travel', color: '#0ea5e9' }, // trips, flights, ferries
   { id: 'entertainment', nameId: 'category.entertainment', color: '#9b59d0' },
-  { id: 'health',        nameId: 'category.health',        color: '#84cc16' }, // gym, pharmacy, haircuts
-  { id: 'home',          nameId: 'category.home',          color: '#14b8a6' },
-  { id: 'clothes',       nameId: 'category.clothes',       color: '#b7791f' },
-  { id: 'gifts',         nameId: 'category.gifts',         color: '#a21caf' },
-  { id: 'other',         nameId: 'category.other',         color: '#8a92a6' },
+  { id: 'health', nameId: 'category.health', color: '#84cc16' }, // gym, pharmacy, haircuts
+  { id: 'home', nameId: 'category.home', color: '#14b8a6' },
+  { id: 'clothes', nameId: 'category.clothes', color: '#b7791f' },
+  { id: 'gifts', nameId: 'category.gifts', color: '#a21caf' },
+  { id: 'other', nameId: 'category.other', color: '#8a92a6' },
 ]);
 
 /**
@@ -29,8 +29,18 @@ export const DEFAULT_CATEGORIES = Object.freeze([
  * the month uses yet (see pickCategoryColor in MonthRecord); after that they repeat.
  */
 export const CATEGORY_COLOR_PALETTE = Object.freeze([
-  '#f59e0b', '#ef4444', '#10b981', '#6366f1', '#ec4899', '#06b6d4',
-  '#8b5cf6', '#65a30d', '#f97316', '#0891b2', '#be123c', '#4d7c0f',
+  '#f59e0b',
+  '#ef4444',
+  '#10b981',
+  '#6366f1',
+  '#ec4899',
+  '#06b6d4',
+  '#8b5cf6',
+  '#65a30d',
+  '#f97316',
+  '#0891b2',
+  '#be123c',
+  '#4d7c0f',
 ]);
 
 /** Longest category name: what fits on one line of a card next to the amount, also on a phone. */

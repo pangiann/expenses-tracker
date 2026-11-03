@@ -1,33 +1,81 @@
 /* Fixed costs and subscriptions panel. */
 
-
-.recurring-cost-list { list-style: none; padding: 0; margin: 0; }
-.recurring-cost-row {
-  display: flex; justify-content: space-between; align-items: center; gap: 4px;
-  padding: 7px 0; border-top: 1px solid var(--color-border); font-size: 14px;
+.recurring-cost-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
 }
-.recurring-cost-row:hover .delete-button { visibility: visible; }
+.recurring-cost-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 4px;
+  padding: 7px 0;
+  border-top: 1px solid var(--color-border);
+  font-size: 14px;
+}
+.recurring-cost-row:hover .delete-button {
+  visibility: visible;
+}
 
 .recurring-cost-name {
-  flex: 1; min-width: 0; font: inherit; color: var(--color-text); background: transparent;
-  border: 1px solid transparent; border-radius: 6px; padding: 4px 6px; margin-left: -6px;
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  color: var(--color-text);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 4px 6px;
+  margin-left: -6px;
 }
-.recurring-cost-name:hover { border-color: var(--color-border); }
-.recurring-cost-name:focus { outline: none; border-color: var(--color-accent); background: #fff; }
+.recurring-cost-name:hover {
+  border-color: var(--color-border);
+}
+.recurring-cost-name:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  background: #fff;
+}
 
 /* The € and the number share one box so the symbol stays next to the amount. */
 .recurring-cost-amount {
-  display: inline-flex; align-items: baseline; gap: 1px; cursor: text; font-variant-numeric: tabular-nums;
-  border: 1px solid transparent; border-radius: 6px; padding: 4px 6px;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 1px;
+  cursor: text;
+  font-variant-numeric: tabular-nums;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 4px 6px;
 }
-.recurring-cost-amount:hover { border-color: var(--color-border); }
-.recurring-cost-amount:focus-within { border-color: var(--color-accent); background: #fff; }
-.recurring-cost-amount input { border: 0; padding: 0; font: inherit; background: transparent; text-align: left; }
-.recurring-cost-amount input:focus { outline: none; }
+.recurring-cost-amount:hover {
+  border-color: var(--color-border);
+}
+.recurring-cost-amount:focus-within {
+  border-color: var(--color-accent);
+  background: #fff;
+}
+.recurring-cost-amount input {
+  border: 0;
+  padding: 0;
+  font: inherit;
+  background: transparent;
+  text-align: left;
+}
+.recurring-cost-amount input:focus {
+  outline: none;
+}
 
-.recurring-cost-add-row { padding-top: 4px; }
+.recurring-cost-add-row {
+  padding-top: 4px;
+}
 
 .recurring-costs-total {
-  display: flex; justify-content: space-between; font-weight: 700;
-  margin-top: 14px; padding-top: 12px; border-top: 2px solid var(--color-border);
+  display: flex;
+  justify-content: space-between;
+  font-weight: 700;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 2px solid var(--color-border);
 }

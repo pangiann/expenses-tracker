@@ -46,7 +46,8 @@ export class QuickAddView {
     const selectedCategoryId = this.categorySelect.value;
     this.categorySelect.innerHTML = optionsHtml;
     this.shownCategoryOptions = optionsHtml;
-    if (categories.some((category) => category.id === selectedCategoryId)) this.categorySelect.value = selectedCategoryId;
+    if (categories.some((category) => category.id === selectedCategoryId))
+      this.categorySelect.value = selectedCategoryId;
   }
 
   /** Limits the date picker to the month on screen. */

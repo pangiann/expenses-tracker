@@ -23,10 +23,12 @@ function usedStringIds() {
   const ids = new Set();
   for (const file of filesUnder(join(WEB_DIR, 'scripts'), '.js')) {
     for (const [, id] of readFileSync(file, 'utf8').matchAll(/\bt\(\s*'([\w.]+)'/g)) ids.add(id);
-    for (const [, id] of readFileSync(file, 'utf8').matchAll(/(?:stringId|untitledStringId)\s*[:=]\s*'([\w.]+)'/g)) ids.add(id);
+    for (const [, id] of readFileSync(file, 'utf8').matchAll(/(?:stringId|untitledStringId)\s*[:=]\s*'([\w.]+)'/g))
+      ids.add(id);
     for (const [, id] of readFileSync(file, 'utf8').matchAll(/'(error\.\w+)'/g)) ids.add(id);
   }
-  for (const [, id] of readFileSync(join(WEB_DIR, 'index.html'), 'utf8').matchAll(/data-i18n(?:-[\w-]+)?="([\w.]+)"/g)) ids.add(id);
+  for (const [, id] of readFileSync(join(WEB_DIR, 'index.html'), 'utf8').matchAll(/data-i18n(?:-[\w-]+)?="([\w.]+)"/g))
+    ids.add(id);
   for (const category of DEFAULT_CATEGORIES) ids.add(category.nameId);
   for (let monthNumber = 1; monthNumber <= 12; monthNumber += 1) ids.add(`month.${monthNumber}`);
   return ids;
@@ -35,8 +37,16 @@ function usedStringIds() {
 test('English and Greek have exactly the same string ids', () => {
   const englishIds = Object.keys(english).sort();
   const greekIds = Object.keys(greek).sort();
-  assert.deepEqual(greekIds.filter((id) => !(id in english)), [], 'ids only in el.json');
-  assert.deepEqual(englishIds.filter((id) => !(id in greek)), [], 'ids missing from el.json');
+  assert.deepEqual(
+    greekIds.filter((id) => !(id in english)),
+    [],
+    'ids only in el.json',
+  );
+  assert.deepEqual(
+    englishIds.filter((id) => !(id in greek)),
+    [],
+    'ids missing from el.json',
+  );
 });
 
 test('every string id used by the page exists in the translations', () => {
@@ -52,7 +62,10 @@ test('placeholders match between languages', () => {
 });
 
 test('no translation is left empty', () => {
-  for (const [language, strings] of [['en', english], ['el', greek]]) {
+  for (const [language, strings] of [
+    ['en', english],
+    ['el', greek],
+  ]) {
     for (const [id, text] of Object.entries(strings)) assert.notEqual(text.trim(), '', `${language}: ${id}`);
   }
 });

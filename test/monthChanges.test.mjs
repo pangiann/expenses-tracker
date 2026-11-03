@@ -5,14 +5,18 @@ import { MonthRecord } from '../web/scripts/model/MonthRecord.js';
 import { ChangeKind, InvalidChangeError, applyMonthChange } from '../web/scripts/model/monthChanges.js';
 import { closestSavedMonthKey, isMonthData } from '../web/scripts/model/monthValidation.js';
 
-const novemberWithRent = () => new MonthRecord({
-  month: '2026-11',
-  income: { expected: 4000, entries: [] },
-  budgets: { dinner: 130 },
-  expenses: [],
-  fixed: [{ id: 'rent', name: 'Rent', amount: 1000 }, { id: 'internet', name: 'Internet', amount: 30 }],
-  subscriptions: [],
-});
+const novemberWithRent = () =>
+  new MonthRecord({
+    month: '2026-11',
+    income: { expected: 4000, entries: [] },
+    budgets: { dinner: 130 },
+    expenses: [],
+    fixed: [
+      { id: 'rent', name: 'Rent', amount: 1000 },
+      { id: 'internet', name: 'Internet', amount: 30 },
+    ],
+    subscriptions: [],
+  });
 
 const coffee = { id: 'expense-1', categoryKey: 'lunch', amount: 3.5, description: 'coffee', date: '2026-11-03' };
 const lesson = { id: 'income-1', amount: 40, description: 'lesson', date: '2026-11-04' };
@@ -30,7 +34,10 @@ test('changes from two people on different expenses both survive', () => {
   applyMonthChange(month, { kind: ChangeKind.ADD_EXPENSE, expense: coffee });
   applyMonthChange(month, { kind: ChangeKind.ADD_EXPENSE, expense: { ...coffee, id: 'expense-2', amount: 12 } });
   applyMonthChange(month, { kind: ChangeKind.CHANGE_EXPENSE_AMOUNT, expenseId: 'expense-1', amount: 4 });
-  assert.deepEqual(month.expenses.map((expense) => expense.amount), [4, 12]);
+  assert.deepEqual(
+    month.expenses.map((expense) => expense.amount),
+    [4, 12],
+  );
 });
 
 test('income is a list of entries, and Earned is their total', () => {
@@ -59,8 +66,18 @@ test('an older file with one income number becomes one entry, the same on every 
 test('fixed costs are found by id, so edits hit the right row after others are removed', () => {
   const month = novemberWithRent();
   applyMonthChange(month, { kind: ChangeKind.REMOVE_RECURRING_COST, listName: 'fixed', costId: 'rent' });
-  applyMonthChange(month, { kind: ChangeKind.RENAME_RECURRING_COST, listName: 'fixed', costId: 'internet', name: 'Fibre' });
-  applyMonthChange(month, { kind: ChangeKind.CHANGE_RECURRING_COST_AMOUNT, listName: 'fixed', costId: 'internet', amount: 35 });
+  applyMonthChange(month, {
+    kind: ChangeKind.RENAME_RECURRING_COST,
+    listName: 'fixed',
+    costId: 'internet',
+    name: 'Fibre',
+  });
+  applyMonthChange(month, {
+    kind: ChangeKind.CHANGE_RECURRING_COST_AMOUNT,
+    listName: 'fixed',
+    costId: 'internet',
+    amount: 35,
+  });
   assert.deepEqual(month.recurringCostsIn('fixed'), [{ id: 'internet', name: 'Fibre', amount: 35 }]);
   // Editing a row someone else removed does nothing instead of failing.
   applyMonthChange(month, { kind: ChangeKind.RENAME_RECURRING_COST, listName: 'fixed', costId: 'rent', name: 'Flat' });
@@ -76,8 +93,18 @@ test('adding the same fixed cost twice keeps one row', () => {
 });
 
 test('older fixed costs without ids get the same ids on every device', () => {
-  const oldFile = { month: '2026-08', expenses: [], fixed: [{ name: 'Rent', amount: 880 }, { name: 'Internet', amount: 30 }] };
-  assert.deepEqual(new MonthRecord(oldFile).recurringCostsIn('fixed').map((cost) => cost.id), ['fixed-1', 'fixed-2']);
+  const oldFile = {
+    month: '2026-08',
+    expenses: [],
+    fixed: [
+      { name: 'Rent', amount: 880 },
+      { name: 'Internet', amount: 30 },
+    ],
+  };
+  assert.deepEqual(
+    new MonthRecord(oldFile).recurringCostsIn('fixed').map((cost) => cost.id),
+    ['fixed-1', 'fixed-2'],
+  );
   assert.deepEqual(new MonthRecord(oldFile).toJSON().fixed[1], { name: 'Internet', amount: 30, id: 'fixed-2' });
 });
 
@@ -149,20 +176,36 @@ test('a month keeps its own category list, and a new month copies it', () => {
   const october = new MonthRecord({
     month: '2026-10',
     expenses: [],
-    categories: [{ id: 'kids', name: 'Kids', color: '#f59e0b' }, { id: 'other', nameId: 'category.other', color: '#8a92a6' }],
+    categories: [
+      { id: 'kids', name: 'Kids', color: '#f59e0b' },
+      { id: 'other', nameId: 'category.other', color: '#8a92a6' },
+    ],
     budgets: { kids: 100, other: 20 },
   });
   const november = MonthRecord.createFromTemplate(october, '2026-11');
-  assert.deepEqual(november.categories.map((category) => category.id), ['kids', 'other']);
+  assert.deepEqual(
+    november.categories.map((category) => category.id),
+    ['kids', 'other'],
+  );
   assert.equal(november.budgetFor('kids'), 100);
   assert.equal(november.calculateTotals().totalBudgeted, 120);
 });
 
 test('expenses and budgets are refused for a category the month does not have', () => {
-  const month = new MonthRecord({ month: '2026-10', expenses: [], categories: [{ id: 'kids', name: 'Kids', color: '#f59e0b' }] });
+  const month = new MonthRecord({
+    month: '2026-10',
+    expenses: [],
+    categories: [{ id: 'kids', name: 'Kids', color: '#f59e0b' }],
+  });
   const groceries = { id: 'expense-9', categoryKey: 'supermarket', amount: 20, description: '', date: '2026-10-02' };
-  assert.throws(() => applyMonthChange(month, { kind: ChangeKind.ADD_EXPENSE, expense: groceries }), InvalidChangeError);
-  assert.throws(() => applyMonthChange(month, { kind: ChangeKind.CHANGE_BUDGET, categoryKey: 'supermarket', amount: 5 }), InvalidChangeError);
+  assert.throws(
+    () => applyMonthChange(month, { kind: ChangeKind.ADD_EXPENSE, expense: groceries }),
+    InvalidChangeError,
+  );
+  assert.throws(
+    () => applyMonthChange(month, { kind: ChangeKind.CHANGE_BUDGET, categoryKey: 'supermarket', amount: 5 }),
+    InvalidChangeError,
+  );
   applyMonthChange(month, { kind: ChangeKind.ADD_EXPENSE, expense: { ...groceries, categoryKey: 'kids' } });
   assert.equal(month.spentInCategory('kids'), 20);
 });
@@ -175,8 +218,10 @@ test('adding a category puts it at the end with a budget of 0, once', () => {
   assert.equal(month.categories.length, 12);
   assert.deepEqual(month.categories[11], { id: 'kids', name: 'Kids', color: '#f59e0b' });
   assert.equal(month.budgetFor('kids'), 0);
-  applyMonthChange(month, { kind: ChangeKind.ADD_EXPENSE,
-    expense: { id: 'expense-k', categoryKey: 'kids', amount: 15, description: 'toys', date: '2026-11-05' } });
+  applyMonthChange(month, {
+    kind: ChangeKind.ADD_EXPENSE,
+    expense: { id: 'expense-k', categoryKey: 'kids', amount: 15, description: 'toys', date: '2026-11-05' },
+  });
   assert.equal(month.spentInCategory('kids'), 15);
   assert.equal(MonthRecord.createFromTemplate(month, '2026-12').findCategory('kids').name, 'Kids');
 });
@@ -211,18 +256,24 @@ test('two categories added at the same moment with the same colour end up with d
 
 test('category names must be unique (ignoring capitals and spaces) and at most 20 characters', () => {
   const month = new MonthRecord({ month: '2026-11', expenses: [] });
-  const add = (id, name) => applyMonthChange(month, { kind: ChangeKind.ADD_CATEGORY, category: { id, name, color: '#f59e0b' } });
+  const add = (id, name) =>
+    applyMonthChange(month, { kind: ChangeKind.ADD_CATEGORY, category: { id, name, color: '#f59e0b' } });
   add('kids', 'Kids');
   assert.throws(() => add('kids-2', '  KIDS '), InvalidChangeError);
   assert.throws(() => add('long', 'x'.repeat(21)), InvalidChangeError);
   add('twenty', 'x'.repeat(20));
-  assert.deepEqual(month.categories.slice(11).map((category) => category.id), ['kids', 'twenty']);
+  assert.deepEqual(
+    month.categories.slice(11).map((category) => category.id),
+    ['kids', 'twenty'],
+  );
 });
 
 test('renaming a category keeps its id, expenses and budget', () => {
   const month = new MonthRecord({ month: '2026-11', expenses: [], budgets: { dinner: 130 } });
-  applyMonthChange(month, { kind: ChangeKind.ADD_EXPENSE,
-    expense: { id: 'expense-d', categoryKey: 'dinner', amount: 30, description: 'pizza', date: '2026-11-02' } });
+  applyMonthChange(month, {
+    kind: ChangeKind.ADD_EXPENSE,
+    expense: { id: 'expense-d', categoryKey: 'dinner', amount: 30, description: 'pizza', date: '2026-11-02' },
+  });
   applyMonthChange(month, { kind: ChangeKind.RENAME_CATEGORY, categoryId: 'dinner', name: ' Eating out ' });
   assert.deepEqual(month.findCategory('dinner'), { id: 'dinner', name: 'Eating out', color: '#e8618c' }); // no nameId: same name in every language
   assert.equal(month.spentInCategory('dinner'), 30);
@@ -236,7 +287,10 @@ test('renaming follows the name rules, but a category may keep its own name in o
   applyMonthChange(month, { kind: ChangeKind.RENAME_CATEGORY, categoryId: 'kids', name: 'Kids' });
   assert.equal(month.findCategory('kids').name, 'Kids');
   for (const name of ['PETS', '', 'x'.repeat(21)]) {
-    assert.throws(() => applyMonthChange(month, { kind: ChangeKind.RENAME_CATEGORY, categoryId: 'kids', name }), InvalidChangeError);
+    assert.throws(
+      () => applyMonthChange(month, { kind: ChangeKind.RENAME_CATEGORY, categoryId: 'kids', name }),
+      InvalidChangeError,
+    );
   }
   // Renaming a category someone else removed does nothing.
   applyMonthChange(month, { kind: ChangeKind.RENAME_CATEGORY, categoryId: 'gone', name: 'Anything' });
@@ -254,16 +308,27 @@ test('an empty category can be removed, with its budget; removing it again does 
 });
 
 test('a category with expenses, or the last category, cannot be removed', () => {
-  const month = new MonthRecord({ month: '2026-11', expenses: [
-    { id: 'e1', category: 'lunch', description: 'coffee', amount: 3, date: '2026-11-02' },
-  ] });
+  const month = new MonthRecord({
+    month: '2026-11',
+    expenses: [{ id: 'e1', category: 'lunch', description: 'coffee', amount: 3, date: '2026-11-02' }],
+  });
   assert.equal(month.categoryRemovalBlocker('lunch'), 'has-expenses');
-  assert.throws(() => applyMonthChange(month, { kind: ChangeKind.REMOVE_CATEGORY, categoryId: 'lunch' }), InvalidChangeError);
+  assert.throws(
+    () => applyMonthChange(month, { kind: ChangeKind.REMOVE_CATEGORY, categoryId: 'lunch' }),
+    InvalidChangeError,
+  );
   assert.ok(month.findCategory('lunch'));
 
-  const onlyOne = new MonthRecord({ month: '2026-11', expenses: [], categories: [{ id: 'kids', name: 'Kids', color: '#f59e0b' }] });
+  const onlyOne = new MonthRecord({
+    month: '2026-11',
+    expenses: [],
+    categories: [{ id: 'kids', name: 'Kids', color: '#f59e0b' }],
+  });
   assert.equal(onlyOne.categoryRemovalBlocker('kids'), 'last-category');
-  assert.throws(() => applyMonthChange(onlyOne, { kind: ChangeKind.REMOVE_CATEGORY, categoryId: 'kids' }), InvalidChangeError);
+  assert.throws(
+    () => applyMonthChange(onlyOne, { kind: ChangeKind.REMOVE_CATEGORY, categoryId: 'kids' }),
+    InvalidChangeError,
+  );
 });
 
 test('moving a category puts it before another one, or last', () => {
@@ -280,12 +345,18 @@ test('moving a category puts it before another one, or last', () => {
   move('gone', 'dinner'); // moving a removed category does nothing
   move('dinner', 'dinner');
   assert.equal(order().length, 11);
-  assert.deepEqual(MonthRecord.createFromTemplate(month, '2026-12').categories.map((category) => category.id), order());
+  assert.deepEqual(
+    MonthRecord.createFromTemplate(month, '2026-12').categories.map((category) => category.id),
+    order(),
+  );
 });
 
 test('two people moving categories at once both take effect in arrival order', () => {
   const month = new MonthRecord({ month: '2026-11', expenses: [] });
   applyMonthChange(month, { kind: ChangeKind.MOVE_CATEGORY, categoryId: 'travel', beforeCategoryId: 'dinner' });
   applyMonthChange(month, { kind: ChangeKind.MOVE_CATEGORY, categoryId: 'gifts', beforeCategoryId: 'dinner' });
-  assert.deepEqual(month.categories.slice(0, 3).map((category) => category.id), ['travel', 'gifts', 'dinner']);
+  assert.deepEqual(
+    month.categories.slice(0, 3).map((category) => category.id),
+    ['travel', 'gifts', 'dinner'],
+  );
 });

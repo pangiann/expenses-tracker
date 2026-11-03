@@ -14,8 +14,17 @@ const SITE = process.env.SEED_SITE ?? 'http://localhost:8787';
 const MONTH_COUNT = 6;
 
 const BUDGETS = {
-  dinner: 150, lunch: 80, supermarket: 400, transport: 60, travel: 200, entertainment: 80,
-  health: 60, home: 100, clothes: 80, gifts: 50, other: 50,
+  dinner: 150,
+  lunch: 80,
+  supermarket: 400,
+  transport: 60,
+  travel: 200,
+  entertainment: 80,
+  health: 60,
+  home: 100,
+  clothes: 80,
+  gifts: 50,
+  other: 50,
 };
 const DESCRIPTIONS = {
   dinner: ['pizza', 'sushi', 'tavern', 'burgers'],
@@ -46,8 +55,10 @@ function monthKeyOf(date) {
 
 /** The last MONTH_COUNT months, oldest first, ending with the current month. */
 function recentMonthStarts(today) {
-  return Array.from({ length: MONTH_COUNT }, (_, index) =>
-    new Date(today.getFullYear(), today.getMonth() - (MONTH_COUNT - 1 - index), 1));
+  return Array.from(
+    { length: MONTH_COUNT },
+    (_, index) => new Date(today.getFullYear(), today.getMonth() - (MONTH_COUNT - 1 - index), 1),
+  );
 }
 
 function sampleMonth(monthStart, today) {
@@ -56,17 +67,26 @@ function sampleMonth(monthStart, today) {
   const lastDay = monthKey === monthKeyOf(today) ? today.getDate() : daysInMonth;
   const dateOn = (day) => `${monthKey}-${String(day).padStart(2, '0')}`;
 
-  const expenses = Array.from({ length: Math.round(40 * lastDay / daysInMonth) }, () => {
+  const expenses = Array.from({ length: Math.round((40 * lastDay) / daysInMonth) }, () => {
     const category = pick(DEFAULT_CATEGORIES).id;
-    const amount = randomInteger(300, BUDGETS[category] * 25) / 100;  // up to a quarter of the budget
-    return { id: crypto.randomUUID(), date: dateOn(randomInteger(1, lastDay)), category,
-             description: pick(DESCRIPTIONS[category]), amount };
+    const amount = randomInteger(300, BUDGETS[category] * 25) / 100; // up to a quarter of the budget
+    return {
+      id: crypto.randomUUID(),
+      date: dateOn(randomInteger(1, lastDay)),
+      category,
+      description: pick(DESCRIPTIONS[category]),
+      amount,
+    };
   }).sort((first, second) => first.date.localeCompare(second.date));
 
   const incomeEntries = [{ id: crypto.randomUUID(), date: dateOn(1), description: 'salary', amount: 3200 }];
   if (Math.random() < 0.4) {
-    incomeEntries.push({ id: crypto.randomUUID(), date: dateOn(Math.min(15, lastDay)),
-                         description: 'side project', amount: randomInteger(100, 400) });
+    incomeEntries.push({
+      id: crypto.randomUUID(),
+      date: dateOn(Math.min(15, lastDay)),
+      description: 'side project',
+      amount: randomInteger(100, 400),
+    });
   }
 
   return {
@@ -75,8 +95,11 @@ function sampleMonth(monthStart, today) {
     categories: DEFAULT_CATEGORIES.map((category) => ({ ...category })),
     budgets: { ...BUDGETS },
     expenses,
-    fixed: DEFAULT_FIXED_COST_NAMES.map((name, index) =>
-      ({ id: `fixed-${index + 1}`, name, amount: FIXED_AMOUNTS[name] ?? 50 })),
+    fixed: DEFAULT_FIXED_COST_NAMES.map((name, index) => ({
+      id: `fixed-${index + 1}`,
+      name,
+      amount: FIXED_AMOUNTS[name] ?? 50,
+    })),
     subscriptions: [
       { id: crypto.randomUUID(), name: 'Music', amount: 11 },
       { id: crypto.randomUUID(), name: 'Video', amount: 13 },
@@ -102,8 +125,9 @@ function importMonths(months) {
       if (message.type === 'error') reject(new Error(message.message));
       if (message.type === 'importDone' || message.type === 'error') socket.close();
     });
-    socket.addEventListener('error', () => reject(new Error(
-      `Could not connect to ${socketURL}. Is \`npm run dev\` running, and does .dev.vars exist?`)));
+    socket.addEventListener('error', () =>
+      reject(new Error(`Could not connect to ${socketURL}. Is \`npm run dev\` running, and does .dev.vars exist?`)),
+    );
   });
 }
 

@@ -1,5 +1,9 @@
 import {
-  CATEGORY_COLOR_PALETTE, DEFAULT_CATEGORIES, DEFAULT_FIXED_COST_NAMES, MAX_CATEGORIES_PER_MONTH, RecurringCostList,
+  CATEGORY_COLOR_PALETTE,
+  DEFAULT_CATEGORIES,
+  DEFAULT_FIXED_COST_NAMES,
+  MAX_CATEGORIES_PER_MONTH,
+  RecurringCostList,
 } from '../config/categories.js';
 import { roundToCents, sumAmounts } from '../utils/money.js';
 
@@ -41,8 +45,10 @@ export class MonthRecord {
     this.expenses = (monthData.expenses ?? []).map((expense) => ({ ...expense }));
     this.recurringCosts = {
       [RecurringCostList.FIXED_COSTS]: MonthRecord.#readRecurringCosts(monthData.fixed, RecurringCostList.FIXED_COSTS),
-      [RecurringCostList.SUBSCRIPTIONS]:
-        MonthRecord.#readRecurringCosts(monthData.subscriptions, RecurringCostList.SUBSCRIPTIONS),
+      [RecurringCostList.SUBSCRIPTIONS]: MonthRecord.#readRecurringCosts(
+        monthData.subscriptions,
+        RecurringCostList.SUBSCRIPTIONS,
+      ),
     };
     // Fields this version doesn't know about (for example "importedFrom") are kept as they are.
     this.extraFields = MonthRecord.#unknownFields(monthData);
@@ -73,7 +79,13 @@ export class MonthRecord {
 
   addExpense({ id, categoryId, amount, description, date }) {
     if (!(amount > 0) || this.findExpense(id)) return;
-    this.expenses.push({ id, date, category: categoryId, description: description.trim(), amount: roundToCents(amount) });
+    this.expenses.push({
+      id,
+      date,
+      category: categoryId,
+      description: description.trim(),
+      amount: roundToCents(amount),
+    });
   }
 
   removeExpense(expenseId) {
@@ -142,8 +154,12 @@ export class MonthRecord {
    */
   hasCategoryNamed(name, exceptCategoryId) {
     const wantedName = MonthRecord.normalizeCategoryName(name);
-    return this.categories.some((category) => category.id !== exceptCategoryId && category.name !== undefined
-      && MonthRecord.normalizeCategoryName(category.name) === wantedName);
+    return this.categories.some(
+      (category) =>
+        category.id !== exceptCategoryId &&
+        category.name !== undefined &&
+        MonthRecord.normalizeCategoryName(category.name) === wantedName,
+    );
   }
 
   /**
@@ -206,8 +222,10 @@ export class MonthRecord {
   /** The colour for a new category: the first palette colour this month doesn't use yet. */
   pickCategoryColor() {
     const usedColors = new Set(this.categories.map((category) => category.color.toLowerCase()));
-    return CATEGORY_COLOR_PALETTE.find((color) => !usedColors.has(color))
-      ?? CATEGORY_COLOR_PALETTE[this.categories.length % CATEGORY_COLOR_PALETTE.length];
+    return (
+      CATEGORY_COLOR_PALETTE.find((color) => !usedColors.has(color)) ??
+      CATEGORY_COLOR_PALETTE[this.categories.length % CATEGORY_COLOR_PALETTE.length]
+    );
   }
 
   budgetFor(categoryId) {
@@ -252,7 +270,11 @@ export class MonthRecord {
 
   calculateTotals() {
     const variableSpending = sumAmounts(this.expenses.map((expense) => expense.amount));
-    const recurringCostsTotal = sumAmounts(Object.values(this.recurringCosts).flat().map((cost) => cost.amount));
+    const recurringCostsTotal = sumAmounts(
+      Object.values(this.recurringCosts)
+        .flat()
+        .map((cost) => cost.amount),
+    );
     const categoryBudgetsTotal = sumAmounts(this.categories.map((category) => this.budgetFor(category.id)));
     const totalBudgeted = categoryBudgetsTotal + recurringCostsTotal;
     const totalSpent = variableSpending + recurringCostsTotal;

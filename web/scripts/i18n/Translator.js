@@ -36,9 +36,8 @@ class Translator {
   async load() {
     this.language = Translator.#preferredLanguage();
     this.sourceStrings = await Translator.#fetchStrings(SOURCE_LANGUAGE);
-    this.strings = this.language === SOURCE_LANGUAGE
-      ? this.sourceStrings
-      : await Translator.#fetchStrings(this.language);
+    this.strings =
+      this.language === SOURCE_LANGUAGE ? this.sourceStrings : await Translator.#fetchStrings(this.language);
     document.documentElement.lang = this.language;
   }
 

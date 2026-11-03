@@ -36,8 +36,7 @@ export class SummaryCardsView {
     this.currentExpectedIncome = monthRecord.expectedIncome;
 
     this.totalIncomeValue.textContent = formatEuros(monthRecord.totalIncome);
-    this.expectedIncomeSlot.innerHTML =
-      `<span class="click-to-edit" title="${t('common.clickToEdit')}">${formatEuros(monthRecord.expectedIncome)}</span>`;
+    this.expectedIncomeSlot.innerHTML = `<span class="click-to-edit" title="${t('common.clickToEdit')}">${formatEuros(monthRecord.expectedIncome)}</span>`;
 
     this.totalSpentValue.textContent = formatEuros(totals.totalSpent);
     this.totalSpentValue.classList.toggle('is-negative', totals.totalSpent > totals.totalBudgeted);

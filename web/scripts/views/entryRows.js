@@ -12,7 +12,9 @@ import { formatShortDate } from '../utils/monthKeys.js';
  */
 export function renderEntryRows(entries, untitledStringId = 'common.noDescription') {
   if (entries.length === 0) return `<div class="expense-list-empty">${escapeHtml(t('common.nothingYet'))}</div>`;
-  return entries.map((entry) => `
+  return entries
+    .map(
+      (entry) => `
     <li class="expense-row">
       <span class="expense-date">${formatShortDate(entry.date)}</span>
       <span class="expense-description ${entry.description ? '' : 'is-empty'}">
@@ -21,5 +23,7 @@ export function renderEntryRows(entries, untitledStringId = 'common.noDescriptio
       <span class="click-to-edit entry-amount" data-entry-id="${escapeHtml(entry.id)}"
             title="${escapeHtml(t('common.clickToEdit'))}">${formatEuros(entry.amount)}</span>
       <button class="delete-button" data-entry-id="${escapeHtml(entry.id)}" title="${escapeHtml(t('common.delete'))}">✕</button>
-    </li>`).join('');
+    </li>`,
+    )
+    .join('');
 }

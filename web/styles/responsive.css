@@ -1,13 +1,25 @@
 /* Narrow windows: stack the sections in one column. */
 
 @media (max-width: 960px) {
-  .summary-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .summary-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
   .charts,
-  .month-details { grid-template-columns: minmax(0, 1fr); }
-  .quick-add-form { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
-  .quick-add-form .primary-button { grid-column: span 2; }
-  .recurring-costs-panel { position: static; }
-  .page-content { padding: 16px; }
+  .month-details {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .quick-add-form {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .quick-add-form .primary-button {
+    grid-column: span 2;
+  }
+  .recurring-costs-panel {
+    position: static;
+  }
+  .page-content {
+    padding: 16px;
+  }
 }
 
 /* Phones. */
@@ -16,46 +28,118 @@
   .top-bar {
     display: grid;
     grid-template-columns: auto 1fr;
-    grid-template-areas: "brand actions" "months months";
+    grid-template-areas: 'brand actions' 'months months';
     row-gap: 10px;
     padding: 10px 14px 12px;
   }
-  .brand { grid-area: brand; font-size: 16px; }
-  .brand-icon { width: 22px; height: 22px; }
-  .top-bar-actions { grid-area: actions; justify-content: flex-end; gap: 6px; }
-  .top-bar-actions .secondary-button { padding: 5px 9px; font-size: 12px; }
-  .top-bar-actions .language-select { padding: 4px 6px; font-size: 13px !important; }
-  .save-status { min-width: 0; font-size: 11px; }
-  .month-navigation { grid-area: months; justify-content: space-between; gap: 8px; }
-  .month-navigation h1 { font-size: 18px; min-width: 0; flex: 1; }
+  .brand {
+    grid-area: brand;
+    font-size: 16px;
+  }
+  .brand-icon {
+    width: 22px;
+    height: 22px;
+  }
+  .top-bar-actions {
+    grid-area: actions;
+    justify-content: flex-end;
+    gap: 6px;
+  }
+  .top-bar-actions .secondary-button {
+    padding: 5px 9px;
+    font-size: 12px;
+  }
+  .top-bar-actions .language-select {
+    padding: 4px 6px;
+    font-size: 13px !important;
+  }
+  .save-status {
+    min-width: 0;
+    font-size: 11px;
+  }
+  .month-navigation {
+    grid-area: months;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .month-navigation h1 {
+    font-size: 18px;
+    min-width: 0;
+    flex: 1;
+  }
 
-  .page-content { padding: 12px; gap: 12px; }
-  .card { padding: 14px; }
-  .category-card { padding: 0; } /* its sections have their own padding */
-  h2 { font-size: 14px; margin-bottom: 10px; }
+  .page-content {
+    padding: 12px;
+    gap: 12px;
+  }
+  .card {
+    padding: 14px;
+  }
+  .category-card {
+    padding: 0;
+  } /* its sections have their own padding */
+  h2 {
+    font-size: 14px;
+    margin-bottom: 10px;
+  }
 
   /* 16px text stops iPhones from zooming in when a field is tapped. */
-  input, select { font-size: 16px !important; }
+  input,
+  select {
+    font-size: 16px !important;
+  }
 
-  .summary-cards { gap: 12px; }
-  .summary-card-value { font-size: 20px; }
+  .summary-cards {
+    gap: 12px;
+  }
+  .summary-card-value {
+    font-size: 20px;
+  }
 
-  .budget-bar-row { grid-template-columns: 92px minmax(0, 1fr) 124px; gap: 8px; font-size: 12px; }
+  .budget-bar-row {
+    grid-template-columns: 92px minmax(0, 1fr) 124px;
+    gap: 8px;
+    font-size: 12px;
+  }
 
-  .spending-donut { gap: 14px; }
-  .spending-donut-chart { width: 120px; height: 120px; }
-  .spending-donut-legend { font-size: 12px; min-width: 0; }
+  .spending-donut {
+    gap: 14px;
+  }
+  .spending-donut-chart {
+    width: 120px;
+    height: 120px;
+  }
+  .spending-donut-legend {
+    font-size: 12px;
+    min-width: 0;
+  }
 
-  .category-cards { grid-template-columns: minmax(0, 1fr); gap: 12px; }
-  .expense-list { max-height: none; }
-  .category-add-form input[name=amount] { width: 90px; }
-  .category-add-form button { padding: 0 14px; font-size: 16px; }
+  .category-cards {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+  .expense-list {
+    max-height: none;
+  }
+  .category-add-form input[name='amount'] {
+    width: 90px;
+  }
+  .category-add-form button {
+    padding: 0 14px;
+    font-size: 16px;
+  }
 
-  .dialog { width: calc(100vw - 32px); }
+  .dialog {
+    width: calc(100vw - 32px);
+  }
 }
 
 /* Touch screens have no hover, so the ✕ buttons are always shown. */
 @media (hover: none) {
-  .delete-button { visibility: visible; }
-  .category-remove-button { opacity: 1; }
+  .delete-button {
+    visibility: visible;
+  }
+  .category-remove-button {
+    opacity: 1;
+  }
 }

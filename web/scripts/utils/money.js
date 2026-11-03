@@ -5,12 +5,20 @@
  */
 
 let euroFormatter = new Intl.NumberFormat('en-IE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 });
-let percentFormatter = new Intl.NumberFormat('en-IE', { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 });
+let percentFormatter = new Intl.NumberFormat('en-IE', {
+  style: 'percent',
+  minimumFractionDigits: 1,
+  maximumFractionDigits: 1,
+});
 
 /** @param {string} locale  for example 'en-IE' or 'el-GR' */
 export function setMoneyLocale(locale) {
   euroFormatter = new Intl.NumberFormat(locale, { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 });
-  percentFormatter = new Intl.NumberFormat(locale, { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  percentFormatter = new Intl.NumberFormat(locale, {
+    style: 'percent',
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  });
 }
 
 /** 1234.5 -> "€1,234.50" (English) or "1.234,50 €" (Greek) */

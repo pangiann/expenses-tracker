@@ -128,11 +128,17 @@ export function applyMonthChange(monthRecord, change) {
       return;
     case ChangeKind.RENAME_RECURRING_COST:
       monthRecord.renameRecurringCost(
-        requireListName(change.listName), requireId(change.costId), requireText(change.name));
+        requireListName(change.listName),
+        requireId(change.costId),
+        requireText(change.name),
+      );
       return;
     case ChangeKind.CHANGE_RECURRING_COST_AMOUNT:
       monthRecord.setRecurringCostAmount(
-        requireListName(change.listName), requireId(change.costId), requireAmount(change.amount));
+        requireListName(change.listName),
+        requireId(change.costId),
+        requireAmount(change.amount),
+      );
       return;
 
     default:
@@ -143,8 +149,8 @@ export function applyMonthChange(monthRecord, change) {
 // ----- Field checks -----
 
 function requireAmount(value, { allowZero = true } = {}) {
-  const isValid = typeof value === 'number' && Number.isFinite(value)
-    && (allowZero ? value >= 0 : value > 0) && value <= MAX_AMOUNT;
+  const isValid =
+    typeof value === 'number' && Number.isFinite(value) && (allowZero ? value >= 0 : value > 0) && value <= MAX_AMOUNT;
   if (!isValid) throw new InvalidChangeError(`Invalid amount: ${value}`);
   return value;
 }
@@ -179,7 +185,8 @@ function requireCategoryIn(monthRecord, value) {
 function requireCategoryName(monthRecord, value, renamedCategoryId) {
   const trimmedName = requireText(value).trim();
   if (trimmedName.length > MAX_CATEGORY_NAME_LENGTH) throw new InvalidChangeError('Category name too long');
-  if (monthRecord.hasCategoryNamed(trimmedName, renamedCategoryId)) throw new InvalidChangeError('Category name already used');
+  if (monthRecord.hasCategoryNamed(trimmedName, renamedCategoryId))
+    throw new InvalidChangeError('Category name already used');
   return trimmedName;
 }
 

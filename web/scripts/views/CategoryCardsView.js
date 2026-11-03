@@ -59,15 +59,14 @@ export class CategoryCardsView {
     }
     this.monthWaitingForDragEnd = null;
     this.monthRecord = monthRecord;
-    this.container.innerHTML = monthRecord.categories
-      .map((category) => this.#renderCard(category, monthRecord))
-      .join('') + this.#renderNewCategoryCard();
+    this.container.innerHTML =
+      monthRecord.categories.map((category) => this.#renderCard(category, monthRecord)).join('') +
+      this.#renderNewCategoryCard();
   }
 
   #drawWaitingMonth() {
     if (this.monthWaitingForDragEnd) this.render(this.monthWaitingForDragEnd);
   }
-
 
   // ----- Event handling -----
 
@@ -154,8 +153,10 @@ export class CategoryCardsView {
    */
   #isNameShown(name, exceptCategoryId) {
     const wantedName = MonthRecord.normalizeCategoryName(name);
-    return this.monthRecord.categories.some((category) => category.id !== exceptCategoryId
-      && MonthRecord.normalizeCategoryName(categoryName(category)) === wantedName);
+    return this.monthRecord.categories.some(
+      (category) =>
+        category.id !== exceptCategoryId && MonthRecord.normalizeCategoryName(categoryName(category)) === wantedName,
+    );
   }
 
   #renderNewCategoryCard() {

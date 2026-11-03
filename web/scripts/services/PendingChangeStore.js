@@ -26,7 +26,11 @@ export class PendingChangeStore {
   }
 
   static #isPendingChange(entry) {
-    return typeof entry?.changeId === 'string' && typeof entry?.monthKey === 'string'
-      && typeof entry?.change === 'object' && entry.change !== null;
+    return (
+      typeof entry?.changeId === 'string' &&
+      typeof entry?.monthKey === 'string' &&
+      typeof entry?.change === 'object' &&
+      entry.change !== null
+    );
   }
 }

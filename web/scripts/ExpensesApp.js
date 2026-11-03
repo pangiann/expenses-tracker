@@ -91,29 +91,32 @@ export class ExpensesApp {
       addMonth: (monthKey) => this.sync.openMonth(monthKey), // creates it when missing
 
       // Expenses
-      addExpense: ({ categoryKey, amount, description, date }) => this.#applyChange({
-        kind: ChangeKind.ADD_EXPENSE,
-        expense: { id: createUniqueId(), categoryKey, amount, description, date },
-      }),
+      addExpense: ({ categoryKey, amount, description, date }) =>
+        this.#applyChange({
+          kind: ChangeKind.ADD_EXPENSE,
+          expense: { id: createUniqueId(), categoryKey, amount, description, date },
+        }),
       removeExpense: (expenseId) => this.#applyChange({ kind: ChangeKind.REMOVE_EXPENSE, expenseId }),
       changeExpenseAmount: (expenseId, amount) =>
         this.#applyChange({ kind: ChangeKind.CHANGE_EXPENSE_AMOUNT, expenseId, amount }),
 
       // Income
-      addIncome: ({ amount, description, date }) => this.#applyChange({
-        kind: ChangeKind.ADD_INCOME,
-        income: { id: createUniqueId(), amount, description, date },
-      }),
+      addIncome: ({ amount, description, date }) =>
+        this.#applyChange({
+          kind: ChangeKind.ADD_INCOME,
+          income: { id: createUniqueId(), amount, description, date },
+        }),
       removeIncome: (incomeId) => this.#applyChange({ kind: ChangeKind.REMOVE_INCOME, incomeId }),
       changeIncomeAmount: (incomeId, amount) =>
         this.#applyChange({ kind: ChangeKind.CHANGE_INCOME_AMOUNT, incomeId, amount }),
       changeExpectedIncome: (amount) => this.#applyChange({ kind: ChangeKind.CHANGE_EXPECTED_INCOME, amount }),
 
       // Categories and budgets
-      addCategory: (name) => this.#applyChange({
-        kind: ChangeKind.ADD_CATEGORY,
-        category: { id: createUniqueId(), name, color: this.currentMonth.pickCategoryColor() },
-      }),
+      addCategory: (name) =>
+        this.#applyChange({
+          kind: ChangeKind.ADD_CATEGORY,
+          category: { id: createUniqueId(), name, color: this.currentMonth.pickCategoryColor() },
+        }),
       renameCategory: (categoryId, name) => this.#applyChange({ kind: ChangeKind.RENAME_CATEGORY, categoryId, name }),
       removeCategory: (categoryId) => this.#applyChange({ kind: ChangeKind.REMOVE_CATEGORY, categoryId }),
       moveCategory: (categoryId, beforeCategoryId) =>
@@ -121,11 +124,12 @@ export class ExpensesApp {
       changeBudget: (categoryKey, amount) => this.#applyChange({ kind: ChangeKind.CHANGE_BUDGET, categoryKey, amount }),
 
       // Fixed costs and subscriptions
-      addRecurringCost: (listName) => this.#applyChange({
-        kind: ChangeKind.ADD_RECURRING_COST,
-        listName,
-        cost: { id: createUniqueId(), name: t('recurring.newItem') },
-      }),
+      addRecurringCost: (listName) =>
+        this.#applyChange({
+          kind: ChangeKind.ADD_RECURRING_COST,
+          listName,
+          cost: { id: createUniqueId(), name: t('recurring.newItem') },
+        }),
       removeRecurringCost: (listName, costId) =>
         this.#applyChange({ kind: ChangeKind.REMOVE_RECURRING_COST, listName, costId }),
       renameRecurringCost: (listName, costId, name) =>
@@ -190,7 +194,9 @@ export class ExpensesApp {
     }
     const monthList = months.map((monthData) => monthData.month).sort();
     const confirmation = t('backup.confirmImport', {
-      count: months.length, first: monthList[0], last: monthList[monthList.length - 1],
+      count: months.length,
+      first: monthList[0],
+      last: monthList[monthList.length - 1],
     });
     if (!confirm(confirmation)) return;
 

@@ -18,7 +18,7 @@ export class BudgetBarsView {
     const spent = monthRecord.spentInCategory(category.id);
     const budget = monthRecord.budgetFor(category.id);
     const isOverBudget = spent > budget;
-    const fillPercentage = budget > 0 ? Math.min(spent / budget, 1) * 100 : (spent > 0 ? 100 : 0);
+    const fillPercentage = budget > 0 ? Math.min(spent / budget, 1) * 100 : spent > 0 ? 100 : 0;
     const fillColor = isOverBudget ? 'var(--color-negative)' : category.color;
 
     return `

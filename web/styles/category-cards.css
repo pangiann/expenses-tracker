@@ -1,98 +1,266 @@
 /* One card per spending category, with its expenses and an add form. */
 
-.month-details { display: grid; grid-template-columns: 1fr 300px; gap: 20px; align-items: start; }
-.category-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; }
+.month-details {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 20px;
+  align-items: start;
+}
+.category-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 20px;
+}
 
 /* Right-hand column: the Income card above the fixed costs. */
-.side-column { display: grid; gap: 20px; align-content: start; }
-.income-card-header { border-top-color: var(--color-positive); }
-.income-card .category-card-spent { color: var(--color-positive); }
+.side-column {
+  display: grid;
+  gap: 20px;
+  align-content: start;
+}
+.income-card-header {
+  border-top-color: var(--color-positive);
+}
+.income-card .category-card-spent {
+  color: var(--color-positive);
+}
 
-.category-card { padding: 0; overflow: hidden; display: flex; flex-direction: column; }
-.category-card-header { padding: 16px 18px 12px; border-top: 4px solid; }
-.category-card-title { display: flex; justify-content: space-between; align-items: baseline; }
-.category-card-title { gap: 8px; }
-.category-card-title h2 { margin: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.category-card {
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.category-card-header {
+  padding: 16px 18px 12px;
+  border-top: 4px solid;
+}
+.category-card-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.category-card-title {
+  gap: 8px;
+}
+.category-card-title h2 {
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 /* The clickable name has padding for its hover box; pull it back so the text lines up with "Budget". */
-.category-card-title h2.category-name { margin: -1px 0 -1px -4px; }
-.category-card-spent { font-weight: 700; font-variant-numeric: tabular-nums; }
+.category-card-title h2.category-name {
+  margin: -1px 0 -1px -4px;
+}
+.category-card-spent {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
 
 /* ✕ that removes a category: in the card's top-right corner, outside the text so nothing shifts;
    shown on hover, greyed out while the category can't be removed. */
-.category-card-header { position: relative; }
+.category-card-header {
+  position: relative;
+}
 
 /* Dragging cards by their header (see CategoryDragController). */
-.is-dragging-category, .is-dragging-category * { -webkit-user-select: none; user-select: none; cursor: grabbing; }
-.category-card-header { cursor: grab; }
-.category-card-header input, .category-card-header button { cursor: auto; }
+.is-dragging-category,
+.is-dragging-category * {
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: grabbing;
+}
+.category-card-header {
+  cursor: grab;
+}
+.category-card-header input,
+.category-card-header button {
+  cursor: auto;
+}
 /* The gap where the dragged card will land. */
-.category-card.is-drop-placeholder { opacity: .35; outline: 2px dashed var(--color-accent); outline-offset: -2px; }
+.category-card.is-drop-placeholder {
+  opacity: 0.35;
+  outline: 2px dashed var(--color-accent);
+  outline-offset: -2px;
+}
 /* The card following the pointer: lifted above the others. */
 .category-card.is-lifted {
-  opacity: 1 !important; cursor: grabbing; transform: rotate(1.5deg) scale(1.03);
-  box-shadow: 0 18px 40px rgba(20, 25, 50, .25);
+  opacity: 1 !important;
+  cursor: grabbing;
+  transform: rotate(1.5deg) scale(1.03);
+  box-shadow: 0 18px 40px rgba(20, 25, 50, 0.25);
 }
 .category-remove-button {
-  position: absolute; top: 3px; right: 5px;
-  border: 0; background: none; padding: 2px 4px; font-size: 12px; line-height: 1;
-  color: #c0c4d0; cursor: pointer; opacity: 0; /* transparent, not hidden, so the keyboard can reach it */
+  position: absolute;
+  top: 3px;
+  right: 5px;
+  border: 0;
+  background: none;
+  padding: 2px 4px;
+  font-size: 12px;
+  line-height: 1;
+  color: #c0c4d0;
+  cursor: pointer;
+  opacity: 0; /* transparent, not hidden, so the keyboard can reach it */
 }
 .category-card:hover .category-remove-button,
-.category-remove-button:focus-visible { opacity: 1; }
-.category-remove-button:hover { color: var(--color-negative); }
-.category-remove-button.is-blocked { color: #dfe2ea; cursor: not-allowed; }
-.category-remove-button.is-blocked:hover { color: #dfe2ea; }
+.category-remove-button:focus-visible {
+  opacity: 1;
+}
+.category-remove-button:hover {
+  color: var(--color-negative);
+}
+.category-remove-button.is-blocked {
+  color: #dfe2ea;
+  cursor: not-allowed;
+}
+.category-remove-button.is-blocked:hover {
+  color: #dfe2ea;
+}
 .category-card-budget-line {
-  font-size: 12px; color: var(--color-text-muted); margin-top: 4px;
-  display: flex; justify-content: space-between; gap: 8px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin-top: 4px;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
 }
 /* Longer languages wrap this line; keep the "left / over" amount against the right edge. */
-.category-card-budget-line > span:last-child { text-align: right; }
-.category-card-budget-line .is-negative { font-weight: 600; }
-.category-card-progress-track { height: 5px; background: var(--color-track); border-radius: 3px; margin-top: 10px; overflow: hidden; }
-.category-card-progress-fill { height: 100%; }
-
-.expense-list { list-style: none; margin: 0; padding: 0 18px; max-height: 220px; overflow-y: auto; flex: 1; }
-.expense-row {
-  display: flex; align-items: center; gap: 8px; padding: 7px 0;
-  border-top: 1px solid var(--color-border); font-size: 13px;
+.category-card-budget-line > span:last-child {
+  text-align: right;
 }
-.expense-row:hover .delete-button { visibility: visible; }
-.expense-date { color: var(--color-text-muted); font-size: 11px; width: 38px; flex-shrink: 0; }
-.expense-description { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.expense-description.is-empty { color: var(--color-text-faint); font-style: italic; }
-.entry-amount { font-variant-numeric: tabular-nums; }
+.category-card-budget-line .is-negative {
+  font-weight: 600;
+}
+.category-card-progress-track {
+  height: 5px;
+  background: var(--color-track);
+  border-radius: 3px;
+  margin-top: 10px;
+  overflow: hidden;
+}
+.category-card-progress-fill {
+  height: 100%;
+}
+
+.expense-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 18px;
+  max-height: 220px;
+  overflow-y: auto;
+  flex: 1;
+}
+.expense-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 0;
+  border-top: 1px solid var(--color-border);
+  font-size: 13px;
+}
+.expense-row:hover .delete-button {
+  visibility: visible;
+}
+.expense-date {
+  color: var(--color-text-muted);
+  font-size: 11px;
+  width: 38px;
+  flex-shrink: 0;
+}
+.expense-description {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.expense-description.is-empty {
+  color: var(--color-text-faint);
+  font-style: italic;
+}
+.entry-amount {
+  font-variant-numeric: tabular-nums;
+}
 .expense-list-empty {
-  color: var(--color-text-faint); font-size: 13px; padding: 12px 0; text-align: center;
+  color: var(--color-text-faint);
+  font-size: 13px;
+  padding: 12px 0;
+  text-align: center;
   border-top: 1px solid var(--color-border);
 }
 
 /* "New category" card at the end of the grid. */
 .new-category-card {
-  display: flex; flex-direction: column; justify-content: center; gap: 4px;
-  border: 2px dashed var(--color-border); box-shadow: none; background: transparent; min-height: 140px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  border: 2px dashed var(--color-border);
+  box-shadow: none;
+  background: transparent;
+  min-height: 140px;
 }
-.new-category-card h2 { color: var(--color-text-muted); margin-bottom: 6px; }
-.new-category-fields { display: flex; gap: 8px; }
+.new-category-card h2 {
+  color: var(--color-text-muted);
+  margin-bottom: 6px;
+}
+.new-category-fields {
+  display: flex;
+  gap: 8px;
+}
 .new-category-fields input {
-  flex: 1; min-width: 0; border: 1px solid var(--color-border); border-radius: 8px;
-  padding: 8px 10px; font: inherit; font-size: 14px; background: var(--color-card-background);
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 14px;
+  background: var(--color-card-background);
 }
-.new-category-fields input:focus { outline: 2px solid var(--color-accent); outline-offset: -1px; }
-.new-category-fields .primary-button { padding: 8px 14px; }
-.new-category-error { color: var(--color-negative); font-size: 12px; margin: 4px 0 0; min-height: 1em; }
+.new-category-fields input:focus {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -1px;
+}
+.new-category-fields .primary-button {
+  padding: 8px 14px;
+}
+.new-category-error {
+  color: var(--color-negative);
+  font-size: 12px;
+  margin: 4px 0 0;
+  min-height: 1em;
+}
 
 .category-add-form {
-  display: flex; gap: 6px; padding: 10px 18px 14px;
-  border-top: 1px solid var(--color-border); background: #fafbfd;
+  display: flex;
+  gap: 6px;
+  padding: 10px 18px 14px;
+  border-top: 1px solid var(--color-border);
+  background: #fafbfd;
 }
 .category-add-form input {
-  border: 1px solid var(--color-border); border-radius: 6px; padding: 6px 8px;
-  font-size: 13px; font-family: inherit; min-width: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 13px;
+  font-family: inherit;
+  min-width: 0;
 }
-.category-add-form input[name=description] { flex: 1; }
-.category-add-form input[name=amount] { width: 72px; }
+.category-add-form input[name='description'] {
+  flex: 1;
+}
+.category-add-form input[name='amount'] {
+  width: 72px;
+}
 .category-add-form button {
-  border: 0; background: var(--color-accent); color: #fff; border-radius: 6px;
-  padding: 0 10px; cursor: pointer; font-weight: 700;
+  border: 0;
+  background: var(--color-accent);
+  color: #fff;
+  border-radius: 6px;
+  padding: 0 10px;
+  cursor: pointer;
+  font-weight: 700;
 }

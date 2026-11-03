@@ -61,11 +61,16 @@ export class HouseholdRoom {
 
     try {
       switch (message?.type) {
-        case 'openMonth': return await this.#openMonth(socket, message.month);
-        case 'change': return await this.#applyChange(socket, message);
-        case 'export': return await this.#exportMonths(socket);
-        case 'import': return await this.#importMonths(socket, message.months);
-        default: return this.#sendError(socket, `Unknown message type: ${message?.type}`);
+        case 'openMonth':
+          return await this.#openMonth(socket, message.month);
+        case 'change':
+          return await this.#applyChange(socket, message);
+        case 'export':
+          return await this.#exportMonths(socket);
+        case 'import':
+          return await this.#importMonths(socket, message.months);
+        default:
+          return this.#sendError(socket, `Unknown message type: ${message?.type}`);
       }
     } catch (error) {
       if (error instanceof InvalidChangeError) {
@@ -77,7 +82,11 @@ export class HouseholdRoom {
   }
 
   webSocketClose(socket, code) {
-    try { socket.close(code, 'Closing'); } catch { /* already closed */ }
+    try {
+      socket.close(code, 'Closing');
+    } catch {
+      /* already closed */
+    }
   }
 
   webSocketError() {}
@@ -112,15 +121,20 @@ export class HouseholdRoom {
   }
 
   async #importMonths(socket, months) {
-    if (!Array.isArray(months) || months.length === 0 || months.length > MAX_IMPORTED_MONTHS
-        || !months.every(isMonthData)) {
+    if (
+      !Array.isArray(months) ||
+      months.length === 0 ||
+      months.length > MAX_IMPORTED_MONTHS ||
+      !months.every(isMonthData)
+    ) {
       throw new InvalidChangeError('Not a valid list of months');
     }
     const monthRecords = months.map((monthData) => new MonthRecord(monthData));
     for (let start = 0; start < monthRecords.length; start += MAX_KEYS_PER_STORAGE_PUT) {
       const batch = monthRecords.slice(start, start + MAX_KEYS_PER_STORAGE_PUT);
-      await this.storage.put(Object.fromEntries(
-        batch.map((monthRecord) => [storageKey(monthRecord.monthKey), monthRecord.toJSON()])));
+      await this.storage.put(
+        Object.fromEntries(batch.map((monthRecord) => [storageKey(monthRecord.monthKey), monthRecord.toJSON()])),
+      );
     }
     this.monthKeys = null; // re-read on next use
     socket.send(JSON.stringify({ type: 'importDone', count: monthRecords.length }));

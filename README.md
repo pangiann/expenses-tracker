@@ -27,11 +27,12 @@ Cloudflare builds and deploys the Worker from GitHub. Nothing personal is in thi
 2. **Turn on the login.** Open the Worker's **Access** tab (or **Settings → Domains & Routes → Enable Cloudflare Access**). Choose **All traffic**, and for the policy choose **Cloudflare account** to start with only yourself.
 3. **Add one secret.** In the Worker, go to **Settings → Variables and Secrets**, click **Add**, choose type **Secret**, and add:
 
-   | Name | Value |
-   |---|---|
+   | Name                | Value                                                                               |
+   | ------------------- | ----------------------------------------------------------------------------------- |
    | `HOUSEHOLD_MEMBERS` | JSON from each email to a household name, for example `{"you@example.com": "home"}` |
 
    Use the email you sign in with. The Worker learns who is signed in from Cloudflare Access (`ctx.access`); a request that Access didn't authenticate is refused. If the page ever says the sign-in can't be read, you can also add the optional secrets `ACCESS_TEAM_DOMAIN` and `ACCESS_AUD`, and the Worker verifies the Access token itself.
+
 4. **Open the site** and sign in. To bring over months from a backup file, click **Import**.
 
 **Adding a household.** In **Zero Trust → Access → Policies**, edit this Worker's policy and add **Include → Emails** with the new people's addresses; they sign in with a one-time code sent to their email and need no Cloudflare account. Then add them to `HOUSEHOLD_MEMBERS` with their own household name, for example `{"you@example.com": "home", "a@example.com": "family-2", "b@example.com": "family-2"}`. People with the same household name share months; different households never see each other's data. The Cloudflare account owner can see all data stored in the account.
