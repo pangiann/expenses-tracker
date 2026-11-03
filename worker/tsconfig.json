@@ -1,0 +1,9 @@
+{
+  // The Worker: Cloudflare's runtime types from worker-configuration.d.ts (`npm run types`), no DOM.
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["es2023"],
+    "types": []
+  },
+  "include": ["**/*"]
+}

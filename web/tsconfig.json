@@ -1,0 +1,9 @@
+{
+  // The page: browser built-ins (DOM), no Node.js or Cloudflare types.
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["es2023", "dom", "dom.iterable"],
+    "types": []
+  },
+  "include": ["scripts/**/*"]
+}

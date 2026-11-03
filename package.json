@@ -11,6 +11,8 @@
     "watch": "npm run build -- --watch",
     "dev": "wrangler dev",
     "seed": "node --experimental-websocket scripts/seed-dev-data.mjs",
+    "typecheck": "tsc -p web && tsc -p worker",
+    "types": "wrangler types worker/worker-configuration.d.ts",
     "test": "node --test test/",
     "deploy": "wrangler deploy"
   },
@@ -20,6 +22,7 @@
   "devDependencies": {
     "esbuild": "0.28.2",
     "sortablejs": "1.15.7",
+    "typescript": "6.0.3",
     "wrangler": "^4.40.0"
   }
 }

@@ -1,0 +1,3 @@
+# Files in web/ that Cloudflare should not serve
+.assetsignore
+tsconfig.json

@@ -1,0 +1,21 @@
+{
+  // Shared compiler settings. Each part of the project has its own tsconfig.json that
+  // extends this one, because the page runs in a browser and the Worker on Cloudflare,
+  // and each has different built-in types. Nothing is emitted: esbuild (page) and
+  // wrangler (Worker) compile the code; tsc only checks it (`npm run typecheck`).
+  "compilerOptions": {
+    "target": "es2022",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "noEmit": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true,
+    // Existing .js files can be imported but aren't checked; they become .ts one at a time.
+    "allowJs": true,
+    "checkJs": false
+  }
+}
