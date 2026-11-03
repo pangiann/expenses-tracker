@@ -1,4 +1,3 @@
-import { isMonthData } from '../../shared/month/month-validation.ts';
 import * as categoriesApi from './api/categories-api.ts';
 import * as expensesApi from './api/expenses-api.ts';
 import { ApiError, InvalidRequestError, OfflineError } from './api/http.ts';
@@ -8,20 +7,19 @@ import * as monthsApi from './api/months-api.ts';
 import { outbox } from './api/outbox.ts';
 import * as recurringCostsApi from './api/recurring-costs-api.ts';
 import { monthWithWaitingEdits } from './api/waiting-edits.ts';
-import { t, translator } from './i18n/translator.ts';
+import { BackupButtons } from './features/backup/backup-buttons.ts';
+import { LanguagePicker } from './features/language/language-picker.ts';
+import { MonthNavigation } from './features/month-navigation/month-navigation.ts';
+import { StatusBar } from './features/status/status-bar.ts';
+import { t } from './i18n/translator.ts';
 import { SaveStatus } from './utils/save-status.ts';
-import { currentMonthKey, nextMonthKey, todayAsIsoDate } from './utils/month-keys.ts';
-import { AddMonthDialog } from './views/AddMonthDialog.js';
-import { BackupView } from './views/BackupView.js';
+import { currentMonthKey } from './utils/month-keys.ts';
 import { BudgetBarsView } from './views/BudgetBarsView.js';
 import { CategoryCardsView } from './views/CategoryCardsView.js';
 import { IncomeView } from './views/IncomeView.js';
-import { LanguageView } from './views/LanguageView.js';
-import { MonthNavigationView } from './views/MonthNavigationView.js';
 import { QuickAddView } from './views/QuickAddView.js';
 import { RecurringCostsView } from './views/RecurringCostsView.js';
 import { SpendingDonutView } from './views/SpendingDonutView.js';
-import { StatusView } from './views/StatusView.js';
 import { SummaryCardsView } from './views/SummaryCardsView.js';
 
 /** String id of the message shown when the server explains why it refused the connection. */
@@ -45,7 +43,7 @@ const REFUSAL_STRING_IDS = {
  */
 export class ExpensesApp {
   constructor() {
-    this.statusView = new StatusView();
+    this.statusView = new StatusBar();
 
     /** @type {import('../../shared/month/month-record.ts').MonthData | null} the server's version of the month */
     this.serverMonth = null;
@@ -60,10 +58,12 @@ export class ExpensesApp {
     this.outboxState = { kind: 'idle' };
 
     const actions = this.#createActions();
-    this.monthNavigationView = new MonthNavigationView(actions);
-    this.addMonthDialog = new AddMonthDialog(actions);
-    this.backupView = new BackupView(actions);
-    this.languageView = new LanguageView(actions);
+    this.monthNavigation = new MonthNavigation((monthKey) => void this.#openMonth(monthKey));
+    new BackupButtons(() => {
+      this.shownRevision = -1; // the import saved months without a newer answer for this one
+      void this.#openMonth(this.shownMonthKey);
+    });
+    new LanguagePicker();
     this.views = [
       new QuickAddView(actions),
       new SummaryCardsView(actions),
@@ -156,12 +156,6 @@ export class ExpensesApp {
 
   #createActions() {
     return {
-      // Month navigation
-      showPreviousMonth: () => this.#openMonthAtOffset(-1),
-      showNextMonth: () => this.#openMonthAtOffset(+1),
-      requestNewMonth: () => this.addMonthDialog.open(this.#suggestedNewMonthKey()),
-      addMonth: (monthKey) => this.#openMonth(monthKey), // the server creates it when missing
-
       // Expenses
       addExpense: ({ categoryKey, amount, description, date }) =>
         this.#edit((monthKey) =>
@@ -200,11 +194,6 @@ export class ExpensesApp {
         this.#edit((monthKey) => recurringCostsApi.renameRecurringCost(monthKey, listName, costId, name)),
       changeRecurringCostAmount: (listName, costId, amount) =>
         this.#edit((monthKey) => recurringCostsApi.changeRecurringCostAmount(monthKey, listName, costId, amount)),
-
-      // Backups and language
-      exportBackup: () => this.#exportBackup(),
-      importBackup: (fileText) => this.#importBackup(fileText),
-      changeLanguage: (language) => this.#changeLanguage(language),
     };
   }
 
@@ -227,75 +216,8 @@ export class ExpensesApp {
   #renderAll() {
     if (!this.serverMonth) return;
     this.currentMonth = monthWithWaitingEdits(this.serverMonth, outbox.waitingEdits);
-    this.monthNavigationView.render(this.currentMonth.monthKey, this.savedMonthKeys);
+    this.monthNavigation.render(this.currentMonth.monthKey, this.savedMonthKeys);
     for (const view of this.views) view.render(this.currentMonth);
-  }
-
-  /** Reloads the page in the new language. Edits not yet sent wait in the outbox and survive the reload. */
-  #changeLanguage(language) {
-    translator.saveLanguage(language);
-    location.reload();
-  }
-
-  // ----- Backups -----
-
-  async #exportBackup() {
-    let months;
-    try {
-      ({ months } = await monthsApi.exportMonths());
-    } catch (error) {
-      console.error(error);
-      return alert(t('error.cloudUnreachable'));
-    }
-    const backup = { exportedAt: new Date().toISOString(), months };
-    const downloadLink = document.createElement('a');
-    downloadLink.href = URL.createObjectURL(new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' }));
-    downloadLink.download = `expenses-backup-${todayAsIsoDate()}.json`;
-    downloadLink.click();
-    URL.revokeObjectURL(downloadLink.href);
-  }
-
-  async #importBackup(fileText) {
-    let months;
-    try {
-      months = JSON.parse(fileText).months;
-    } catch {
-      months = null;
-    }
-    if (!Array.isArray(months) || months.length === 0 || !months.every(isMonthData)) {
-      alert(t('backup.notABackup'));
-      return;
-    }
-    const monthList = months.map((monthData) => monthData.month).sort();
-    const confirmation = t('backup.confirmImport', {
-      count: months.length,
-      first: monthList[0],
-      last: monthList[monthList.length - 1],
-    });
-    if (!confirm(confirmation)) return;
-
-    try {
-      await monthsApi.importMonths(months);
-    } catch (error) {
-      console.error(error);
-      return alert(error instanceof OfflineError ? t('error.cloudUnreachable') : t('backup.notABackup'));
-    }
-    this.shownRevision = -1; // the import saved months without a newer answer for this one
-    await this.#openMonth(this.shownMonthKey);
-  }
-
-  // ----- Month helpers -----
-
-  #openMonthAtOffset(offset) {
-    if (!this.currentMonth) return;
-    const position = this.savedMonthKeys.indexOf(this.currentMonth.monthKey);
-    const targetMonthKey = this.savedMonthKeys[position + offset];
-    if (targetMonthKey) void this.#openMonth(targetMonthKey);
-  }
-
-  #suggestedNewMonthKey() {
-    const latestMonthKey = this.savedMonthKeys[this.savedMonthKeys.length - 1];
-    return latestMonthKey ? nextMonthKey(latestMonthKey) : currentMonthKey();
   }
 }
 

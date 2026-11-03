@@ -7,19 +7,20 @@ import { parseAmount } from '../utils/money.ts';
  * put the original text back.
  */
 export class InlineNumberEditor {
-  /**
-   * @param {HTMLElement} displayElement  the element showing the value
-   * @param {object} options
-   * @param {number} options.currentValue
-   * @param {boolean} [options.allowZero=false]
-   * @param {(newValue: number) => void} options.onSave
-   */
-  static open(displayElement, { currentValue, allowZero = false, onSave }) {
+  /** @param displayElement  the element showing the value */
+  static open(
+    displayElement: HTMLElement,
+    {
+      currentValue,
+      allowZero = false,
+      onSave,
+    }: { currentValue: number; allowZero?: boolean; onSave: (newValue: number) => void },
+  ): void {
     const input = document.createElement('input');
     input.type = 'number';
     input.step = '0.01';
     input.min = '0';
-    input.value = currentValue;
+    input.value = String(currentValue);
     input.className = 'inline-number-input';
 
     displayElement.replaceWith(input);
@@ -27,7 +28,7 @@ export class InlineNumberEditor {
     input.select();
 
     let isFinished = false;
-    const finish = (shouldSave) => {
+    const finish = (shouldSave: boolean) => {
       if (isFinished) return;
       isFinished = true;
 

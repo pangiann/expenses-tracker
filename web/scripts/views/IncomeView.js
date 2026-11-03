@@ -1,8 +1,8 @@
 import { getElement } from '../utils/html.ts';
 import { formatEuros, parseAmount } from '../utils/money.ts';
 import { defaultExpenseDate } from '../utils/month-keys.ts';
-import { InlineNumberEditor } from './InlineNumberEditor.js';
-import { renderEntryRows } from './entryRows.js';
+import { InlineNumberEditor } from '../components/inline-number-editor.ts';
+import { renderEntryRows } from '../components/entry-rows.ts';
 
 /**
  * The Income card: every amount earned this month (salary, each private lesson, ...),

@@ -3,14 +3,19 @@ import { escapeHtml } from '../utils/html.ts';
 import { formatEuros } from '../utils/money.ts';
 import { formatShortDate } from '../utils/month-keys.ts';
 
+export interface EntryRow {
+  id: string;
+  date?: string | null;
+  description: string;
+  amount: number;
+}
+
 /**
  * The rows of a list of dated amounts: expenses in a category card, entries in the Income card.
  * The amount (class entry-amount) and the ✕ (class delete-button) carry data-entry-id.
- *
- * @param {{ id: string, date: string | null, description: string, amount: number }[]} entries
- * @param {string} [untitledStringId]  shown when an entry has no description
+ * @param untitledStringId  shown when an entry has no description
  */
-export function renderEntryRows(entries, untitledStringId = 'common.noDescription') {
+export function renderEntryRows(entries: readonly EntryRow[], untitledStringId = 'common.noDescription'): string {
   if (entries.length === 0) return `<div class="expense-list-empty">${escapeHtml(t('common.nothingYet'))}</div>`;
   return entries
     .map(

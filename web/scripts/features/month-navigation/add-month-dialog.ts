@@ -1,22 +1,18 @@
-import { t } from '../i18n/translator.ts';
-import { escapeHtml, getElement } from '../utils/html.ts';
-import { buildMonthKey, monthNames, parseMonthKey } from '../utils/month-keys.ts';
+import { t } from '../../i18n/translator.ts';
+import { escapeHtml, getElement } from '../../utils/html.ts';
+import { buildMonthKey, monthNames, parseMonthKey } from '../../utils/month-keys.ts';
 
 const EARLIEST_YEAR = 1900;
 const LATEST_YEAR = 2999;
 
-/** "Add a month" dialog: pick a month and year. */
+/** "Add a month" dialog: pick a month and year, then open it (the server creates it). */
 export class AddMonthDialog {
-  /**
-   * @param {object} actions
-   * @param {(monthKey: string) => void} actions.addMonth
-   */
-  constructor(actions) {
-    this.backdrop = getElement('addMonthDialog');
-    this.monthSelect = getElement('addMonthMonthSelect');
-    this.yearInput = getElement('addMonthYearInput');
-    this.errorMessage = getElement('addMonthError');
+  readonly backdrop = getElement('addMonthDialog');
+  readonly monthSelect = getElement('addMonthMonthSelect', HTMLSelectElement);
+  readonly yearInput = getElement('addMonthYearInput', HTMLInputElement);
+  readonly errorMessage = getElement('addMonthError');
 
+  constructor(openMonth: (monthKey: string) => void) {
     this.monthSelect.innerHTML = monthNames()
       .map((monthName, monthIndex) => `<option value="${monthIndex + 1}">${escapeHtml(monthName)}</option>`)
       .join('');
@@ -30,20 +26,20 @@ export class AddMonthDialog {
         return;
       }
       this.close();
-      actions.addMonth(buildMonthKey(year, Number(this.monthSelect.value)));
+      openMonth(buildMonthKey(year, Number(this.monthSelect.value)));
     });
   }
 
-  /** @param {string} suggestedMonthKey  month selected when the dialog opens */
-  open(suggestedMonthKey) {
+  /** @param suggestedMonthKey  month selected when the dialog opens */
+  open(suggestedMonthKey: string): void {
     const { year, monthNumber } = parseMonthKey(suggestedMonthKey);
     this.monthSelect.value = String(monthNumber);
-    this.yearInput.value = year;
+    this.yearInput.value = String(year);
     this.errorMessage.textContent = '';
     this.backdrop.hidden = false;
   }
 
-  close() {
+  close(): void {
     this.backdrop.hidden = true;
   }
 }

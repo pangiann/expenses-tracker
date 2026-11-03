@@ -5,14 +5,23 @@
  */
 export class InlineTextEditor {
   /**
-   * @param {HTMLElement} displayElement  the element showing the text
-   * @param {object} options
-   * @param {string} options.currentText
-   * @param {number} options.maxLength
-   * @param {(newText: string) => string | null} options.validate  returns an error message, or null when valid
-   * @param {(newText: string) => void} options.onSave
+   * @param displayElement  the element showing the text
+   * @param options.validate  returns an error message, or null when valid
    */
-  static open(displayElement, { currentText, maxLength, validate, onSave }) {
+  static open(
+    displayElement: HTMLElement,
+    {
+      currentText,
+      maxLength,
+      validate,
+      onSave,
+    }: {
+      currentText: string;
+      maxLength: number;
+      validate: (newText: string) => string | null;
+      onSave: (newText: string) => void;
+    },
+  ): void {
     const input = document.createElement('input');
     input.type = 'text';
     input.value = currentText;

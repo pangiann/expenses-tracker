@@ -4,10 +4,10 @@ import { categoryName, t } from '../i18n/translator.ts';
 import { escapeHtml, getElement } from '../utils/html.ts';
 import { formatEuros, parseAmount } from '../utils/money.ts';
 import { defaultExpenseDate } from '../utils/month-keys.ts';
-import { InlineNumberEditor } from './InlineNumberEditor.js';
-import { InlineTextEditor } from './InlineTextEditor.js';
+import { InlineNumberEditor } from '../components/inline-number-editor.ts';
+import { InlineTextEditor } from '../components/inline-text-editor.ts';
 import { CategoryDragController } from './CategoryDragController.js';
-import { renderEntryRows } from './entryRows.js';
+import { renderEntryRows } from '../components/entry-rows.ts';
 
 /**
  * One card per category with its budget, its expenses and a small add form, followed by a

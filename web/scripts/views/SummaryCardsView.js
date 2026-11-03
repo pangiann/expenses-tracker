@@ -1,7 +1,7 @@
 import { t } from '../i18n/translator.ts';
 import { getElement } from '../utils/html.ts';
 import { formatEuros, formatPercent } from '../utils/money.ts';
-import { InlineNumberEditor } from './InlineNumberEditor.js';
+import { InlineNumberEditor } from '../components/inline-number-editor.ts';
 
 /** Earned, Spent, Saved and Savings rate cards. Earned is the sum of the Income card's entries. */
 export class SummaryCardsView {
