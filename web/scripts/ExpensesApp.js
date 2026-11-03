@@ -1,4 +1,3 @@
-import { MonthRecord } from '../../shared/month/month-record.ts';
 import { isMonthData } from '../../shared/month/month-validation.ts';
 import * as categoriesApi from './api/categories-api.ts';
 import * as expensesApi from './api/expenses-api.ts';
@@ -8,6 +7,7 @@ import { liveUpdates } from './api/live-updates.ts';
 import * as monthsApi from './api/months-api.ts';
 import { outbox } from './api/outbox.ts';
 import * as recurringCostsApi from './api/recurring-costs-api.ts';
+import { monthWithWaitingEdits } from './api/waiting-edits.ts';
 import { t, translator } from './i18n/Translator.js';
 import { SaveStatus } from './services/SaveStatus.js';
 import { currentMonthKey, nextMonthKey, todayAsIsoDate } from './utils/monthKeys.js';
@@ -38,15 +38,18 @@ const REFUSAL_STRING_IDS = {
  *   view event -> action below -> API function (api/*-api.ts) -> HTTP request
  *     -> the server saves the edit and answers with the month -> #show() draws it
  *
- * The screen shows only what the server sent, never a guess. Other people's edits arrive
- * the same way, through the live connection (api/live-updates.ts), and also go to #show().
- * Edits made without a connection wait in the outbox (api/outbox.ts) and are sent later.
+ * The screen shows the server's last answer with the edits still waiting in the outbox
+ * applied on top (api/waiting-edits.ts), so an edit shows at once, also without a
+ * connection; the outbox sends it when it can (api/outbox.ts). Other people's edits arrive
+ * through the live connection (api/live-updates.ts) and also go to #show().
  */
 export class ExpensesApp {
   constructor() {
     this.statusView = new StatusView();
 
-    /** @type {MonthRecord | null} the month on screen */
+    /** @type {import('../../shared/month/month-record.ts').MonthData | null} the server's version of the month */
+    this.serverMonth = null;
+    /** @type {import('../../shared/month/month-record.ts').MonthRecord | null} the month on screen */
     this.currentMonth = null;
     /** @type {string | null} the month being shown or loaded */
     this.shownMonthKey = null;
@@ -80,6 +83,7 @@ export class ExpensesApp {
     }
     outbox.onAnswer = (answer) => this.#show(answer);
     outbox.onStateChange = (state) => this.#handleOutboxState(state);
+    outbox.onEditsChange = () => this.#renderAll();
     liveUpdates.onMonth = (answer) => this.#show(answer);
     liveUpdates.onReconnect = () => {
       void this.#openMonth(this.shownMonthKey); // catch up on edits missed while disconnected
@@ -124,7 +128,7 @@ export class ExpensesApp {
   #show(answer) {
     if (answer.month.month !== this.shownMonthKey || answer.revision < this.shownRevision) return;
     this.shownRevision = answer.revision;
-    this.currentMonth = new MonthRecord(answer.month);
+    this.serverMonth = answer.month;
     this.savedMonthKeys = answer.monthKeys;
     this.statusView.showError(null);
     this.#renderAll();
@@ -205,8 +209,8 @@ export class ExpensesApp {
   }
 
   /**
-   * Sends an edit of the month on screen. The screen changes when the server's answer
-   * arrives (see #show).
+   * Sends an edit of the month on screen. The outbox redraws the month with the edit at
+   * once, and again with the server's answer.
    * @param {(monthKey: string) => void} sendEdit  calls one API function
    */
   #edit(sendEdit) {
@@ -219,7 +223,10 @@ export class ExpensesApp {
     }
   }
 
+  /** Draws the server's month with the waiting edits on top. */
   #renderAll() {
+    if (!this.serverMonth) return;
+    this.currentMonth = monthWithWaitingEdits(this.serverMonth, outbox.waitingEdits);
     this.monthNavigationView.render(this.currentMonth.monthKey, this.savedMonthKeys);
     for (const view of this.views) view.render(this.currentMonth);
   }
