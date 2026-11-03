@@ -1,5 +1,5 @@
-import { MAX_CATEGORY_NAME_LENGTH } from '../config/categories.js';
-import { MonthRecord } from '../model/MonthRecord.js';
+import { MAX_CATEGORY_NAME_LENGTH } from '../../../shared/month/categories.js';
+import { MonthRecord } from '../../../shared/month/month-record.js';
 import { categoryName, t } from '../i18n/Translator.js';
 import { escapeHtml, getElement } from '../utils/html.js';
 import { formatEuros, parseAmount } from '../utils/money.js';

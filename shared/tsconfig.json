@@ -1,0 +1,10 @@
+{
+  // Code that runs both in the page and in the Worker: plain JavaScript built-ins only,
+  // no DOM, no Cloudflare and no Node.js types, so it can't depend on either side.
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["es2023"],
+    "types": []
+  },
+  "include": ["**/*"]
+}

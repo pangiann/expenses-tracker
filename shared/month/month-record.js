@@ -4,8 +4,8 @@ import {
   DEFAULT_FIXED_COST_NAMES,
   MAX_CATEGORIES_PER_MONTH,
   RecurringCostList,
-} from '../config/categories.js';
-import { roundToCents, sumAmounts } from '../utils/money.js';
+} from './categories.js';
+import { roundToCents, sumAmounts } from './amounts.js';
 
 /**
  * Everything recorded for one month: income entries, spending categories with their

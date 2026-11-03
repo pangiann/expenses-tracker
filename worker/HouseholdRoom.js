@@ -7,7 +7,7 @@
  *
  * Messages from a device:
  *   { type: 'openMonth', month }                      show this month (created if missing)
- *   { type: 'change', changeId, month, change }       apply one change (see monthChanges.js)
+ *   { type: 'change', changeId, month, change }       apply one change (see shared/month/month-changes.js)
  *   { type: 'export' }                                send every month
  *   { type: 'import', months }                        replace these months
  * Messages to devices:
@@ -15,9 +15,9 @@
  *   { type: 'changeApplied', changeId }                    to the sender, if it no longer views that month
  *   { type: 'exportData', months } / { type: 'importDone', count } / { type: 'error', message, changeId? }
  */
-import { MonthRecord } from '../web/scripts/model/MonthRecord.js';
-import { InvalidChangeError, applyMonthChange } from '../web/scripts/model/monthChanges.js';
-import { closestSavedMonthKey, isMonthData, isValidMonthKey } from '../web/scripts/model/monthValidation.js';
+import { MonthRecord } from '../shared/month/month-record.js';
+import { InvalidChangeError, applyMonthChange } from '../shared/month/month-changes.js';
+import { closestSavedMonthKey, isMonthData, isValidMonthKey } from '../shared/month/month-validation.js';
 
 const MONTH_STORAGE_PREFIX = 'month:';
 const MAX_MESSAGE_LENGTH = 5 * 1024 * 1024;

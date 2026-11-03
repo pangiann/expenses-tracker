@@ -1,6 +1,7 @@
 import { categoryName, t } from '../i18n/Translator.js';
 import { escapeHtml, getElement } from '../utils/html.js';
-import { formatEuros, sumAmounts } from '../utils/money.js';
+import { sumAmounts } from '../../../shared/month/amounts.js';
+import { formatEuros } from '../utils/money.js';
 
 // Chart geometry inside the SVG's 120 x 120 viewBox.
 const CHART_CENTER = 60;

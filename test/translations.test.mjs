@@ -3,7 +3,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { test } from 'vitest';
 
-import { DEFAULT_CATEGORIES } from '../web/scripts/config/categories.js';
+import { DEFAULT_CATEGORIES } from '../shared/month/categories.js';
 
 const WEB_DIR = new URL('../web/', import.meta.url).pathname;
 const readTranslations = (language) => JSON.parse(readFileSync(join(WEB_DIR, 'i18n', `${language}.json`), 'utf8'));

@@ -8,7 +8,7 @@
  * through the real Worker code. Months it creates replace the same months already there.
  * It only talks to localhost, where .dev.vars lets you in without signing in.
  */
-import { DEFAULT_CATEGORIES, DEFAULT_FIXED_COST_NAMES } from '../web/scripts/config/categories.js';
+import { DEFAULT_CATEGORIES, DEFAULT_FIXED_COST_NAMES } from '../shared/month/categories.js';
 
 const SITE = process.env.SEED_SITE ?? 'http://localhost:8787';
 const MONTH_COUNT = 6;

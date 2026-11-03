@@ -11,7 +11,7 @@
     "watch": "npm run build -- --watch",
     "dev": "wrangler dev",
     "seed": "node --experimental-websocket scripts/seed-dev-data.mjs",
-    "typecheck": "tsc -p web && tsc -p worker",
+    "typecheck": "tsc -p shared && tsc -p web && tsc -p worker",
     "lint": "eslint .",
     "types": "wrangler types worker/worker-configuration.d.ts",
     "format": "prettier --write .",

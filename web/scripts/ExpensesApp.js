@@ -1,5 +1,5 @@
-import { ChangeKind, InvalidChangeError, applyMonthChange } from './model/monthChanges.js';
-import { isMonthData } from './model/monthValidation.js';
+import { ChangeKind, InvalidChangeError, applyMonthChange } from '../../shared/month/month-changes.js';
+import { isMonthData } from '../../shared/month/month-validation.js';
 import { t, translator } from './i18n/Translator.js';
 import { CloudMonthSync } from './services/CloudMonthSync.js';
 import { createUniqueId } from './utils/ids.js';
@@ -34,7 +34,7 @@ export class ExpensesApp {
     this.statusView = new StatusView();
     this.sync = null;
 
-    /** @type {import('./model/MonthRecord.js').MonthRecord | null} the month on screen */
+    /** @type {import('../../shared/month/month-record.js').MonthRecord | null} the month on screen */
     this.currentMonth = null;
     /** @type {string[]} saved months, oldest first */
     this.savedMonthKeys = [];

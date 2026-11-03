@@ -55,6 +55,13 @@ Everything fits in Cloudflare's free plan. The page files are static assets, whi
 ## Project layout
 
 ```
+shared/                   code that runs in the page and in the Worker (no DOM, no Cloudflare)
+  month/
+    categories.js         default categories, colours and limits
+    amounts.js            rounding and sums
+    month-record.js       one month's data and the rules for changing it
+    month-changes.js      every kind of change, checked and applied the same way everywhere
+    month-validation.js   month keys, month shape, which month a new one copies
 web/                      the page (HTML, CSS, JavaScript modules; bundled into web/dist/ by `npm run build`)
   index.html
   i18n/en.json, el.json   display text for every string id
@@ -62,12 +69,7 @@ web/                      the page (HTML, CSS, JavaScript modules; bundled into 
   scripts/
     main.js               entry point: creates ExpensesApp
     ExpensesApp.js        controller: turns user actions into changes
-    config/               default categories, colours and limits
     i18n/Translator.js    translations by string id (see "Languages" below)
-    model/
-      MonthRecord.js      one month's data and the rules for changing it
-      monthChanges.js     every kind of change, checked and applied the same way everywhere
-      monthValidation.js  month keys, month shape, which month a new one copies
     services/
       CloudMonthSync.js   sends changes over a WebSocket, receives live updates
       PendingChangeStore.js  keeps unconfirmed changes in the browser, so offline edits survive a closed tab

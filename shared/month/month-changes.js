@@ -1,4 +1,4 @@
-import { MAX_CATEGORY_NAME_LENGTH, RecurringCostList } from '../config/categories.js';
+import { MAX_CATEGORY_NAME_LENGTH, RecurringCostList } from './categories.js';
 
 /**
  * Every edit to a month is described as a small "change" object, for example
@@ -44,7 +44,7 @@ const RECURRING_LIST_NAMES = new Set(Object.values(RecurringCostList));
 
 /**
  * Applies one change to a month.
- * @param {import('./MonthRecord.js').MonthRecord} monthRecord
+ * @param {import('./month-record.js').MonthRecord} monthRecord
  * @param {object} change
  * @throws {InvalidChangeError} when the change is malformed
  */

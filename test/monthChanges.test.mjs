@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { test } from 'vitest';
 
-import { MonthRecord } from '../web/scripts/model/MonthRecord.js';
-import { ChangeKind, InvalidChangeError, applyMonthChange } from '../web/scripts/model/monthChanges.js';
-import { closestSavedMonthKey, isMonthData } from '../web/scripts/model/monthValidation.js';
+import { MonthRecord } from '../shared/month/month-record.js';
+import { ChangeKind, InvalidChangeError, applyMonthChange } from '../shared/month/month-changes.js';
+import { closestSavedMonthKey, isMonthData } from '../shared/month/month-validation.js';
 
 const novemberWithRent = () =>
   new MonthRecord({

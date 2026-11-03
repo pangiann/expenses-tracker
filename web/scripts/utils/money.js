@@ -1,7 +1,7 @@
 /**
  * Money helpers. Formatting follows the page language (set once at start by main.js):
  * English shows "€1,234.50", Greek shows "1.234,50 €".
- * The rounding and sum helpers have no language and also run in the Cloudflare Worker.
+ * Rounding and sums are in shared/month/amounts.js, because the Worker needs them too.
  */
 
 let euroFormatter = new Intl.NumberFormat('en-IE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 });
@@ -29,15 +29,6 @@ export function formatEuros(amount) {
 /** 0.523 -> "52.3%" (English) or "52,3%" (Greek) */
 export function formatPercent(fraction) {
   return percentFormatter.format(fraction);
-}
-
-/** Rounds to whole cents, avoiding values like 0.30000000000000004. */
-export function roundToCents(amount) {
-  return Math.round(amount * 100) / 100;
-}
-
-export function sumAmounts(amounts) {
-  return amounts.reduce((total, amount) => total + amount, 0);
 }
 
 /** Parses an input value; returns null when it isn't a number. Accepts "3,50" as well as "3.50". */
