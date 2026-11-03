@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { test } from 'node:test';
+import { test } from 'vitest';
 
 import { AccessDeniedError, verifiedUserEmail } from '../worker/accessAuth.js';
 import { UnknownMemberError, householdForEmail, parseHouseholdMembers } from '../worker/households.js';

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { test } from 'node:test';
+import { test } from 'vitest';
 
 import { MonthRecord } from '../web/scripts/model/MonthRecord.js';
 import { ChangeKind, InvalidChangeError, applyMonthChange } from '../web/scripts/model/monthChanges.js';
