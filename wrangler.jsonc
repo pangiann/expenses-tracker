@@ -4,7 +4,8 @@
   "name": "expenses-tracker",
   "main": "worker/index.js",
   // Bundles the page (web/scripts -> web/dist) before every `wrangler deploy` and `wrangler dev`.
-  "build": { "command": "npm run build" },
+  // `wrangler dev` builds again whenever a file in web/scripts changes.
+  "build": { "command": "npm run build", "watch_dir": "web/scripts" },
   "compatibility_date": "2026-05-03",
   "assets": {
     "directory": "./web",
