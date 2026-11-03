@@ -3,6 +3,8 @@
  *
  *   /api/live    WebSocket to the signed-in user's household (see HouseholdRoom)
  *   /api/status  why the WebSocket was refused; the page asks only after a failed connection
+ *   /api/months/..., /api/export, /api/import
+ *                the app's endpoints (shared/api/endpoints.ts), answered by the household
  *   /api/...     anything else: 404
  *   everything else: static files from web/ (served by Cloudflare without running this code)
  *
@@ -16,6 +18,8 @@ export { HouseholdRoom };
 
 const LIVE_PATH = '/api/live';
 const STATUS_PATH = '/api/status';
+const ENDPOINT_PATHS = ['/api/export', '/api/import'];
+const ENDPOINT_PATH_PREFIX = '/api/months/';
 
 export default {
   /**
@@ -27,6 +31,9 @@ export default {
     const { pathname } = new URL(request.url);
     if (pathname === LIVE_PATH) return openHouseholdConnection(request, env, context);
     if (pathname === STATUS_PATH) return describeAccess(request, env, context);
+    if (pathname.startsWith(ENDPOINT_PATH_PREFIX) || ENDPOINT_PATHS.includes(pathname)) {
+      return callHouseholdEndpoint(request, env, context);
+    }
     if (pathname.startsWith('/api/')) return textResponse('Not found', 404);
     return env.ASSETS.fetch(request);
   },
@@ -41,7 +48,27 @@ async function openHouseholdConnection(request, env, context) {
   if (!isSameOriginRequest(request)) {
     return textResponse('Forbidden', 403);
   }
+  return forwardToHousehold(request, env, context);
+}
 
+/**
+ * An endpoint call. A browser sends the login cookie with requests that other websites
+ * start too, so an edit (anything but GET) must come from this site's own page. Browsers
+ * also say where a request comes from (Sec-Fetch-Site); requests started by another site
+ * are refused, reads included. Tools such as curl send neither header; an edit from curl
+ * needs `-H "Origin: <site>"`.
+ */
+async function callHouseholdEndpoint(request, env, context) {
+  const fetchSite = request.headers.get('Sec-Fetch-Site');
+  const isFromAnotherSite = fetchSite !== null && fetchSite !== 'same-origin' && fetchSite !== 'none';
+  if (isFromAnotherSite || (request.method !== 'GET' && !isSameOriginRequest(request))) {
+    return textResponse('Forbidden', 403);
+  }
+  return forwardToHousehold(request, env, context);
+}
+
+/** Checks the sign-in, finds the user's household, and lets its Durable Object answer. */
+async function forwardToHousehold(request, env, context) {
   let householdName;
   try {
     const email = await verifiedUserEmail(request, env, context);

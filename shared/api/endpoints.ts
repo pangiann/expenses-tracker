@@ -148,6 +148,11 @@ export interface MonthResponse {
   month: MonthData;
   /** every saved month, oldest first */
   monthKeys: string[];
+  /**
+   * Goes up by one with every save in the household. Answers and live updates can arrive
+   * out of order; the page shows a month only if its revision is newer than what it shows.
+   */
+  revision: number;
 }
 
 export interface ExportResponse {

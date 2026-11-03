@@ -25,6 +25,11 @@ export const ClientMessageSchema = z.discriminatedUnion('type', [
   /** Show this month, creating it if missing; the reply is a "month" message. */
   z.object({ type: z.literal('openMonth'), month: MonthKey }),
   /**
+   * This device now shows this month: send it every update of the month from now on. The
+   * month itself comes from GET /api/months/:month (shared/api/endpoints.ts).
+   */
+  z.object({ type: z.literal('watchMonth'), month: MonthKey }),
+  /**
    * Apply one change to a month. The change itself is checked by applyMonthChange()
    * (shared/month/month-changes.ts), so an invalid change is refused with its changeId and
    * the page can drop it.
@@ -49,6 +54,8 @@ export const ServerMessageSchema = z.discriminatedUnion('type', [
     type: z.literal('month'),
     month: Month,
     monthKeys: z.array(MonthKey),
+    /** see MonthResponse in shared/api/endpoints.ts */
+    revision: z.optional(z.number()),
     appliedChangeId: z.optional(ChangeId),
   }),
   /** Confirms a change to a sender that no longer views that month. */

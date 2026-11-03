@@ -1,3 +1,5 @@
+import type { StoredMonthData } from './month-record.ts';
+
 /**
  * Checks for whole months arriving from outside (imports, stored files).
  * Shared by the browser and the Cloudflare server.
@@ -9,8 +11,11 @@ export function isValidMonthKey(monthKey: unknown): monthKey is string {
   return typeof monthKey === 'string' && MONTH_KEY_PATTERN.test(monthKey);
 }
 
-/** True when the data has the basic shape of a month file. */
-export function isMonthData(monthData: unknown): monthData is { month: string; expenses: unknown[] } {
+/**
+ * True when the data has the basic shape of a month file: a month key and a list of expenses.
+ * MonthRecord reads the rest, filling in what older files lack.
+ */
+export function isMonthData(monthData: unknown): monthData is StoredMonthData {
   return (
     monthData !== null &&
     typeof monthData === 'object' &&

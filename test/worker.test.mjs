@@ -91,3 +91,25 @@ test('WebSockets opened by other websites are refused', () => {
   assert.equal(isSameOriginRequest(fromOtherSite), false);
   assert.equal(isSameOriginRequest(new Request('https://expenses.example.workers.dev/api/live')), false);
 });
+
+test('endpoint calls from another website are refused before they reach the household', async () => {
+  const { default: worker } = await import('../worker/index.js');
+  const forwarded = [];
+  const env = {
+    ACCESS_TEST_BYPASS_EMAIL: 'me@example.com',
+    HOUSEHOLD_MEMBERS: JSON.stringify({ 'me@example.com': 'home' }),
+    HOUSEHOLD: {
+      idFromName: (name) => name,
+      get: (id) => ({ fetch: async (request) => (forwarded.push(`${id} ${request.method}`), new Response('ok')) }),
+    },
+  };
+  const call = (method, headers) =>
+    worker.fetch(new Request('http://localhost:8787/api/months/2026-11/expenses', { method, headers }), env, {});
+
+  assert.equal((await call('POST', { Origin: 'http://localhost:8787', 'Sec-Fetch-Site': 'same-origin' })).status, 200);
+  assert.equal((await call('POST', { Origin: 'https://evil.example', 'Sec-Fetch-Site': 'cross-site' })).status, 403);
+  assert.equal((await call('POST', {})).status, 403, 'an edit needs an Origin');
+  assert.equal((await call('GET', { 'Sec-Fetch-Site': 'cross-site' })).status, 403);
+  assert.equal((await call('GET', {})).status, 200, 'a read from curl works');
+  assert.deepEqual(forwarded, ['home POST', 'home GET']);
+});

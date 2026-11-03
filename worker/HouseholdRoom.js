@@ -2,6 +2,10 @@
  * One Durable Object per household. It stores the household's months and keeps a
  * WebSocket open to every device that has the page open.
  *
+ * HTTP requests to /api/... go to the router (household/router.ts), which calls one handler
+ * per endpoint. The WebSocket carries live updates; it still also accepts the older change
+ * messages, until the page uses the HTTP endpoints for everything.
+ *
  * Cloudflare runs one message at a time per Durable Object, so two people editing at the
  * same moment are applied one after the other; neither overwrites the other.
  *
@@ -9,34 +13,36 @@
  */
 import { MonthRecord } from '../shared/month/month-record.ts';
 import { InvalidChangeError, applyMonthChange } from '../shared/month/month-changes.ts';
-import { closestSavedMonthKey, isMonthData } from '../shared/month/month-validation.ts';
+import { isMonthData } from '../shared/month/month-validation.ts';
 import { InvalidMessageError, encodeServerMessage, parseClientMessage } from '../shared/protocol.ts';
+import { Broadcaster } from './household/broadcaster.ts';
+import { MonthRepository } from './household/month-repository.ts';
+import { routeRequest } from './household/router.ts';
 
-const MONTH_STORAGE_PREFIX = 'month:';
 const MAX_MESSAGE_LENGTH = 5 * 1024 * 1024;
 const MAX_IMPORTED_MONTHS = 1200; // 100 years
 const RECENT_CHANGE_IDS_TO_REMEMBER = 500;
-const MAX_KEYS_PER_STORAGE_PUT = 128; // Durable Object storage limit
 
 export class HouseholdRoom {
   /** @param {DurableObjectState} state */
   constructor(state) {
     this.state = state;
-    this.storage = state.storage;
-    /** @type {string[] | null} month keys, oldest first; null until first read */
-    this.monthKeys = null;
+    this.months = new MonthRepository(state.storage);
+    this.broadcaster = new Broadcaster(state);
     /** Change ids already applied, so a change resent after a reconnect is applied once. */
     this.recentChangeIds = new Set();
     // Keepalive pings are answered by Cloudflare without waking this object (free).
     this.state.setWebSocketAutoResponse(new WebSocketRequestResponsePair('ping', 'pong'));
   }
 
-  /** Accepts the WebSocket that index.js forwarded after checking the login. */
-  async fetch() {
+  /** A request index.js forwarded after checking the login: an API call, or the WebSocket. */
+  async fetch(request) {
+    if (request.headers.get('Upgrade') !== 'websocket') {
+      return routeRequest(request, { months: this.months, broadcaster: this.broadcaster });
+    }
     const { 0: deviceSocket, 1: serverSocket } = new WebSocketPair();
     // Hibernation API: the object can sleep between messages without closing the socket.
-    this.state.acceptWebSocket(serverSocket);
-    serverSocket.serializeAttachment({ monthKey: null });
+    this.broadcaster.accept(serverSocket);
     return new Response(null, { status: 101, webSocket: deviceSocket });
   }
 
@@ -58,6 +64,8 @@ export class HouseholdRoom {
       switch (message.type) {
         case 'openMonth':
           return await this.#openMonth(socket, message.month);
+        case 'watchMonth':
+          return this.broadcaster.watch(socket, message.month);
         case 'change':
           return await this.#applyChange(socket, message);
         case 'export':
@@ -87,16 +95,16 @@ export class HouseholdRoom {
   // ----- Message handlers -----
 
   async #openMonth(socket, monthKey) {
-    const monthRecord = (await this.#loadMonth(monthKey)) ?? (await this.#createMonth(monthKey));
-    socket.serializeAttachment({ monthKey });
+    const monthRecord = await this.months.loadOrCreate(monthKey);
+    this.broadcaster.watch(socket, monthKey);
     socket.send(await this.#monthMessage(monthRecord));
   }
 
   async #applyChange(socket, { changeId, month: monthKey, change }) {
-    const monthRecord = (await this.#loadMonth(monthKey)) ?? (await this.#createMonth(monthKey));
+    const monthRecord = await this.months.loadOrCreate(monthKey);
     if (!this.recentChangeIds.has(changeId)) {
       applyMonthChange(monthRecord, change);
-      await this.#saveMonth(monthRecord);
+      await this.months.save(monthRecord);
       this.#rememberChangeId(changeId);
     }
     const deliveredToSender = this.#broadcastMonth(await this.#monthMessage(monthRecord, changeId), monthKey, socket);
@@ -105,8 +113,7 @@ export class HouseholdRoom {
   }
 
   async #exportMonths(socket) {
-    const storedMonths = await this.storage.list({ prefix: MONTH_STORAGE_PREFIX });
-    socket.send(encodeServerMessage({ type: 'exportData', months: [...storedMonths.values()] }));
+    socket.send(encodeServerMessage({ type: 'exportData', months: await this.months.allMonths() }));
   }
 
   async #importMonths(socket, months) {
@@ -119,48 +126,8 @@ export class HouseholdRoom {
       throw new InvalidChangeError('Not a valid list of months');
     }
     const monthRecords = months.map((monthData) => new MonthRecord(monthData));
-    for (let start = 0; start < monthRecords.length; start += MAX_KEYS_PER_STORAGE_PUT) {
-      const batch = monthRecords.slice(start, start + MAX_KEYS_PER_STORAGE_PUT);
-      await this.storage.put(
-        Object.fromEntries(batch.map((monthRecord) => [storageKey(monthRecord.monthKey), monthRecord.toJSON()])),
-      );
-    }
-    this.monthKeys = null; // re-read on next use
+    await this.months.saveAll(monthRecords);
     socket.send(encodeServerMessage({ type: 'importDone', count: monthRecords.length }));
-  }
-
-  // ----- Storage -----
-
-  async #loadMonth(monthKey) {
-    const monthData = await this.storage.get(storageKey(monthKey));
-    return monthData ? new MonthRecord(monthData) : null;
-  }
-
-  /** New months copy budgets and recurring costs from the closest saved month. */
-  async #createMonth(monthKey) {
-    const templateMonthKey = closestSavedMonthKey(await this.#savedMonthKeys(), monthKey);
-    const templateMonth = templateMonthKey ? await this.#loadMonth(templateMonthKey) : null;
-    const newMonth = templateMonth
-      ? MonthRecord.createFromTemplate(templateMonth, monthKey)
-      : MonthRecord.createEmpty(monthKey);
-    await this.#saveMonth(newMonth);
-    return newMonth;
-  }
-
-  async #saveMonth(monthRecord) {
-    await this.storage.put(storageKey(monthRecord.monthKey), monthRecord.toJSON());
-    const monthKeys = await this.#savedMonthKeys();
-    if (!monthKeys.includes(monthRecord.monthKey)) {
-      this.monthKeys = [...monthKeys, monthRecord.monthKey].sort();
-    }
-  }
-
-  async #savedMonthKeys() {
-    if (this.monthKeys === null) {
-      const storedMonths = await this.storage.list({ prefix: MONTH_STORAGE_PREFIX });
-      this.monthKeys = [...storedMonths.keys()].map((key) => key.slice(MONTH_STORAGE_PREFIX.length)).sort();
-    }
-    return this.monthKeys;
   }
 
   // ----- Sending -----
@@ -169,7 +136,8 @@ export class HouseholdRoom {
     return encodeServerMessage({
       type: 'month',
       month: monthRecord.toJSON(),
-      monthKeys: await this.#savedMonthKeys(),
+      monthKeys: await this.months.monthKeys(),
+      revision: await this.months.revision(),
       appliedChangeId,
     });
   }
@@ -181,7 +149,7 @@ export class HouseholdRoom {
   #broadcastMonth(message, monthKey, senderSocket) {
     let deliveredToSender = false;
     for (const socket of this.state.getWebSockets()) {
-      if (socket.deserializeAttachment()?.monthKey !== monthKey) continue;
+      if (this.broadcaster.watchedMonth(socket) !== monthKey) continue;
       try {
         socket.send(message);
         if (socket === senderSocket) deliveredToSender = true;
@@ -212,8 +180,4 @@ function changeIdIn(rawMessage) {
   } catch {
     return undefined;
   }
-}
-
-function storageKey(monthKey) {
-  return `${MONTH_STORAGE_PREFIX}${monthKey}`;
 }
