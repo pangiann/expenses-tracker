@@ -1,5 +1,5 @@
 import { roundToCents } from '../../../shared/month/amounts.ts';
-import { parseAmount } from '../utils/money.js';
+import { parseAmount } from '../utils/money.ts';
 
 /**
  * Turns a displayed value (for example "€24.00") into a number field in place.

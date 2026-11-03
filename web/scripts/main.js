@@ -1,6 +1,6 @@
 import { ExpensesApp } from './ExpensesApp.js';
-import { translator } from './i18n/Translator.js';
-import { setMoneyLocale } from './utils/money.js';
+import { translator } from './i18n/translator.ts';
+import { setMoneyLocale } from './utils/money.ts';
 
 // Translations load first, so every view draws in the chosen language from the start.
 await translator.load();

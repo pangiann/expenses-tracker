@@ -1,6 +1,6 @@
-import { t } from '../i18n/Translator.js';
-import { escapeHtml, getElement } from '../utils/html.js';
-import { buildMonthKey, monthNames, parseMonthKey } from '../utils/monthKeys.js';
+import { t } from '../i18n/translator.ts';
+import { escapeHtml, getElement } from '../utils/html.ts';
+import { buildMonthKey, monthNames, parseMonthKey } from '../utils/month-keys.ts';
 
 const EARLIEST_YEAR = 1900;
 const LATEST_YEAR = 2999;

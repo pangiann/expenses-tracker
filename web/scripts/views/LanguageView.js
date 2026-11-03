@@ -1,5 +1,5 @@
-import { SUPPORTED_LANGUAGES, translator } from '../i18n/Translator.js';
-import { getElement } from '../utils/html.js';
+import { SUPPORTED_LANGUAGES, translator } from '../i18n/translator.ts';
+import { getElement } from '../utils/html.ts';
 
 /** The EN / ΕΛ language picker in the top bar. */
 export class LanguageView {

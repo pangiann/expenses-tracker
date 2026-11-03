@@ -4,4 +4,6 @@ export const SaveStatus = Object.freeze({
   SAVING: 'saving',
   FAILED: 'failed',
   OFFLINE: 'offline',
-});
+} as const);
+
+export type SaveStatusValue = (typeof SaveStatus)[keyof typeof SaveStatus];

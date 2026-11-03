@@ -1,6 +1,6 @@
-import { categoryName } from '../i18n/Translator.js';
-import { escapeHtml, getElement } from '../utils/html.js';
-import { formatEuros } from '../utils/money.js';
+import { categoryName } from '../i18n/translator.ts';
+import { escapeHtml, getElement } from '../utils/html.ts';
+import { formatEuros } from '../utils/money.ts';
 
 /** One bar per category: spent compared to budget, red when over budget. */
 export class BudgetBarsView {

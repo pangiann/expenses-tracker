@@ -3,7 +3,7 @@
  * sends edits in order and shows the server's answer, the month after the edit. A new
  * expense gets its id here, so sending it twice can't add it twice.
  */
-import { createUniqueId } from '../utils/ids.js';
+import { createUniqueId } from '../utils/ids.ts';
 import { outbox } from './outbox.ts';
 
 export interface NewExpense {

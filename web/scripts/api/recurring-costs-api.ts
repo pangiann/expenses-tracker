@@ -1,6 +1,6 @@
 /** Edits to fixed costs and subscriptions, sent through the outbox like expenses (see expenses-api.ts). */
 import type { RecurringCostListName } from '../../../shared/month/categories.ts';
-import { createUniqueId } from '../utils/ids.js';
+import { createUniqueId } from '../utils/ids.ts';
 import { outbox } from './outbox.ts';
 
 /** POST /api/months/:month/recurring/:list */

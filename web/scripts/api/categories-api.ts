@@ -1,5 +1,5 @@
 /** Edits to categories and budgets, sent through the outbox like expenses (see expenses-api.ts). */
-import { createUniqueId } from '../utils/ids.js';
+import { createUniqueId } from '../utils/ids.ts';
 import { outbox } from './outbox.ts';
 
 /** POST /api/months/:month/categories */

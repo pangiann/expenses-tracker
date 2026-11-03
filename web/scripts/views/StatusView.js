@@ -1,6 +1,6 @@
-import { t } from '../i18n/Translator.js';
-import { getElement } from '../utils/html.js';
-import { SaveStatus } from '../services/SaveStatus.js';
+import { t } from '../i18n/translator.ts';
+import { getElement } from '../utils/html.ts';
+import { SaveStatus } from '../utils/save-status.ts';
 
 const SAVE_STATUS_DISPLAY = {
   [SaveStatus.SAVED]: { stringId: 'status.saved', cssClass: 'is-saved' },

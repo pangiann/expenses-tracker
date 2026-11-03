@@ -10,18 +10,19 @@ const readTranslations = (language) => JSON.parse(readFileSync(join(WEB_DIR, 'i1
 const english = readTranslations('en');
 const greek = readTranslations('el');
 
-function filesUnder(directory, extension) {
+/** The page's source files: .ts, and .js files not yet converted. */
+function sourceFilesUnder(directory) {
   return readdirSync(directory).flatMap((name) => {
     const path = join(directory, name);
-    if (statSync(path).isDirectory()) return filesUnder(path, extension);
-    return path.endsWith(extension) ? [path] : [];
+    if (statSync(path).isDirectory()) return sourceFilesUnder(path);
+    return /\.(ts|js)$/.test(path) ? [path] : [];
   });
 }
 
 /** Every string id the code uses: t('…'), data-i18n…="…", and the ids built from categories and months. */
 function usedStringIds() {
   const ids = new Set();
-  for (const file of filesUnder(join(WEB_DIR, 'scripts'), '.js')) {
+  for (const file of sourceFilesUnder(join(WEB_DIR, 'scripts'))) {
     for (const [, id] of readFileSync(file, 'utf8').matchAll(/\bt\(\s*'([\w.]+)'/g)) ids.add(id);
     for (const [, id] of readFileSync(file, 'utf8').matchAll(/(?:stringId|untitledStringId)\s*[:=]\s*'([\w.]+)'/g))
       ids.add(id);

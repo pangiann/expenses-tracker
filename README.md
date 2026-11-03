@@ -73,17 +73,15 @@ web/                      the page (HTML, CSS, JavaScript modules; bundled into 
   scripts/
     main.js               entry point: creates ExpensesApp
     ExpensesApp.js        controller: turns user actions into API calls, draws what the server answers
-    api/                  one function per endpoint, grouped like the Worker's handlers
+    api/                  one function per endpoint, grouped by what they edit
       months-api.ts, expenses-api.ts, income-api.ts, categories-api.ts, recurring-costs-api.ts
       http.ts             callEndpoint(): one HTTP request to an endpoint of shared/api/endpoints.ts
       outbox.ts           sends edits in order; keeps them in the browser while offline
       waiting-edits.ts    the month to show: the server's month with waiting edits on top
       live-updates.ts     the WebSocket that brings other people's edits
-    i18n/Translator.js    translations by string id (see "Languages" below)
-    services/
-      SaveStatus.js       the states the status pill shows
+    i18n/translator.ts    translations by string id (see "Languages" below)
     views/                one class per section of the page; CategoryDragController reorders cards
-    utils/                money, month-key, id and HTML helpers
+    utils/                money, month-key, id and HTML helpers, and the save status
 worker/                   Cloudflare Worker
   index.js                routing, login check, same-origin check
   accessAuth.js           verifies the Cloudflare Access token
@@ -125,7 +123,7 @@ curl -X POST -H "Origin: http://localhost:8787" -d '{"id":"x1","categoryId":"lun
 
 The page is in English and Greek; the EN / ΕΛ picker in the top bar switches between them and the choice is remembered. The code contains no display text, only string ids such as `summary.earned`. Each language has one file, `web/i18n/en.json` and `web/i18n/el.json`, that maps every id to its text. In the HTML, elements name their id with `data-i18n` (text), `data-i18n-placeholder`, `data-i18n-title` or `data-i18n-aria-label`; in JavaScript, `t('summary.earned')`. English is the fallback for a missing translation.
 
-To add or change text, edit both files with the same id. `npm test` fails if the files don't have the same ids, if a placeholder like `{amount}` differs, or if the page uses an id that has no text. To add a language, add its file and an entry in `SUPPORTED_LANGUAGES` in `Translator.js`.
+To add or change text, edit both files with the same id. `npm test` fails if the files don't have the same ids, if a placeholder like `{amount}` differs, or if the page uses an id that has no text. To add a language, add its file and an entry in `SUPPORTED_LANGUAGES` in `translator.ts`.
 
 ## Data
 

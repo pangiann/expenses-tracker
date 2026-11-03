@@ -1,7 +1,7 @@
-import { categoryName } from '../i18n/Translator.js';
-import { escapeHtml, getElement } from '../utils/html.js';
-import { parseAmount } from '../utils/money.js';
-import { defaultExpenseDate, monthDateRange } from '../utils/monthKeys.js';
+import { categoryName } from '../i18n/translator.ts';
+import { escapeHtml, getElement } from '../utils/html.ts';
+import { parseAmount } from '../utils/money.ts';
+import { defaultExpenseDate, monthDateRange } from '../utils/month-keys.ts';
 
 /** The "Add expense" bar: amount, description, category, date. */
 export class QuickAddView {

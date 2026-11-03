@@ -1,7 +1,7 @@
 import { RecurringCostList } from '../../../shared/month/categories.ts';
-import { t } from '../i18n/Translator.js';
-import { escapeHtml, getElement } from '../utils/html.js';
-import { formatEuros, parseAmount } from '../utils/money.js';
+import { t } from '../i18n/translator.ts';
+import { escapeHtml, getElement } from '../utils/html.ts';
+import { formatEuros, parseAmount } from '../utils/money.ts';
 
 /**
  * Fixed costs and subscriptions panel. Every row's name and amount can be edited,

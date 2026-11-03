@@ -11,8 +11,8 @@ let percentFormatter = new Intl.NumberFormat('en-IE', {
   maximumFractionDigits: 1,
 });
 
-/** @param {string} locale  for example 'en-IE' or 'el-GR' */
-export function setMoneyLocale(locale) {
+/** @param locale  for example 'en-IE' or 'el-GR' */
+export function setMoneyLocale(locale: string): void {
   euroFormatter = new Intl.NumberFormat(locale, { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 });
   percentFormatter = new Intl.NumberFormat(locale, {
     style: 'percent',
@@ -22,17 +22,17 @@ export function setMoneyLocale(locale) {
 }
 
 /** 1234.5 -> "€1,234.50" (English) or "1.234,50 €" (Greek) */
-export function formatEuros(amount) {
+export function formatEuros(amount: number): string {
   return euroFormatter.format(amount);
 }
 
 /** 0.523 -> "52.3%" (English) or "52,3%" (Greek) */
-export function formatPercent(fraction) {
+export function formatPercent(fraction: number): string {
   return percentFormatter.format(fraction);
 }
 
 /** Parses an input value; returns null when it isn't a number. Accepts "3,50" as well as "3.50". */
-export function parseAmount(text) {
+export function parseAmount(text: string | number): number | null {
   const amount = Number.parseFloat(String(text).replace(',', '.'));
   return Number.isFinite(amount) ? amount : null;
 }

@@ -1,6 +1,6 @@
-import { getElement } from '../utils/html.js';
-import { formatEuros, parseAmount } from '../utils/money.js';
-import { defaultExpenseDate } from '../utils/monthKeys.js';
+import { getElement } from '../utils/html.ts';
+import { formatEuros, parseAmount } from '../utils/money.ts';
+import { defaultExpenseDate } from '../utils/month-keys.ts';
 import { InlineNumberEditor } from './InlineNumberEditor.js';
 import { renderEntryRows } from './entryRows.js';
 

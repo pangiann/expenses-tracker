@@ -1,9 +1,9 @@
 import { MAX_CATEGORY_NAME_LENGTH } from '../../../shared/month/categories.ts';
 import { MonthRecord } from '../../../shared/month/month-record.ts';
-import { categoryName, t } from '../i18n/Translator.js';
-import { escapeHtml, getElement } from '../utils/html.js';
-import { formatEuros, parseAmount } from '../utils/money.js';
-import { defaultExpenseDate } from '../utils/monthKeys.js';
+import { categoryName, t } from '../i18n/translator.ts';
+import { escapeHtml, getElement } from '../utils/html.ts';
+import { formatEuros, parseAmount } from '../utils/money.ts';
+import { defaultExpenseDate } from '../utils/month-keys.ts';
 import { InlineNumberEditor } from './InlineNumberEditor.js';
 import { InlineTextEditor } from './InlineTextEditor.js';
 import { CategoryDragController } from './CategoryDragController.js';

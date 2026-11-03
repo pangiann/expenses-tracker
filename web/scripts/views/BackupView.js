@@ -1,4 +1,4 @@
-import { getElement } from '../utils/html.js';
+import { getElement } from '../utils/html.ts';
 
 /** Export and Import buttons in the top bar. A backup is one JSON file with every month. */
 export class BackupView {

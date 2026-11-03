@@ -1,7 +1,7 @@
-import { t } from '../i18n/Translator.js';
-import { escapeHtml } from '../utils/html.js';
-import { formatEuros } from '../utils/money.js';
-import { formatShortDate } from '../utils/monthKeys.js';
+import { t } from '../i18n/translator.ts';
+import { escapeHtml } from '../utils/html.ts';
+import { formatEuros } from '../utils/money.ts';
+import { formatShortDate } from '../utils/month-keys.ts';
 
 /**
  * The rows of a list of dated amounts: expenses in a category card, entries in the Income card.

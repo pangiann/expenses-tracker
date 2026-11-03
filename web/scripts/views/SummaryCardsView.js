@@ -1,6 +1,6 @@
-import { t } from '../i18n/Translator.js';
-import { getElement } from '../utils/html.js';
-import { formatEuros, formatPercent } from '../utils/money.js';
+import { t } from '../i18n/translator.ts';
+import { getElement } from '../utils/html.ts';
+import { formatEuros, formatPercent } from '../utils/money.ts';
 import { InlineNumberEditor } from './InlineNumberEditor.js';
 
 /** Earned, Spent, Saved and Savings rate cards. Earned is the sum of the Income card's entries. */

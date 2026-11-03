@@ -1,5 +1,5 @@
-import { getElement } from '../utils/html.js';
-import { formatMonthTitle } from '../utils/monthKeys.js';
+import { getElement } from '../utils/html.ts';
+import { formatMonthTitle } from '../utils/month-keys.ts';
 
 /** Month title with the ‹ › buttons and the + button in the top bar. */
 export class MonthNavigationView {
