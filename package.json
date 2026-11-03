@@ -7,7 +7,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "build": "esbuild web/scripts/main.js --bundle --format=esm --target=es2022 --sourcemap --outfile=web/dist/main.js",
+    "build": "esbuild web/scripts/main.ts --bundle --format=esm --target=es2022 --sourcemap --outfile=web/dist/main.js",
     "watch": "npm run build -- --watch",
     "dev": "wrangler dev",
     "seed": "tsx scripts/seed-dev-data.mjs",
@@ -27,6 +27,7 @@
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
+    "@types/sortablejs": "1.15.9",
     "esbuild": "0.28.2",
     "eslint": "10.14.0",
     "eslint-config-prettier": "10.1.8",

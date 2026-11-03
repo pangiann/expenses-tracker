@@ -10,24 +10,28 @@ import Sortable from 'sortablejs';
  * - On touch screens the card lifts after holding it for a moment, so swiping still scrolls.
  * - Near the top or bottom of the window the page scrolls by itself.
  * - The "New category" card can't move and always stays last.
- * - Text can't be selected while dragging (WebKit, used by the Mac app, would otherwise
- *   highlight every card the pointer passes over).
+ * - Text can't be selected while dragging (Safari would otherwise highlight every card the
+ *   pointer passes over).
  *
  * When a drag changes the order, onMove(categoryId, beforeCategoryId) reports it: the id of the
  * category the card now sits before, or null when it is last.
  */
 const CARD_SELECTOR = '.category-card[data-category-id]';
 
-export class CategoryDragController {
-  /**
-   * @param {HTMLElement} container  the grid holding the category cards
-   * @param {object} callbacks
-   * @param {(categoryId: string, beforeCategoryId: string | null) => void} callbacks.onMove
-   * @param {() => void} callbacks.onDragEnd  called when a drag ends without moving anything
-   */
-  constructor(container, { onMove, onDragEnd }) {
-    this.isDragging = false;
+export class CategoryDrag {
+  isDragging = false;
 
+  /**
+   * @param container  the grid holding the category cards
+   * @param callbacks.onDragEnd  called when a drag ends without moving anything
+   */
+  constructor(
+    container: HTMLElement,
+    {
+      onMove,
+      onDragEnd,
+    }: { onMove: (categoryId: string, beforeCategoryId: string | null) => void; onDragEnd: () => void },
+  ) {
     Sortable.create(container, {
       draggable: CARD_SELECTOR,
       handle: '.category-card-header',
@@ -51,8 +55,8 @@ export class CategoryDragController {
       scrollSpeed: 16,
       bubbleScroll: true,
 
-      onChoose: () => CategoryDragController.#setTextSelectionBlocked(true),
-      onUnchoose: () => CategoryDragController.#setTextSelectionBlocked(false),
+      onChoose: () => setTextSelectionBlocked(true),
+      onUnchoose: () => setTextSelectionBlocked(false),
       onStart: () => {
         this.isDragging = true;
       },
@@ -64,21 +68,22 @@ export class CategoryDragController {
           onDragEnd();
           return;
         }
-        onMove(endEvent.item.dataset.categoryId, CategoryDragController.#beforeIdOf(endEvent.item));
+        const categoryId = endEvent.item.dataset.categoryId;
+        if (categoryId) onMove(categoryId, beforeIdOf(endEvent.item));
       },
     });
   }
+}
 
-  /** Stops text selection on the whole page while a card is held, and clears what was selected. */
-  static #setTextSelectionBlocked(isBlocked) {
-    document.documentElement.classList.toggle('is-dragging-category', isBlocked);
-    window.getSelection()?.removeAllRanges();
-  }
+/** Stops text selection on the whole page while a card is held, and clears what was selected. */
+function setTextSelectionBlocked(isBlocked: boolean): void {
+  document.documentElement.classList.toggle('is-dragging-category', isBlocked);
+  window.getSelection()?.removeAllRanges();
+}
 
-  /** The id of the category card right after this one, or null when it is the last. */
-  static #beforeIdOf(card) {
-    let nextElement = card.nextElementSibling;
-    while (nextElement && !nextElement.matches(CARD_SELECTOR)) nextElement = nextElement.nextElementSibling;
-    return nextElement ? nextElement.dataset.categoryId : null;
-  }
+/** The id of the category card right after this one, or null when it is the last. */
+function beforeIdOf(card: HTMLElement): string | null {
+  let nextElement = card.nextElementSibling;
+  while (nextElement && !nextElement.matches(CARD_SELECTOR)) nextElement = nextElement.nextElementSibling;
+  return nextElement instanceof HTMLElement ? (nextElement.dataset.categoryId ?? null) : null;
 }

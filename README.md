@@ -66,13 +66,25 @@ shared/                   code that runs in the page and in the Worker (no DOM, 
     amounts.ts            rounding and sums
     month-record.ts       one month's data and the rules for changing it
     month-validation.ts   month keys, month shape, which month a new one copies
-web/                      the page (HTML, CSS, JavaScript modules; bundled into web/dist/ by `npm run build`)
+web/                      the page (HTML, CSS and TypeScript; bundled into web/dist/ by `npm run build`)
   index.html
   i18n/en.json, el.json   display text for every string id
   styles/                 one stylesheet per section of the page
   scripts/
-    main.js               entry point: creates ExpensesApp
-    ExpensesApp.js        controller: turns user actions into API calls, draws what the server answers
+    main.ts               entry point: loads the translations, starts the month page
+    pages/
+      month-page.ts       the month page: loads a month, draws it with every feature, draws it again on changes
+    features/             one folder per part of the page; each handles its own clicks and calls its API functions
+      categories/         the category cards (category-cards.ts) and dragging them (category-drag.ts)
+      quick-add/          the "Add expense" bar
+      income/             the Income card
+      recurring-costs/    fixed costs and subscriptions
+      summary/            the summary cards, budget bars and spending donut
+      month-navigation/   the month title, ‹ › and the "Add a month" dialog
+      backup/             Export and Import
+      language/           the EN / ΕΛ picker
+      status/             the save status and the error banner
+    components/           pieces several features use: entry rows, inline number and text editors
     api/                  one function per endpoint, grouped by what they edit
       months-api.ts, expenses-api.ts, income-api.ts, categories-api.ts, recurring-costs-api.ts
       http.ts             callEndpoint(): one HTTP request to an endpoint of shared/api/endpoints.ts
@@ -80,7 +92,6 @@ web/                      the page (HTML, CSS, JavaScript modules; bundled into 
       waiting-edits.ts    the month to show: the server's month with waiting edits on top
       live-updates.ts     the WebSocket that brings other people's edits
     i18n/translator.ts    translations by string id (see "Languages" below)
-    views/                one class per section of the page; CategoryDragController reorders cards
     utils/                money, month-key, id and HTML helpers, and the save status
 worker/                   Cloudflare Worker
   index.js                routing, login check, same-origin check
@@ -101,14 +112,14 @@ test/                     unit tests: npm test
 
 Adding an expense, from the click to every screen:
 
-1. **View.** `QuickAddView` (or a category card) handles the form's submit event and calls the `addExpense` action.
-2. **Controller.** `ExpensesApp` calls the API function `addExpense()` in `web/scripts/api/expenses-api.ts`, which gives the expense a new id.
+1. **Feature.** The quick add bar (`features/quick-add/quick-add.ts`), or a category card's add form (`features/categories/category-cards.ts`), handles the form's submit event.
+2. **API function.** It calls `addExpense()` in `web/scripts/api/expenses-api.ts`, which gives the expense a new id.
 3. **Outbox.** `api/outbox.ts` sends `POST /api/months/2026-11/expenses` with the expense as JSON. Edits go one at a time, in order. Without a connection they wait in the browser, also across a closed tab, and go out when it is back.
 4. **On screen at once.** While an edit waits for its answer, the page shows the server's last month with the waiting edits applied on top (`api/waiting-edits.ts`), so the expense appears right away, also offline.
 5. **Worker.** `worker/index.js` checks the sign-in and that the request comes from the site's own page, finds the household, and passes the request to its Durable Object.
 6. **Router.** `worker/household/router.ts` finds the endpoint in `shared/api/endpoints.ts`, checks the path and the body against it, and calls the handler with the same name, `addExpense` in `handlers/expenses.ts`.
 7. **Handler.** It runs `editMonth()`: load the month from storage (`month-repository.ts`), apply the endpoint's edit (`shared/api/month-edits.ts`, here `month.addExpense(...)` in `shared/month/month-record.ts`, which enforces the month's rules), save it, and send the new month to every device showing it (`broadcaster.ts`).
-8. **Answer.** The handler's answer, the month after the edit, goes back to the page, and `ExpensesApp` draws it. Other devices get the same month over their WebSocket (`api/live-updates.ts`) and draw it too.
+8. **Answer.** The handler's answer, the month after the edit, goes back to the page, and the month page (`pages/month-page.ts`) draws it with every feature. Other devices get the same month over their WebSocket (`api/live-updates.ts`) and draw it too.
 
 Steps 4 and 7 run the same edit function from `shared/api/month-edits.ts`, so the page's early version and the server's answer agree. Answers and live updates can arrive in either order, so each carries a revision number, and the page ignores anything older than what it shows. A Durable Object handles one request at a time, so two people editing at once never overwrite each other.
 
