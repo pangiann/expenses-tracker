@@ -1,8 +1,8 @@
 // zod/mini has the same checks as zod in a form bundlers can trim: about 7 KB in the page instead of 90 KB.
 import * as z from 'zod/mini';
 
-import { MAX_CATEGORY_NAME_LENGTH, RecurringCostList } from './categories.ts';
-import type { MonthRecord } from './month-record.ts';
+import { RecurringCostList } from './categories.ts';
+import { MonthRuleError, type MonthRecord } from './month-record.ts';
 
 /**
  * Every edit to a month is described as a small "change" object, for example
@@ -17,8 +17,8 @@ import type { MonthRecord } from './month-record.ts';
  *
  * Changes arrive from the network, so applyMonthChange() checks them in two steps:
  *   1. MonthChangeSchema checks the shape: field types, lengths, amounts, date format.
- *   2. The rules that depend on the month: the category exists, the date is in this month,
- *      a category name isn't taken, a category being removed is empty.
+ *   2. MonthRecord checks the rules that depend on the month: the category exists, the date
+ *      is in this month, a category name isn't taken, a category being removed is empty.
  * (Changes name a category in the field `categoryKey`; it holds the category's id.)
  */
 export const ChangeKind = Object.freeze({
@@ -120,16 +120,19 @@ export function parseMonthChange(value: unknown): MonthChange {
  */
 export function applyMonthChange(monthRecord: MonthRecord, value: unknown): void {
   const change = parseMonthChange(value);
+  try {
+    applyParsedChange(monthRecord, change);
+  } catch (error) {
+    if (error instanceof MonthRuleError) throw new InvalidChangeError(error.message);
+    throw error;
+  }
+}
+
+function applyParsedChange(monthRecord: MonthRecord, change: MonthChange): void {
   switch (change.kind) {
     case ChangeKind.ADD_EXPENSE: {
       const { id, categoryKey, amount, description, date } = change.expense;
-      monthRecord.addExpense({
-        id,
-        categoryId: requireCategoryIn(monthRecord, categoryKey),
-        amount,
-        description,
-        date: requireDateInMonth(date, monthRecord.monthKey),
-      });
+      monthRecord.addExpense({ id, categoryId: categoryKey, amount, description, date });
       return;
     }
     case ChangeKind.REMOVE_EXPENSE:
@@ -139,11 +142,9 @@ export function applyMonthChange(monthRecord: MonthRecord, value: unknown): void
       monthRecord.updateExpenseAmount(change.expenseId, change.amount);
       return;
 
-    case ChangeKind.ADD_INCOME: {
-      const { id, amount, description, date } = change.income;
-      monthRecord.addIncome({ id, amount, description, date: requireDateInMonth(date, monthRecord.monthKey) });
+    case ChangeKind.ADD_INCOME:
+      monthRecord.addIncome(change.income);
       return;
-    }
     case ChangeKind.REMOVE_INCOME:
       monthRecord.removeIncome(change.incomeId);
       return;
@@ -154,29 +155,20 @@ export function applyMonthChange(monthRecord: MonthRecord, value: unknown): void
       monthRecord.setExpectedIncome(change.amount);
       return;
 
-    case ChangeKind.ADD_CATEGORY: {
-      const { id, name, color } = change.category;
-      if (monthRecord.findCategory(id)) return; // already added (a resent change)
-      monthRecord.addCategory({ id, name: requireCategoryName(monthRecord, name), color });
+    case ChangeKind.ADD_CATEGORY:
+      monthRecord.addCategory(change.category);
       return;
-    }
     case ChangeKind.RENAME_CATEGORY:
-      if (!monthRecord.findCategory(change.categoryId)) return; // removed meanwhile
-      monthRecord.renameCategory(change.categoryId, requireCategoryName(monthRecord, change.name, change.categoryId));
+      monthRecord.renameCategory(change.categoryId, change.name);
       return;
-    case ChangeKind.REMOVE_CATEGORY: {
-      if (!monthRecord.findCategory(change.categoryId)) return; // already removed
-      // Someone may have added an expense meanwhile; then the category stays.
-      const blocker = monthRecord.categoryRemovalBlocker(change.categoryId);
-      if (blocker) throw new InvalidChangeError(`Category can't be removed: ${blocker}`);
+    case ChangeKind.REMOVE_CATEGORY:
       monthRecord.removeCategory(change.categoryId);
       return;
-    }
     case ChangeKind.MOVE_CATEGORY:
       monthRecord.moveCategory(change.categoryId, change.beforeCategoryId);
       return;
     case ChangeKind.CHANGE_BUDGET:
-      monthRecord.setBudget(requireCategoryIn(monthRecord, change.categoryKey), change.amount);
+      monthRecord.setBudget(change.categoryKey, change.amount);
       return;
 
     case ChangeKind.ADD_RECURRING_COST:
@@ -192,31 +184,4 @@ export function applyMonthChange(monthRecord: MonthRecord, value: unknown): void
       monthRecord.setRecurringCostAmount(change.listName, change.costId, change.amount);
       return;
   }
-}
-
-// ----- Rules that depend on the month -----
-
-/** The category must exist in this month (each month has its own list). */
-function requireCategoryIn(monthRecord: MonthRecord, categoryId: string): string {
-  if (!monthRecord.findCategory(categoryId)) throw new InvalidChangeError(`Unknown category: ${categoryId}`);
-  return categoryId;
-}
-
-/**
- * A category name: at most MAX_CATEGORY_NAME_LENGTH characters, and different from the
- * month's other names, ignoring capitals and surrounding spaces. The server only knows the
- * names people typed; the page also compares with the translated default names.
- */
-function requireCategoryName(monthRecord: MonthRecord, name: string, renamedCategoryId?: string): string {
-  const trimmedName = name.trim();
-  if (trimmedName.length > MAX_CATEGORY_NAME_LENGTH) throw new InvalidChangeError('Category name too long');
-  if (monthRecord.hasCategoryNamed(trimmedName, renamedCategoryId)) {
-    throw new InvalidChangeError('Category name already used');
-  }
-  return trimmedName;
-}
-
-function requireDateInMonth(date: string, monthKey: string): string {
-  if (!date.startsWith(`${monthKey}-`)) throw new InvalidChangeError(`Date ${date} is not in ${monthKey}`);
-  return date;
 }

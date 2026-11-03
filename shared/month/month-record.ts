@@ -3,6 +3,7 @@ import {
   DEFAULT_CATEGORIES,
   DEFAULT_FIXED_COST_NAMES,
   MAX_CATEGORIES_PER_MONTH,
+  MAX_CATEGORY_NAME_LENGTH,
   RecurringCostList,
   type Category,
   type RecurringCostListName,
@@ -77,6 +78,24 @@ export interface MonthTotals {
 /** Why a category can't be removed. */
 export type CategoryRemovalBlocker = 'has-expenses' | 'last-category';
 
+/** Every rule of a month that an edit can break. The page shows a message for each. */
+export type MonthRule =
+  | 'unknown-category'
+  | 'date-outside-month'
+  | 'category-name-empty'
+  | 'category-name-too-long'
+  | 'category-name-taken'
+  | 'too-many-categories'
+  | 'category-has-expenses'
+  | 'last-category';
+
+/** An edit that breaks a rule of the month, for example an expense in a category that doesn't exist. */
+export class MonthRuleError extends Error {
+  constructor(readonly rule: MonthRule) {
+    super(`Month rule broken: ${rule}`);
+  }
+}
+
 const KNOWN_FIELDS = new Set(['month', 'income', 'categories', 'budgets', 'expenses', 'fixed', 'subscriptions']);
 
 /**
@@ -104,7 +123,11 @@ const KNOWN_FIELDS = new Set(['month', 'income', 'categories', 'budgets', 'expen
  *
  * Every item (expense, income entry, fixed cost) has an id, and every method finds items by
  * id. Adding an item whose id already exists does nothing, and changing or removing an item
- * that no longer exists does nothing, so applying the same change twice is harmless.
+ * that no longer exists does nothing, so applying the same edit twice is harmless.
+ *
+ * Methods throw MonthRuleError when an edit breaks a rule that depends on the month, such as
+ * an expense dated outside it. Callers check the shape of what they pass (types, lengths,
+ * amounts) before calling.
  */
 export class MonthRecord {
   readonly monthKey: string;
@@ -172,6 +195,8 @@ export class MonthRecord {
     date: string;
   }): void {
     if (!(amount > 0) || this.findExpense(id)) return;
+    this.#requireCategory(categoryId);
+    this.#requireDateInMonth(date);
     this.expenses.push({
       id,
       date,
@@ -217,6 +242,7 @@ export class MonthRecord {
     date: string;
   }): void {
     if (!(amount > 0) || this.findIncome(id)) return;
+    this.#requireDateInMonth(date);
     this.incomes.push({ id, date, description: description.trim(), amount: roundToCents(amount) });
   }
 
@@ -273,7 +299,7 @@ export class MonthRecord {
   renameCategory(categoryId: string, newName: string): void {
     const category = this.findCategory(categoryId);
     if (!category) return;
-    category.name = newName.trim();
+    category.name = this.#requireFreeCategoryName(newName, categoryId);
     delete category.nameId;
   }
 
@@ -289,9 +315,11 @@ export class MonthRecord {
    * second one then gets the next free colour instead.
    */
   addCategory({ id, name, color }: { id: string; name: string; color: string }): void {
-    if (this.findCategory(id) || this.categories.length >= MAX_CATEGORIES_PER_MONTH) return;
+    if (this.findCategory(id)) return; // already added (the same edit sent twice)
+    if (this.categories.length >= MAX_CATEGORIES_PER_MONTH) throw new MonthRuleError('too-many-categories');
+    const freeName = this.#requireFreeCategoryName(name);
     const isColorTaken = this.categories.some((category) => category.color.toLowerCase() === color.toLowerCase());
-    this.categories.push({ id, name: name.trim(), color: isColorTaken ? this.pickCategoryColor() : color });
+    this.categories.push({ id, name: freeName, color: isColorTaken ? this.pickCategoryColor() : color });
     this.budgets[id] ??= 0;
   }
 
@@ -302,8 +330,14 @@ export class MonthRecord {
     return null;
   }
 
-  /** Removes an empty category and its budget. Removing one that is already gone does nothing. */
+  /**
+   * Removes an empty category and its budget. Removing one that is already gone does nothing.
+   * Someone may have added an expense to it meanwhile; then it stays.
+   */
   removeCategory(categoryId: string): void {
+    if (!this.findCategory(categoryId)) return;
+    const blocker = this.categoryRemovalBlocker(categoryId);
+    if (blocker) throw new MonthRuleError(blocker === 'has-expenses' ? 'category-has-expenses' : 'last-category');
     this.categories = this.categories.filter((category) => category.id !== categoryId);
     delete this.budgets[categoryId];
   }
@@ -337,6 +371,7 @@ export class MonthRecord {
   }
 
   setBudget(categoryId: string, amount: number): void {
+    this.#requireCategory(categoryId);
     if (amount >= 0) this.budgets[categoryId] = roundToCents(amount);
   }
 
@@ -412,6 +447,32 @@ export class MonthRecord {
       fixed: this.recurringCosts[RecurringCostList.FIXED_COSTS].map((cost) => ({ ...cost })),
       subscriptions: this.recurringCosts[RecurringCostList.SUBSCRIPTIONS].map((cost) => ({ ...cost })),
     };
+  }
+
+  // ----- Rules -----
+
+  /** Each month has its own list of categories. */
+  #requireCategory(categoryId: string): void {
+    if (!this.findCategory(categoryId)) throw new MonthRuleError('unknown-category');
+  }
+
+  /** "YYYY-MM-DD" within this month. */
+  #requireDateInMonth(date: string): void {
+    if (!date.startsWith(`${this.monthKey}-`)) throw new MonthRuleError('date-outside-month');
+  }
+
+  /**
+   * A category name: not empty, at most MAX_CATEGORY_NAME_LENGTH characters, and different
+   * from the month's other names, ignoring capitals and surrounding spaces. The server only
+   * knows the names people typed; the page also compares with the translated default names.
+   * @returns the name without surrounding spaces
+   */
+  #requireFreeCategoryName(name: string, renamedCategoryId?: string): string {
+    const trimmedName = name.trim();
+    if (trimmedName === '') throw new MonthRuleError('category-name-empty');
+    if (trimmedName.length > MAX_CATEGORY_NAME_LENGTH) throw new MonthRuleError('category-name-too-long');
+    if (this.hasCategoryNamed(trimmedName, renamedCategoryId)) throw new MonthRuleError('category-name-taken');
+    return trimmedName;
   }
 
   // ----- Reading older files -----
