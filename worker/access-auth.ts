@@ -17,25 +17,37 @@ export const AccessProblem = Object.freeze({
   NOT_ENABLED: 'access-not-enabled',
   NEEDS_TOKEN_SETTINGS: 'access-needs-token-settings',
   INVALID_TOKEN: 'invalid-sign-in',
-});
+} as const);
+
+export type AccessProblemValue = (typeof AccessProblem)[keyof typeof AccessProblem];
 
 export class AccessDeniedError extends Error {
-  constructor(message, problem) {
+  constructor(
+    message: string,
+    readonly problem: AccessProblemValue,
+  ) {
     super(message);
-    this.problem = problem;
   }
 }
 
-const keySetsByTeamDomain = new Map(); // cached per Worker instance
+/** The Worker context with what Cloudflare Access adds; access is undefined without a sign-in. */
+export interface AccessContext {
+  access?: { getIdentity(): Promise<{ email?: unknown } | undefined> };
+}
+
+type AccessSettings = Pick<Env, 'ACCESS_TEAM_DOMAIN' | 'ACCESS_AUD' | 'ACCESS_TEST_BYPASS_EMAIL'>;
+
+const keySetsByTeamDomain = new Map<string, ReturnType<typeof createRemoteJWKSet>>(); // cached per Worker instance
 
 /**
- * @param {Request} request
- * @param {object} env  Worker environment
- * @param {ExecutionContext} context  Worker context; context.access is set by Cloudflare Access
- * @returns {Promise<string>} the signed-in user's email, lowercase
+ * @returns the signed-in user's email, lowercase
  * @throws {AccessDeniedError}
  */
-export async function verifiedUserEmail(request, env, context) {
+export async function verifiedUserEmail(
+  request: Request,
+  env: AccessSettings,
+  context: AccessContext | undefined,
+): Promise<string> {
   const testEmail = localTestBypassEmail(request, env);
   if (testEmail) return testEmail;
 
@@ -56,13 +68,13 @@ export async function verifiedUserEmail(request, env, context) {
 }
 
 /** Accepts the domain with or without https:// and a trailing slash, as people paste it. */
-function normalizeTeamDomain(value) {
+function normalizeTeamDomain(value: string | undefined): string | null {
   const trimmed = value?.trim().replace(/\/+$/, '');
   if (!trimmed) return null;
   return trimmed.startsWith('https://') ? trimmed : `https://${trimmed.replace(/^http:\/\//, '')}`;
 }
 
-function requireEmail(email) {
+function requireEmail(email: unknown): string {
   if (typeof email !== 'string' || email === '') {
     throw new AccessDeniedError('The sign-in has no email', AccessProblem.INVALID_TOKEN);
   }
@@ -70,22 +82,25 @@ function requireEmail(email) {
 }
 
 /** Verifies the signed token Access adds in the Cf-Access-Jwt-Assertion header. */
-async function emailFromAccessToken(request, teamDomain, audience) {
+async function emailFromAccessToken(request: Request, teamDomain: string, audience: string): Promise<unknown> {
   const token = request.headers.get('Cf-Access-Jwt-Assertion');
   if (!token) throw new AccessDeniedError('Missing Cloudflare Access token', AccessProblem.NOT_ENABLED);
   try {
     const { payload } = await jwtVerify(token, keySetFor(teamDomain), { issuer: teamDomain, audience });
     return payload.email;
   } catch (error) {
-    throw new AccessDeniedError(`Invalid Cloudflare Access token: ${error.message}`, AccessProblem.INVALID_TOKEN);
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new AccessDeniedError(`Invalid Cloudflare Access token: ${reason}`, AccessProblem.INVALID_TOKEN);
   }
 }
 
-function keySetFor(teamDomain) {
-  if (!keySetsByTeamDomain.has(teamDomain)) {
-    keySetsByTeamDomain.set(teamDomain, createRemoteJWKSet(new URL(`${teamDomain}/cdn-cgi/access/certs`)));
+function keySetFor(teamDomain: string): ReturnType<typeof createRemoteJWKSet> {
+  let keySet = keySetsByTeamDomain.get(teamDomain);
+  if (!keySet) {
+    keySet = createRemoteJWKSet(new URL(`${teamDomain}/cdn-cgi/access/certs`));
+    keySetsByTeamDomain.set(teamDomain, keySet);
   }
-  return keySetsByTeamDomain.get(teamDomain);
+  return keySet;
 }
 
 /**
@@ -93,7 +108,7 @@ function keySetFor(teamDomain) {
  * Off unless ACCESS_TEST_BYPASS_EMAIL is set (in the git-ignored .dev.vars file),
  * and refused for any host other than localhost, so it can't work on the real site.
  */
-function localTestBypassEmail(request, env) {
+function localTestBypassEmail(request: Request, env: AccessSettings): string | null {
   const bypassEmail = env.ACCESS_TEST_BYPASS_EMAIL;
   if (!bypassEmail) return null;
   const { hostname } = new URL(request.url);

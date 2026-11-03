@@ -2,7 +2,7 @@
   // Cloudflare deployment. Settings that identify people (Access team, emails) are
   // secrets set in the Cloudflare dashboard, never in this file. See README.md.
   "name": "expenses-tracker",
-  "main": "worker/index.js",
+  "main": "worker/index.ts",
   // Bundles the page (web/scripts -> web/dist) before every `wrangler deploy` and `wrangler dev`.
   // `wrangler dev` builds again whenever a file in web/scripts changes.
   "build": { "command": "npm run build", "watch_dir": "web/scripts" },

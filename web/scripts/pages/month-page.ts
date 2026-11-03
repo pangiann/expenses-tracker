@@ -156,7 +156,7 @@ export class MonthPage {
   }
 }
 
-/** The text explaining why the server refused the connection (see describeAccess in worker/index.js). */
+/** The text explaining why the server refused the connection (see describeAccess in worker/index.ts). */
 function refusalMessage({ problem, email, reason }: Refusal): string {
   return t(REFUSAL_STRING_IDS[problem] ?? 'error.refused', { email: email ?? '', reason: reason ?? '' });
 }

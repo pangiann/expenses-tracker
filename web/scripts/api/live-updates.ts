@@ -9,7 +9,7 @@ const KEEPALIVE_INTERVAL_MS = 50_000;
 const RECONNECT_DELAY_MS = 2_000;
 const REFUSED_RETRY_DELAY_MS = 20_000; // when the server refuses us, retrying fast won't help
 
-/** Why the server refused the connection, from /api/status (see describeAccess in worker/index.js). */
+/** Why the server refused the connection, from /api/status (see describeAccess in worker/index.ts). */
 export interface Refusal {
   problem: string;
   email?: string;

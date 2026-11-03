@@ -94,9 +94,10 @@ web/                      the page (HTML, CSS and TypeScript; bundled into web/d
     i18n/translator.ts    translations by string id (see "Languages" below)
     utils/                money, month-key, id and HTML helpers, and the save status
 worker/                   Cloudflare Worker
-  index.js                routing, login check, same-origin check
-  accessAuth.js           verifies the Cloudflare Access token
-  households.js           email -> household from the HOUSEHOLD_MEMBERS secret
+  index.ts                routing, login check, same-origin check
+  access-auth.ts          who is signed in, from Cloudflare Access
+  households.ts           email -> household from the HOUSEHOLD_MEMBERS secret
+  env.d.ts                the secrets the Worker reads
   household/
     household-room.ts     one Durable Object per household: endpoint calls go to the router, WebSockets to the broadcaster
     router.ts             request -> endpoint -> checked params and body -> handler -> JSON answer
@@ -116,7 +117,7 @@ Adding an expense, from the click to every screen:
 2. **API function.** It calls `addExpense()` in `web/scripts/api/expenses-api.ts`, which gives the expense a new id.
 3. **Outbox.** `api/outbox.ts` sends `POST /api/months/2026-11/expenses` with the expense as JSON. Edits go one at a time, in order. Without a connection they wait in the browser, also across a closed tab, and go out when it is back.
 4. **On screen at once.** While an edit waits for its answer, the page shows the server's last month with the waiting edits applied on top (`api/waiting-edits.ts`), so the expense appears right away, also offline.
-5. **Worker.** `worker/index.js` checks the sign-in and that the request comes from the site's own page, finds the household, and passes the request to its Durable Object.
+5. **Worker.** `worker/index.ts` checks the sign-in and that the request comes from the site's own page, finds the household, and passes the request to its Durable Object.
 6. **Router.** `worker/household/router.ts` finds the endpoint in `shared/api/endpoints.ts`, checks the path and the body against it, and calls the handler with the same name, `addExpense` in `handlers/expenses.ts`.
 7. **Handler.** It runs `editMonth()`: load the month from storage (`month-repository.ts`), apply the endpoint's edit (`shared/api/month-edits.ts`, here `month.addExpense(...)` in `shared/month/month-record.ts`, which enforces the month's rules), save it, and send the new month to every device showing it (`broadcaster.ts`).
 8. **Answer.** The handler's answer, the month after the edit, goes back to the page, and the month page (`pages/month-page.ts`) draws it with every feature. Other devices get the same month over their WebSocket (`api/live-updates.ts`) and draw it too.

@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { test } from 'vitest';
 
-import { AccessDeniedError, verifiedUserEmail } from '../worker/accessAuth.js';
-import { UnknownMemberError, householdForEmail, parseHouseholdMembers } from '../worker/households.js';
-import { isSameOriginRequest } from '../worker/index.js';
+import { AccessDeniedError, verifiedUserEmail } from '../worker/access-auth.ts';
+import { UnknownMemberError, householdForEmail, parseHouseholdMembers } from '../worker/households.ts';
+import { isSameOriginRequest } from '../worker/index.ts';
 
 const MEMBERS = JSON.stringify({ 'Me@Example.com': 'home', 'sister@example.com': 'sister', 'bad@example.com': '../x' });
 
@@ -93,7 +93,7 @@ test('WebSockets opened by other websites are refused', () => {
 });
 
 test('endpoint calls from another website are refused before they reach the household', async () => {
-  const { default: worker } = await import('../worker/index.js');
+  const { default: worker } = await import('../worker/index.ts');
   const forwarded = [];
   const env = {
     ACCESS_TEST_BYPASS_EMAIL: 'me@example.com',

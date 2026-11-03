@@ -10,9 +10,9 @@
  *
  * Only the default handler and Durable Object classes may be exported from this module.
  */
-import { AccessDeniedError, verifiedUserEmail } from './accessAuth.js';
+import { AccessDeniedError, verifiedUserEmail, type AccessContext } from './access-auth.ts';
 import { HouseholdRoom } from './household/household-room.ts';
-import { UnknownMemberError, householdForEmail } from './households.js';
+import { UnknownMemberError, householdForEmail } from './households.ts';
 
 export { HouseholdRoom };
 
@@ -21,13 +21,11 @@ const STATUS_PATH = '/api/status';
 const ENDPOINT_PATHS = ['/api/export', '/api/import'];
 const ENDPOINT_PATH_PREFIX = '/api/months/';
 
+/** The Worker context; context.access identifies the signed-in user (see access-auth.ts). */
+type Context = ExecutionContext & AccessContext;
+
 export default {
-  /**
-   * @param {Request} request
-   * @param {{ HOUSEHOLD: DurableObjectNamespace, ASSETS: Fetcher }} env
-   * @param {ExecutionContext} context  context.access identifies the signed-in user
-   */
-  async fetch(request, env, context) {
+  async fetch(request, env, context: Context) {
     const { pathname } = new URL(request.url);
     if (pathname === LIVE_PATH) return openHouseholdConnection(request, env, context);
     if (pathname === STATUS_PATH) return describeAccess(request, env, context);
@@ -37,9 +35,9 @@ export default {
     if (pathname.startsWith('/api/')) return textResponse('Not found', 404);
     return env.ASSETS.fetch(request);
   },
-};
+} satisfies ExportedHandler<Env>;
 
-async function openHouseholdConnection(request, env, context) {
+async function openHouseholdConnection(request: Request, env: Env, context: Context): Promise<Response> {
   if (request.headers.get('Upgrade') !== 'websocket') {
     return textResponse('Connect with a WebSocket', 426);
   }
@@ -58,7 +56,7 @@ async function openHouseholdConnection(request, env, context) {
  * are refused, reads included. Tools such as curl send neither header; an edit from curl
  * needs `-H "Origin: <site>"`.
  */
-async function callHouseholdEndpoint(request, env, context) {
+async function callHouseholdEndpoint(request: Request, env: Env, context: Context): Promise<Response> {
   const fetchSite = request.headers.get('Sec-Fetch-Site');
   const isFromAnotherSite = fetchSite !== null && fetchSite !== 'same-origin' && fetchSite !== 'none';
   if (isFromAnotherSite || (request.method !== 'GET' && !isSameOriginRequest(request))) {
@@ -68,8 +66,8 @@ async function callHouseholdEndpoint(request, env, context) {
 }
 
 /** Checks the sign-in, finds the user's household, and lets its Durable Object answer. */
-async function forwardToHousehold(request, env, context) {
-  let householdName;
+async function forwardToHousehold(request: Request, env: Env, context: Context): Promise<Response> {
+  let householdName: string;
   try {
     const email = await verifiedUserEmail(request, env, context);
     householdName = householdForEmail(email, env);
@@ -89,8 +87,8 @@ async function forwardToHousehold(request, env, context) {
  * Tells the signed-in user why they can't connect, for example that their email isn't in
  * any household yet. Reveals nothing to strangers: Cloudflare Access stops them first.
  */
-async function describeAccess(request, env, context) {
-  let email;
+async function describeAccess(request: Request, env: Env, context: Context): Promise<Response> {
+  let email: string;
   try {
     email = await verifiedUserEmail(request, env, context);
   } catch (error) {
@@ -107,7 +105,7 @@ async function describeAccess(request, env, context) {
   return jsonResponse({ email }, 200);
 }
 
-export function isSameOriginRequest(request) {
+export function isSameOriginRequest(request: Request): boolean {
   const origin = request.headers.get('Origin');
   if (!origin) return false;
   try {
@@ -117,13 +115,13 @@ export function isSameOriginRequest(request) {
   }
 }
 
-function jsonResponse(body, status) {
+function jsonResponse(body: unknown, status: number): Response {
   return new Response(JSON.stringify(body), {
     status,
     headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
   });
 }
 
-function textResponse(text, status) {
+function textResponse(text: string, status: number): Response {
   return new Response(text, { status, headers: { 'Content-Type': 'text/plain' } });
 }
