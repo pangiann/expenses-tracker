@@ -1,79 +1,37 @@
 /**
- * Every message between the page and the household's Durable Object, in both directions.
- * They travel as JSON over one WebSocket (/api/live). Both sides parse what they receive
- * with these schemas, so a message that doesn't match is refused in one place instead of
- * being checked field by field in each handler.
+ * The messages on the live WebSocket (/api/live) between the page and its household.
+ * The WebSocket only brings updates: edits are HTTP requests (shared/api/endpoints.ts).
  *
- * The keepalive "ping" and "pong" are plain text, not JSON; Cloudflare answers them
- * without waking the Durable Object.
+ *   page -> household:  watchMonth  "send me updates of this month"
+ *   household -> page:  month       the month after someone saved an edit to it
+ *
+ * Both sides parse what they receive with these schemas. The keepalive "ping" and "pong"
+ * are plain text, not JSON; Cloudflare answers them without waking the Durable Object.
  */
-// zod/mini has the same checks as zod in a form bundlers can trim (see month/month-changes.ts).
+// zod/mini has the same checks as zod in a form bundlers can trim (see api/fields.ts).
 import * as z from 'zod/mini';
 
-import type { MonthData, StoredMonthData } from './month/month-record.ts';
-import { MONTH_KEY_PATTERN, isMonthData } from './month/month-validation.ts';
+import type { MonthResponse } from './api/endpoints.ts';
+import { MonthKey } from './api/fields.ts';
+import type { MonthData } from './month/month-record.ts';
+import { isMonthData } from './month/month-validation.ts';
 
-const MonthKey = z.string().check(z.regex(MONTH_KEY_PATTERN));
-const ChangeId = z.string().check(z.minLength(1), z.maxLength(64));
-
-/** A whole month. Only its basic shape is checked; MonthRecord reads older formats too. */
-const Month = z.custom<StoredMonthData>(isMonthData, 'Not a month');
-
-// ----- Page -> Durable Object -----
+/** A whole month. Only its basic shape is checked; MonthRecord reads the rest. */
+const Month = z.custom<MonthData>(isMonthData, 'Not a month');
 
 export const ClientMessageSchema = z.discriminatedUnion('type', [
-  /** Show this month, creating it if missing; the reply is a "month" message. */
-  z.object({ type: z.literal('openMonth'), month: MonthKey }),
-  /**
-   * This device now shows this month: send it every update of the month from now on. The
-   * month itself comes from GET /api/months/:month (shared/api/endpoints.ts).
-   */
+  /** This device shows this month now. Its current version comes from GET /api/months/:month. */
   z.object({ type: z.literal('watchMonth'), month: MonthKey }),
-  /**
-   * Apply one change to a month. The change itself is checked by applyMonthChange()
-   * (shared/month/month-changes.ts), so an invalid change is refused with its changeId and
-   * the page can drop it.
-   */
-  z.object({ type: z.literal('change'), changeId: ChangeId, month: MonthKey, change: z.unknown() }),
-  /** Send every month; the reply is "exportData". */
-  z.object({ type: z.literal('export') }),
-  /** Replace these months; the reply is "importDone". Each month is checked by the handler. */
-  z.object({ type: z.literal('import'), months: z.array(z.unknown()) }),
 ]);
 
 export type ClientMessage = z.output<typeof ClientMessageSchema>;
 
-// ----- Durable Object -> page -----
-
 export const ServerMessageSchema = z.discriminatedUnion('type', [
-  /**
-   * The current version of a month, sent to every device viewing it after any change.
-   * appliedChangeId confirms the sender's change.
-   */
-  z.object({
-    type: z.literal('month'),
-    month: Month,
-    monthKeys: z.array(MonthKey),
-    /** see MonthResponse in shared/api/endpoints.ts */
-    revision: z.optional(z.number()),
-    appliedChangeId: z.optional(ChangeId),
-  }),
-  /** Confirms a change to a sender that no longer views that month. */
-  z.object({ type: z.literal('changeApplied'), changeId: ChangeId }),
-  z.object({ type: z.literal('exportData'), months: z.array(Month) }),
-  z.object({ type: z.literal('importDone'), count: z.number() }),
-  /** A request failed. changeId names the refused change, if it was one. */
-  z.object({ type: z.literal('error'), message: z.string(), changeId: z.optional(ChangeId) }),
+  /** The same as the answer to an edit: see MonthResponse. */
+  z.object({ type: z.literal('month'), month: Month, monthKeys: z.array(MonthKey), revision: z.number() }),
 ]);
 
-export type ServerMessage = z.output<typeof ServerMessageSchema>;
-
-/** What the server sends; the month is already in saved form. */
-export type OutgoingServerMessage =
-  | (Omit<Extract<ServerMessage, { type: 'month' }>, 'month'> & { month: MonthData })
-  | Exclude<ServerMessage, { type: 'month' }>;
-
-// ----- Reading and writing -----
+export type ServerMessage = { type: 'month' } & MonthResponse;
 
 export class InvalidMessageError extends Error {}
 
@@ -87,13 +45,11 @@ export function parseServerMessage(text: string): ServerMessage {
   return parse(ServerMessageSchema, text);
 }
 
-/** The JSON text to send for a server message. */
-export function encodeServerMessage(message: OutgoingServerMessage): string {
+export function encodeClientMessage(message: ClientMessage): string {
   return JSON.stringify(message);
 }
 
-/** The JSON text to send for a page message. */
-export function encodeClientMessage(message: ClientMessage): string {
+export function encodeServerMessage(message: ServerMessage): string {
   return JSON.stringify(message);
 }
 

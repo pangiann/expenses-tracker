@@ -10,59 +10,31 @@ import {
   parseServerMessage,
 } from '../shared/protocol.ts';
 
-const addCoffee = {
-  kind: 'addExpense',
-  expense: { id: 'e1', categoryKey: 'lunch', amount: 3.5, description: 'coffee', date: '2026-11-03' },
-};
+test('the page says which month it shows, and the household sends that month', () => {
+  const watch = { type: 'watchMonth', month: '2026-11' };
+  assert.deepEqual(parseClientMessage(encodeClientMessage(watch)), watch);
 
-test('every message the page sends can be read by the server', () => {
-  const messages = [
-    { type: 'openMonth', month: '2026-11' },
-    { type: 'change', changeId: 'c1', month: '2026-11', change: addCoffee },
-    { type: 'export' },
-    { type: 'import', months: [{ month: '2026-11', expenses: [] }] },
-  ];
-  for (const message of messages) {
-    assert.deepEqual(parseClientMessage(encodeClientMessage(message)), message);
-  }
-});
-
-test('a month the server sends arrives whole, older fields included', () => {
-  const month = MonthRecord.createEmpty('2026-11');
-  const sent = encodeServerMessage({
-    type: 'month',
-    month: month.toJSON(),
-    monthKeys: ['2026-11'],
-    appliedChangeId: 'c1',
-  });
-  const received = parseServerMessage(sent);
-  assert.equal(received.type, 'month');
-  assert.deepEqual(received.month, month.toJSON());
-
-  const importedFile = { month: '2024-10', expenses: [], importedFrom: 'spreadsheet' };
-  const exported = parseServerMessage(encodeServerMessage({ type: 'exportData', months: [importedFile] }));
-  assert.deepEqual(exported, { type: 'exportData', months: [importedFile] });
+  const month = MonthRecord.createEmpty('2026-11').toJSON();
+  const update = { type: 'month', month, monthKeys: ['2026-11'], revision: 7 };
+  assert.deepEqual(parseServerMessage(encodeServerMessage(update)), update);
 });
 
 test('messages that do not match the protocol are refused', () => {
   const refusedFromPage = [
     'not json',
-    '"openMonth"',
-    JSON.stringify({ type: 'deleteEverything' }),
-    JSON.stringify({ type: 'openMonth', month: '2026-13' }),
-    JSON.stringify({ type: 'openMonth' }),
-    JSON.stringify({ type: 'change', changeId: 'x'.repeat(65), month: '2026-11', change: addCoffee }),
-    JSON.stringify({ type: 'change', month: '2026-11', change: addCoffee }),
-    JSON.stringify({ type: 'import', months: 'everything' }),
+    '"watchMonth"',
+    JSON.stringify({ type: 'change', changeId: 'c1', month: '2026-11', change: {} }), // edits are HTTP requests now
+    JSON.stringify({ type: 'watchMonth', month: '2026-13' }),
+    JSON.stringify({ type: 'watchMonth' }),
   ];
   for (const text of refusedFromPage) {
     assert.throws(() => parseClientMessage(text), InvalidMessageError, text);
   }
 
   const refusedFromServer = [
-    JSON.stringify({ type: 'month', month: { expenses: [] }, monthKeys: [] }),
-    JSON.stringify({ type: 'error' }),
-    JSON.stringify({ type: 'importDone', count: 'many' }),
+    JSON.stringify({ type: 'month', month: { expenses: [] }, monthKeys: [], revision: 1 }),
+    JSON.stringify({ type: 'month', month: { month: '2026-11', expenses: [] }, monthKeys: [] }),
+    JSON.stringify({ type: 'error', message: 'old message type' }),
   ];
   for (const text of refusedFromServer) {
     assert.throws(() => parseServerMessage(text), InvalidMessageError, text);

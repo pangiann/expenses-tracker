@@ -4,8 +4,8 @@
  *
  *   npm run seed
  *
- * It sends the same "import" message as the page's Import button, so the data goes
- * through the real Worker code. Months it creates replace the same months already there.
+ * It calls the same endpoint as the page's Import button (POST /api/import), so the data
+ * goes through the real Worker code. Months it creates replace the same months already there.
  * It only talks to localhost, where .dev.vars lets you in without signing in.
  */
 import { DEFAULT_CATEGORIES, DEFAULT_FIXED_COST_NAMES } from '../shared/month/categories.ts';
@@ -107,28 +107,27 @@ function sampleMonth(monthStart, today) {
   };
 }
 
-/** Sends the months over the page's WebSocket and resolves when the Worker confirms. */
-function importMonths(months) {
+/** Sends the months to the import endpoint, like the page's Import button. */
+async function importMonths(months) {
   const siteURL = new URL(SITE);
   if (siteURL.hostname !== 'localhost' && siteURL.hostname !== '127.0.0.1') {
     throw new Error(`Refusing to seed ${SITE}: only localhost is allowed.`);
   }
-  const socketURL = `${siteURL.protocol === 'https:' ? 'wss' : 'ws'}://${siteURL.host}/api/live`;
-  // The Worker accepts only connections that look like they come from its own page.
-  const socket = new WebSocket(socketURL, { headers: { Origin: siteURL.origin } });
-
-  return new Promise((resolve, reject) => {
-    socket.addEventListener('open', () => socket.send(JSON.stringify({ type: 'import', months })));
-    socket.addEventListener('message', (event) => {
-      const message = JSON.parse(event.data);
-      if (message.type === 'importDone') resolve(message.count);
-      if (message.type === 'error') reject(new Error(message.message));
-      if (message.type === 'importDone' || message.type === 'error') socket.close();
+  let response;
+  try {
+    response = await fetch(new URL('/api/import', siteURL), {
+      method: 'POST',
+      // The Worker accepts edits only from its own page.
+      headers: { 'Content-Type': 'application/json', Origin: siteURL.origin },
+      body: JSON.stringify({ months }),
     });
-    socket.addEventListener('error', () =>
-      reject(new Error(`Could not connect to ${socketURL}. Is \`npm run dev\` running, and does .dev.vars exist?`)),
-    );
-  });
+  } catch {
+    throw new Error(`Could not reach ${SITE}. Is \`npm run dev\` running?`);
+  }
+  if (!response.ok) {
+    throw new Error(`${SITE} refused the import (${response.status}). Does .dev.vars exist? ${await response.text()}`);
+  }
+  return (await response.json()).count;
 }
 
 const today = new Date();

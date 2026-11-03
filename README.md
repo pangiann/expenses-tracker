@@ -56,7 +56,7 @@ Everything fits in Cloudflare's free plan. The page files are static assets, whi
 
 ```
 shared/                   code that runs in the page and in the Worker (no DOM, no Cloudflare)
-  protocol.ts             every WebSocket message in both directions, checked with zod
+  protocol.ts             the two live-update messages on the WebSocket, checked with zod
   api/
     endpoints.ts          every HTTP endpoint: method, path, request body; shared by page and Worker
     fields.ts             the shapes of ids, amounts, text and dates in requests
@@ -64,7 +64,6 @@ shared/                   code that runs in the page and in the Worker (no DOM, 
     categories.ts         default categories, colours and limits
     amounts.ts            rounding and sums
     month-record.ts       one month's data and the rules for changing it
-    month-changes.ts      every kind of change: its shape (checked with zod) and how it applies
     month-validation.ts   month keys, month shape, which month a new one copies
 web/                      the page (HTML, CSS, JavaScript modules; bundled into web/dist/ by `npm run build`)
   index.html
@@ -87,8 +86,8 @@ worker/                   Cloudflare Worker
   index.js                routing, login check, same-origin check
   accessAuth.js           verifies the Cloudflare Access token
   households.js           email -> household from the HOUSEHOLD_MEMBERS secret
-  HouseholdRoom.js        one Durable Object per household: answers endpoints, keeps live connections
   household/
+    household-room.ts     one Durable Object per household: endpoint calls go to the router, WebSockets to the broadcaster
     router.ts             request -> endpoint -> checked params and body -> handler -> JSON answer
     handlers/             one handler per endpoint, grouped by what they edit (expenses.ts, categories.ts, ...)
     household.ts          editMonth(): load the month, change it, save it, send it to the devices showing it

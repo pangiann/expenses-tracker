@@ -1,5 +1,4 @@
 import type { MonthResponse } from '../../../shared/api/endpoints.ts';
-import type { MonthData } from '../../../shared/month/month-record.ts';
 import { InvalidMessageError, encodeClientMessage, parseServerMessage } from '../../../shared/protocol.ts';
 
 const LIVE_PATH = '/api/live';
@@ -85,10 +84,8 @@ export class LiveUpdates {
   #handleMessage(rawMessage: string): void {
     if (rawMessage === KEEPALIVE_PONG) return;
     try {
-      const message = parseServerMessage(rawMessage);
-      if (message.type === 'month' && message.revision !== undefined) {
-        this.onMonth({ month: message.month as MonthData, monthKeys: message.monthKeys, revision: message.revision });
-      }
+      const { month, monthKeys, revision } = parseServerMessage(rawMessage);
+      this.onMonth({ month, monthKeys, revision });
     } catch (error) {
       if (!(error instanceof InvalidMessageError)) throw error;
       console.error('Ignored a message from the server:', error.message);

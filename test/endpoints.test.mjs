@@ -32,3 +32,32 @@ test('request bodies are checked against the endpoint', () => {
   assert.equal(endpoints.getMonth.params.safeParse({ month: '2026-13' }).success, false);
   assert.equal(endpoints.addRecurringCost.params.safeParse({ month: '2026-11', list: '__proto__' }).success, false);
 });
+
+test('malformed edits are refused by their endpoint', () => {
+  const coffee = { id: 'e1', categoryId: 'lunch', amount: 3.5, description: 'coffee', date: '2026-11-03' };
+  const refused = [
+    ['addExpense', { ...coffee, amount: -5 }],
+    ['addExpense', { ...coffee, amount: '5' }],
+    ['addExpense', { ...coffee, amount: Number.POSITIVE_INFINITY }],
+    ['addExpense', { ...coffee, description: 'x'.repeat(500) }],
+    ['addExpense', { ...coffee, date: 'tomorrow' }],
+    ['addExpense', { ...coffee, id: '' }],
+    ['addIncome', { id: 'i1', amount: 0, date: '2026-11-04' }],
+    ['changeBudget', { amount: Number.NaN }],
+    ['addCategory', { id: 'x', name: '  ', color: '#f59e0b' }],
+    ['addCategory', { id: 'x', name: 'X', color: 'red' }],
+    ['addCategory', { id: 'x', name: 'X', color: '#f59e0b"><script>' }],
+    ['moveCategory', {}],
+    ['addRecurringCost', { id: 'x', name: '   ' }],
+  ];
+  for (const [name, body] of refused) {
+    assert.equal(endpoints[name].body.safeParse(body).success, false, `${name} ${JSON.stringify(body)}`);
+  }
+  const withoutDescription = endpoints.addIncome.body.parse({
+    id: 'i1',
+    amount: 40,
+    description: null,
+    date: '2026-11-04',
+  });
+  assert.equal(withoutDescription.description, '');
+});

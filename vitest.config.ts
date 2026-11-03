@@ -5,4 +5,8 @@ export default defineConfig({
   test: {
     include: ['test/**/*.test.{ts,mjs}'],
   },
+  resolve: {
+    // Cloudflare's runtime module doesn't exist in Node.js; tests get a stand-in.
+    alias: { 'cloudflare:workers': new URL('test/stubs/cloudflare-workers.mjs', import.meta.url).pathname },
+  },
 });

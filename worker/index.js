@@ -1,7 +1,7 @@
 /**
  * Cloudflare Worker entry point.
  *
- *   /api/live    WebSocket to the signed-in user's household (see HouseholdRoom)
+ *   /api/live    WebSocket to the signed-in user's household, for live updates (see household/household-room.ts)
  *   /api/status  why the WebSocket was refused; the page asks only after a failed connection
  *   /api/months/..., /api/export, /api/import
  *                the app's endpoints (shared/api/endpoints.ts), answered by the household
@@ -11,7 +11,7 @@
  * Only the default handler and Durable Object classes may be exported from this module.
  */
 import { AccessDeniedError, verifiedUserEmail } from './accessAuth.js';
-import { HouseholdRoom } from './HouseholdRoom.js';
+import { HouseholdRoom } from './household/household-room.ts';
 import { UnknownMemberError, householdForEmail } from './households.js';
 
 export { HouseholdRoom };
