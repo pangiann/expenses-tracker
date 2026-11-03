@@ -12,21 +12,28 @@
     "dev": "wrangler dev",
     "seed": "node --experimental-websocket scripts/seed-dev-data.mjs",
     "typecheck": "tsc -p web && tsc -p worker",
+    "lint": "eslint .",
     "types": "wrangler types worker/worker-configuration.d.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "deploy": "wrangler deploy"
+    "deploy": "wrangler deploy",
+    "check": "prettier --check . && eslint . && npm run typecheck && vitest run"
   },
   "dependencies": {
     "jose": "^6.0.0"
   },
   "devDependencies": {
+    "@eslint/js": "10.0.1",
     "esbuild": "0.28.2",
+    "eslint": "10.14.0",
+    "eslint-config-prettier": "10.1.8",
+    "globals": "17.14.0",
     "prettier": "3.9.10",
     "sortablejs": "1.15.7",
     "typescript": "6.0.3",
+    "typescript-eslint": "8.72.1",
     "vitest": "4.1.12",
     "wrangler": "^4.40.0"
   }

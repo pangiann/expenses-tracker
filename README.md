@@ -11,6 +11,17 @@ Test on your own computer before you push. You need Node.js.
 3. In a second terminal, run `npm run seed` to fill the last six months with made-up expenses, income and fixed costs. Run it again whenever you want fresh data; it replaces those six months.
 4. Click around. `wrangler dev` rebuilds the page when you save a file in `web/scripts/`; reload the browser to see it.
 
+## Checks
+
+Run `npm run check` before you push. It runs every check below; each one also has its own command.
+
+- `npm run format:check` checks the layout with Prettier. `npm run format` fixes it.
+- `npm run lint` looks for mistakes with ESLint.
+- `npm run typecheck` checks the TypeScript code. The page and the Worker each have a `tsconfig.json`, because one runs in a browser and the other on Cloudflare. Existing `.js` files aren't checked until they become `.ts`.
+- `npm test` runs the unit tests with vitest. `npm run test:watch` reruns them on every save.
+
+After changing `wrangler.jsonc`, run `npm run types` to regenerate the Worker's types in `worker/worker-configuration.d.ts`.
+
 ## Build
 
 The page's JavaScript lives in `web/scripts/` and imports npm packages by name, for example `import Sortable from 'sortablejs'`. `npm run build` uses esbuild to bundle it, together with the packages it imports from `node_modules/`, into `web/dist/main.js`, which `index.html` loads. `web/dist/` is generated and git-ignored.
