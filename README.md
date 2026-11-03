@@ -54,6 +54,8 @@ Everything fits in Cloudflare's free plan. The page files are static assets, whi
 
 ## Project layout
 
+[ARCHITECTURE.md](ARCHITECTURE.md) explains how the parts fit together and follows one click from the screen to storage and back.
+
 ```
 shared/                   code that runs in the page and in the Worker (no DOM, no Cloudflare)
   protocol.ts             the two live-update messages on the WebSocket, checked with zod
