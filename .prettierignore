@@ -1,0 +1,7 @@
+# Generated files
+web/dist/
+worker/worker-configuration.d.ts
+package-lock.json
+# Personal data and local state
+data/
+.wrangler/

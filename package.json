@@ -13,6 +13,8 @@
     "seed": "node --experimental-websocket scripts/seed-dev-data.mjs",
     "typecheck": "tsc -p web && tsc -p worker",
     "types": "wrangler types worker/worker-configuration.d.ts",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "test": "vitest run",
     "test:watch": "vitest",
     "deploy": "wrangler deploy"
@@ -22,6 +24,7 @@
   },
   "devDependencies": {
     "esbuild": "0.28.2",
+    "prettier": "3.9.10",
     "sortablejs": "1.15.7",
     "typescript": "6.0.3",
     "vitest": "4.1.12",
