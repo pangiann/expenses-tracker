@@ -3,6 +3,8 @@ import prettier from 'eslint-config-prettier';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
+import layers from './eslint/layers.mjs';
+
 // `npm run lint`. Prettier handles layout; ESLint looks for mistakes.
 export default tseslint.config(
   { ignores: ['web/dist/', 'worker/worker-configuration.d.ts', 'data/', '.wrangler/'] },
@@ -31,6 +33,13 @@ export default tseslint.config(
     },
   },
   { files: ['test/**', 'scripts/**', '*.config.*'], languageOptions: { globals: globals.node } },
+
+  // Which layer may import which: see eslint/layers.mjs and ARCHITECTURE.md.
+  {
+    files: ['shared/**', 'web/scripts/**', 'worker/**'],
+    plugins: { layers },
+    rules: { 'layers/layers': 'error' },
+  },
 
   prettier,
 );
