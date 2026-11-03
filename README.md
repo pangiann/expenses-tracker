@@ -56,6 +56,7 @@ Everything fits in Cloudflare's free plan. The page files are static assets, whi
 
 ```
 shared/                   code that runs in the page and in the Worker (no DOM, no Cloudflare)
+  protocol.ts             every WebSocket message in both directions, checked with zod
   month/
     categories.ts         default categories, colours and limits
     amounts.ts            rounding and sums

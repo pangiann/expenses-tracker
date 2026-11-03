@@ -5,19 +5,12 @@
  * Cloudflare runs one message at a time per Durable Object, so two people editing at the
  * same moment are applied one after the other; neither overwrites the other.
  *
- * Messages from a device:
- *   { type: 'openMonth', month }                      show this month (created if missing)
- *   { type: 'change', changeId, month, change }       apply one change (see shared/month/month-changes.ts)
- *   { type: 'export' }                                send every month
- *   { type: 'import', months }                        replace these months
- * Messages to devices:
- *   { type: 'month', month, monthKeys, appliedChangeId? }  sent to every device viewing that month
- *   { type: 'changeApplied', changeId }                    to the sender, if it no longer views that month
- *   { type: 'exportData', months } / { type: 'importDone', count } / { type: 'error', message, changeId? }
+ * The messages in both directions are described in shared/protocol.ts.
  */
 import { MonthRecord } from '../shared/month/month-record.ts';
 import { InvalidChangeError, applyMonthChange } from '../shared/month/month-changes.ts';
-import { closestSavedMonthKey, isMonthData, isValidMonthKey } from '../shared/month/month-validation.ts';
+import { closestSavedMonthKey, isMonthData } from '../shared/month/month-validation.ts';
+import { InvalidMessageError, encodeServerMessage, parseClientMessage } from '../shared/protocol.ts';
 
 const MONTH_STORAGE_PREFIX = 'month:';
 const MAX_MESSAGE_LENGTH = 5 * 1024 * 1024;
@@ -54,13 +47,15 @@ export class HouseholdRoom {
     }
     let message;
     try {
-      message = JSON.parse(rawMessage);
-    } catch {
-      return this.#sendError(socket, 'Message is not JSON');
+      message = parseClientMessage(rawMessage);
+    } catch (error) {
+      if (!(error instanceof InvalidMessageError)) throw error;
+      // Name the change, if it was one, so the page can drop it instead of resending it.
+      return this.#sendError(socket, error.message, changeIdIn(rawMessage));
     }
 
     try {
-      switch (message?.type) {
+      switch (message.type) {
         case 'openMonth':
           return await this.#openMonth(socket, message.month);
         case 'change':
@@ -69,8 +64,6 @@ export class HouseholdRoom {
           return await this.#exportMonths(socket);
         case 'import':
           return await this.#importMonths(socket, message.months);
-        default:
-          return this.#sendError(socket, `Unknown message type: ${message?.type}`);
       }
     } catch (error) {
       if (error instanceof InvalidChangeError) {
@@ -94,16 +87,12 @@ export class HouseholdRoom {
   // ----- Message handlers -----
 
   async #openMonth(socket, monthKey) {
-    if (!isValidMonthKey(monthKey)) throw new InvalidChangeError(`Invalid month: ${monthKey}`);
     const monthRecord = (await this.#loadMonth(monthKey)) ?? (await this.#createMonth(monthKey));
     socket.serializeAttachment({ monthKey });
     socket.send(await this.#monthMessage(monthRecord));
   }
 
   async #applyChange(socket, { changeId, month: monthKey, change }) {
-    if (typeof changeId !== 'string' || changeId.length > 64) throw new InvalidChangeError('Invalid change id');
-    if (!isValidMonthKey(monthKey)) throw new InvalidChangeError(`Invalid month: ${monthKey}`);
-
     const monthRecord = (await this.#loadMonth(monthKey)) ?? (await this.#createMonth(monthKey));
     if (!this.recentChangeIds.has(changeId)) {
       applyMonthChange(monthRecord, change);
@@ -112,12 +101,12 @@ export class HouseholdRoom {
     }
     const deliveredToSender = this.#broadcastMonth(await this.#monthMessage(monthRecord, changeId), monthKey, socket);
     // The sender may have moved to another month meanwhile; it still needs the confirmation.
-    if (!deliveredToSender) socket.send(JSON.stringify({ type: 'changeApplied', changeId }));
+    if (!deliveredToSender) socket.send(encodeServerMessage({ type: 'changeApplied', changeId }));
   }
 
   async #exportMonths(socket) {
     const storedMonths = await this.storage.list({ prefix: MONTH_STORAGE_PREFIX });
-    socket.send(JSON.stringify({ type: 'exportData', months: [...storedMonths.values()] }));
+    socket.send(encodeServerMessage({ type: 'exportData', months: [...storedMonths.values()] }));
   }
 
   async #importMonths(socket, months) {
@@ -137,7 +126,7 @@ export class HouseholdRoom {
       );
     }
     this.monthKeys = null; // re-read on next use
-    socket.send(JSON.stringify({ type: 'importDone', count: monthRecords.length }));
+    socket.send(encodeServerMessage({ type: 'importDone', count: monthRecords.length }));
   }
 
   // ----- Storage -----
@@ -177,7 +166,7 @@ export class HouseholdRoom {
   // ----- Sending -----
 
   async #monthMessage(monthRecord, appliedChangeId) {
-    return JSON.stringify({
+    return encodeServerMessage({
       type: 'month',
       month: monthRecord.toJSON(),
       monthKeys: await this.#savedMonthKeys(),
@@ -204,7 +193,7 @@ export class HouseholdRoom {
   }
 
   #sendError(socket, errorMessage, changeId) {
-    socket.send(JSON.stringify({ type: 'error', message: errorMessage, changeId }));
+    socket.send(encodeServerMessage({ type: 'error', message: errorMessage, changeId }));
   }
 
   #rememberChangeId(changeId) {
@@ -212,6 +201,16 @@ export class HouseholdRoom {
     if (this.recentChangeIds.size > RECENT_CHANGE_IDS_TO_REMEMBER) {
       this.recentChangeIds.delete(this.recentChangeIds.values().next().value);
     }
+  }
+}
+
+/** The changeId of a message that failed to parse, if it has a usable one. */
+function changeIdIn(rawMessage) {
+  try {
+    const { changeId } = JSON.parse(rawMessage);
+    return typeof changeId === 'string' && changeId.length <= 64 ? changeId : undefined;
+  } catch {
+    return undefined;
   }
 }
 

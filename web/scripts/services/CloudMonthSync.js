@@ -1,5 +1,6 @@
 import { MonthRecord } from '../../../shared/month/month-record.ts';
 import { InvalidChangeError, applyMonthChange } from '../../../shared/month/month-changes.ts';
+import { InvalidMessageError, encodeClientMessage, parseServerMessage } from '../../../shared/protocol.ts';
 import { t } from '../i18n/Translator.js';
 import { createUniqueId } from '../utils/ids.js';
 import { SaveStatus } from './SaveStatus.js';
@@ -25,9 +26,7 @@ const PROBLEM_STRING_IDS = {
  * Backend for the Cloudflare deployment, shared by several people.
  *
  * Everything travels over one WebSocket, the cheapest kind of Cloudflare request
- * (20 messages are billed as 1 request):
- *   to the server:   openMonth, change, export, import
- *   from the server: month (after every change by anyone), changeApplied, exportData, importDone, error
+ * (20 messages are billed as 1 request). The messages are described in shared/protocol.ts.
  *
  * Changes are applied on screen immediately and kept in a pending list until the server
  * confirms them. When the server sends a newer month, pending changes are re-applied on
@@ -109,9 +108,9 @@ export class CloudMonthSync {
       this.onConnectionProblem(null);
       this.keepaliveTimer = setInterval(() => this.socket.send(KEEPALIVE_PING), KEEPALIVE_INTERVAL_MS);
       // After a reconnect: show the latest version of the month and resend unconfirmed changes.
-      if (this.shownMonthKey) this.socket.send(JSON.stringify({ type: 'openMonth', month: this.shownMonthKey }));
+      if (this.shownMonthKey) this.socket.send(encodeClientMessage({ type: 'openMonth', month: this.shownMonthKey }));
       for (const { changeId, monthKey, change } of this.pendingChanges) {
-        this.socket.send(JSON.stringify({ type: 'change', changeId, month: monthKey, change }));
+        this.socket.send(encodeClientMessage({ type: 'change', changeId, month: monthKey, change }));
       }
       this.#reportStatus();
     });
@@ -145,15 +144,17 @@ export class CloudMonthSync {
 
   /** Messages sent while offline are dropped; reconnecting resends what matters. */
   #send(message) {
-    if (this.isConnected) this.socket.send(JSON.stringify(message));
+    if (this.isConnected) this.socket.send(encodeClientMessage(message));
   }
 
   #handleMessage(rawMessage) {
     if (rawMessage === KEEPALIVE_PONG) return;
     let message;
     try {
-      message = JSON.parse(rawMessage);
-    } catch {
+      message = parseServerMessage(rawMessage);
+    } catch (error) {
+      if (!(error instanceof InvalidMessageError)) throw error;
+      console.error('Ignored a message from the server:', error.message);
       return;
     }
 
