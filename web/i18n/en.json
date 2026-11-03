@@ -16,7 +16,6 @@
   "backup.confirmImport": "Import {count} months ({first} to {last})?\nMonths in the file replace the same months here.",
 
   "status.saved": "Saved ✓",
-  "status.unsaved": "Unsaved…",
   "status.saving": "Saving…",
   "status.failed": "Not saved",
   "status.offline": "Offline, reconnecting…",
@@ -87,7 +86,6 @@
 
   "error.openedAsFile": "Open the tracker through its server, not as a file.",
   "error.startFailed": "Could not start. Reload the page.",
-  "error.localServerDown": "Could not reach the local server. Start it with: python3 server/main.py",
   "error.cloudUnreachable": "Could not reach the server. Check your internet connection.",
   "error.refused": "The server refused the connection.",
   "error.accessNotEnabled": "The login for this site isn’t switched on. In Cloudflare, open the Worker’s Access tab and protect it with Cloudflare Access.",

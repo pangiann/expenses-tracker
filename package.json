@@ -2,7 +2,7 @@
   "name": "expenses-tracker",
   "private": true,
   "type": "module",
-  "description": "Personal expenses tracker: local Mac app or a shared Cloudflare deployment.",
+  "description": "Personal expenses tracker: a website on Cloudflare, shared live within a household.",
   "engines": {
     "node": ">=20"
   },

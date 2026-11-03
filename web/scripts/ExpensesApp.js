@@ -1,7 +1,7 @@
 import { ChangeKind, InvalidChangeError, applyMonthChange } from './model/monthChanges.js';
 import { isMonthData } from './model/monthValidation.js';
 import { t, translator } from './i18n/Translator.js';
-import { createMonthSync } from './services/createMonthSync.js';
+import { CloudMonthSync } from './services/CloudMonthSync.js';
 import { createUniqueId } from './utils/ids.js';
 import { currentMonthKey, nextMonthKey, todayAsIsoDate } from './utils/monthKeys.js';
 import { AddMonthDialog } from './views/AddMonthDialog.js';
@@ -26,8 +26,8 @@ import { SummaryCardsView } from './views/SummaryCardsView.js';
  * New items (expenses, income entries, fixed costs) get their id here, on the device,
  * so the same change can be sent twice without creating two items.
  *
- * The sync is LocalMonthSync (Mac app, files on disk) or CloudMonthSync (Cloudflare,
- * shared live). When the stored month changes, the sync calls #showMonth().
+ * The sync is CloudMonthSync: the household's months, shared live through Cloudflare.
+ * When the stored month changes, the sync calls #showMonth().
  */
 export class ExpensesApp {
   constructor() {
@@ -53,8 +53,6 @@ export class ExpensesApp {
       new IncomeView(actions),
       new RecurringCostsView(actions),
     ];
-
-    window.addEventListener('beforeunload', () => this.sync?.flushWhilePageCloses());
   }
 
   /** Connects to storage and shows the current month, creating it if needed. */
@@ -64,7 +62,7 @@ export class ExpensesApp {
       return;
     }
     try {
-      this.sync = await createMonthSync({
+      this.sync = new CloudMonthSync({
         onMonth: (monthRecord, savedMonthKeys) => this.#showMonth(monthRecord, savedMonthKeys),
         onSaveStatus: (saveStatus) => this.statusView.showSaveStatus(saveStatus),
         onConnectionProblem: (message) => this.statusView.showError(message),
@@ -74,11 +72,6 @@ export class ExpensesApp {
       console.error(error);
       this.statusView.showError(this.sync?.startupErrorMessage ?? t('error.startFailed'));
     }
-  }
-
-  /** Called by the Mac app before it quits. */
-  async flushPendingSave() {
-    await this.sync?.flushPendingChanges();
   }
 
   #showMonth(monthRecord, savedMonthKeys) {

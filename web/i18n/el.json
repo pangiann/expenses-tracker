@@ -16,7 +16,6 @@
   "backup.confirmImport": "Εισαγωγή {count} μηνών ({first} έως {last});\nΟι μήνες του αρχείου αντικαθιστούν τους ίδιους μήνες εδώ.",
 
   "status.saved": "Αποθηκεύτηκε ✓",
-  "status.unsaved": "Μη αποθηκευμένο…",
   "status.saving": "Αποθήκευση…",
   "status.failed": "Δεν αποθηκεύτηκε",
   "status.offline": "Εκτός σύνδεσης, επανασύνδεση…",
@@ -87,7 +86,6 @@
 
   "error.openedAsFile": "Ανοίξτε την εφαρμογή μέσω του διακομιστή της, όχι ως αρχείο.",
   "error.startFailed": "Η εκκίνηση απέτυχε. Ανανεώστε τη σελίδα.",
-  "error.localServerDown": "Δεν υπάρχει σύνδεση με τον τοπικό διακομιστή. Ξεκινήστε τον με: python3 server/main.py",
   "error.cloudUnreachable": "Δεν υπάρχει σύνδεση με τον διακομιστή. Ελέγξτε τη σύνδεσή σας στο διαδίκτυο.",
   "error.refused": "Ο διακομιστής απέρριψε τη σύνδεση.",
   "error.accessNotEnabled": "Η σύνδεση χρηστών δεν είναι ενεργή. Στο Cloudflare, ανοίξτε την καρτέλα Access του Worker και προστατέψτε τον με το Cloudflare Access.",

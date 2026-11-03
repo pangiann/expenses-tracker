@@ -2,7 +2,7 @@ import { MonthRecord } from '../model/MonthRecord.js';
 import { InvalidChangeError, applyMonthChange } from '../model/monthChanges.js';
 import { t } from '../i18n/Translator.js';
 import { createUniqueId } from '../utils/ids.js';
-import { SaveStatus } from './AutoSaver.js';
+import { SaveStatus } from './SaveStatus.js';
 import { PendingChangeStore } from './PendingChangeStore.js';
 
 const LIVE_PATH = '/api/live';
@@ -82,10 +82,6 @@ export class CloudMonthSync {
     while (this.pendingChanges.length > 0 && Date.now() < deadline) {
       await new Promise((resolve) => setTimeout(resolve, 50));
     }
-  }
-
-  flushWhilePageCloses() {
-    // Pending changes were sent the moment they were made; nothing extra to send.
   }
 
   async exportAllMonths() {

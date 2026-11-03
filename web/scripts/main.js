@@ -7,9 +7,4 @@ await translator.load();
 translator.translatePage();
 setMoneyLocale(translator.locale);
 
-const expensesApp = new ExpensesApp();
-
-// The Mac app calls window.expensesApp.flushPendingSave() before quitting.
-window.expensesApp = expensesApp;
-
-expensesApp.start();
+new ExpensesApp().start();

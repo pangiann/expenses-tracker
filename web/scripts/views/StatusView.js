@@ -1,10 +1,9 @@
 import { t } from '../i18n/Translator.js';
 import { getElement } from '../utils/html.js';
-import { SaveStatus } from '../services/AutoSaver.js';
+import { SaveStatus } from '../services/SaveStatus.js';
 
 const SAVE_STATUS_DISPLAY = {
   [SaveStatus.SAVED]: { stringId: 'status.saved', cssClass: 'is-saved' },
-  [SaveStatus.UNSAVED]: { stringId: 'status.unsaved', cssClass: '' },
   [SaveStatus.SAVING]: { stringId: 'status.saving', cssClass: '' },
   [SaveStatus.FAILED]: { stringId: 'status.failed', cssClass: 'is-failed' },
   [SaveStatus.OFFLINE]: { stringId: 'status.offline', cssClass: 'is-failed' },
