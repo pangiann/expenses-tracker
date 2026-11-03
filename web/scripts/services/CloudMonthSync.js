@@ -1,5 +1,5 @@
 import { MonthRecord } from '../../../shared/month/month-record.ts';
-import { InvalidChangeError, applyMonthChange } from '../../../shared/month/month-changes.js';
+import { InvalidChangeError, applyMonthChange } from '../../../shared/month/month-changes.ts';
 import { t } from '../i18n/Translator.js';
 import { createUniqueId } from '../utils/ids.js';
 import { SaveStatus } from './SaveStatus.js';

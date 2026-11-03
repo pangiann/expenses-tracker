@@ -7,7 +7,7 @@
  *
  * Messages from a device:
  *   { type: 'openMonth', month }                      show this month (created if missing)
- *   { type: 'change', changeId, month, change }       apply one change (see shared/month/month-changes.js)
+ *   { type: 'change', changeId, month, change }       apply one change (see shared/month/month-changes.ts)
  *   { type: 'export' }                                send every month
  *   { type: 'import', months }                        replace these months
  * Messages to devices:
@@ -16,7 +16,7 @@
  *   { type: 'exportData', months } / { type: 'importDone', count } / { type: 'error', message, changeId? }
  */
 import { MonthRecord } from '../shared/month/month-record.ts';
-import { InvalidChangeError, applyMonthChange } from '../shared/month/month-changes.js';
+import { InvalidChangeError, applyMonthChange } from '../shared/month/month-changes.ts';
 import { closestSavedMonthKey, isMonthData, isValidMonthKey } from '../shared/month/month-validation.ts';
 
 const MONTH_STORAGE_PREFIX = 'month:';

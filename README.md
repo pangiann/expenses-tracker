@@ -60,7 +60,7 @@ shared/                   code that runs in the page and in the Worker (no DOM, 
     categories.ts         default categories, colours and limits
     amounts.ts            rounding and sums
     month-record.ts       one month's data and the rules for changing it
-    month-changes.js      every kind of change, checked and applied the same way everywhere
+    month-changes.ts      every kind of change: its shape (checked with zod) and how it applies
     month-validation.ts   month keys, month shape, which month a new one copies
 web/                      the page (HTML, CSS, JavaScript modules; bundled into web/dist/ by `npm run build`)
   index.html

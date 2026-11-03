@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'vitest';
 
 import { MonthRecord } from '../shared/month/month-record.ts';
-import { ChangeKind, InvalidChangeError, applyMonthChange } from '../shared/month/month-changes.js';
+import { ChangeKind, InvalidChangeError, applyMonthChange } from '../shared/month/month-changes.ts';
 import { closestSavedMonthKey, isMonthData } from '../shared/month/month-validation.ts';
 
 const novemberWithRent = () =>
@@ -106,6 +106,23 @@ test('older fixed costs without ids get the same ids on every device', () => {
     ['fixed-1', 'fixed-2'],
   );
   assert.deepEqual(new MonthRecord(oldFile).toJSON().fixed[1], { name: 'Internet', amount: 30, id: 'fixed-2' });
+});
+
+test('a missing description is stored as empty text', () => {
+  const month = novemberWithRent();
+  const coffeeWithoutDescription = { ...coffee };
+  delete coffeeWithoutDescription.description;
+  applyMonthChange(month, { kind: ChangeKind.ADD_EXPENSE, expense: coffeeWithoutDescription });
+  applyMonthChange(month, { kind: ChangeKind.ADD_INCOME, income: { ...lesson, description: null } });
+  assert.equal(month.expenses[0].description, '');
+  assert.equal(month.incomes[0].description, '');
+});
+
+test('changes that are not objects, or miss a field, are refused', () => {
+  const month = novemberWithRent();
+  for (const change of [null, 'addExpense', { kind: ChangeKind.MOVE_CATEGORY, categoryId: 'lunch' }]) {
+    assert.throws(() => applyMonthChange(month, change), InvalidChangeError, JSON.stringify(change));
+  }
 });
 
 test('budgets and expected income change through the same path', () => {

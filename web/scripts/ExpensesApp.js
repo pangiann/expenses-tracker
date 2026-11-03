@@ -1,4 +1,4 @@
-import { ChangeKind, InvalidChangeError, applyMonthChange } from '../../shared/month/month-changes.js';
+import { ChangeKind, InvalidChangeError, applyMonthChange } from '../../shared/month/month-changes.ts';
 import { isMonthData } from '../../shared/month/month-validation.ts';
 import { t, translator } from './i18n/Translator.js';
 import { CloudMonthSync } from './services/CloudMonthSync.js';
