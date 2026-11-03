@@ -3,7 +3,7 @@ import { test } from 'vitest';
 
 import { MonthRecord } from '../shared/month/month-record.js';
 import { ChangeKind, InvalidChangeError, applyMonthChange } from '../shared/month/month-changes.js';
-import { closestSavedMonthKey, isMonthData } from '../shared/month/month-validation.js';
+import { closestSavedMonthKey, isMonthData } from '../shared/month/month-validation.ts';
 
 const novemberWithRent = () =>
   new MonthRecord({

@@ -17,7 +17,7 @@
  */
 import { MonthRecord } from '../shared/month/month-record.js';
 import { InvalidChangeError, applyMonthChange } from '../shared/month/month-changes.js';
-import { closestSavedMonthKey, isMonthData, isValidMonthKey } from '../shared/month/month-validation.js';
+import { closestSavedMonthKey, isMonthData, isValidMonthKey } from '../shared/month/month-validation.ts';
 
 const MONTH_STORAGE_PREFIX = 'month:';
 const MAX_MESSAGE_LENGTH = 5 * 1024 * 1024;

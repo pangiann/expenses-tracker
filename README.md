@@ -57,11 +57,11 @@ Everything fits in Cloudflare's free plan. The page files are static assets, whi
 ```
 shared/                   code that runs in the page and in the Worker (no DOM, no Cloudflare)
   month/
-    categories.js         default categories, colours and limits
-    amounts.js            rounding and sums
+    categories.ts         default categories, colours and limits
+    amounts.ts            rounding and sums
     month-record.js       one month's data and the rules for changing it
     month-changes.js      every kind of change, checked and applied the same way everywhere
-    month-validation.js   month keys, month shape, which month a new one copies
+    month-validation.ts   month keys, month shape, which month a new one copies
 web/                      the page (HTML, CSS, JavaScript modules; bundled into web/dist/ by `npm run build`)
   index.html
   i18n/en.json, el.json   display text for every string id

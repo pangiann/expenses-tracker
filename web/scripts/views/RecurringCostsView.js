@@ -1,4 +1,4 @@
-import { RecurringCostList } from '../../../shared/month/categories.js';
+import { RecurringCostList } from '../../../shared/month/categories.ts';
 import { t } from '../i18n/Translator.js';
 import { escapeHtml, getElement } from '../utils/html.js';
 import { formatEuros, parseAmount } from '../utils/money.js';

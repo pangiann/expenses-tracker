@@ -1,4 +1,4 @@
-import { roundToCents } from '../../../shared/month/amounts.js';
+import { roundToCents } from '../../../shared/month/amounts.ts';
 import { parseAmount } from '../utils/money.js';
 
 /**

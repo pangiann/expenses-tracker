@@ -14,6 +14,9 @@
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
     "skipLibCheck": true,
+    // Imports name the real file, for example './month-record.ts'. esbuild, wrangler, vitest
+    // and tsx all understand this; tsc emits nothing, so it never has to rewrite them.
+    "allowImportingTsExtensions": true,
     // Existing .js files can be imported but aren't checked; they become .ts one at a time.
     "allowJs": true,
     "checkJs": false

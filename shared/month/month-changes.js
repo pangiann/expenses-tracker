@@ -1,4 +1,4 @@
-import { MAX_CATEGORY_NAME_LENGTH, RecurringCostList } from './categories.js';
+import { MAX_CATEGORY_NAME_LENGTH, RecurringCostList } from './categories.ts';
 
 /**
  * Every edit to a month is described as a small "change" object, for example

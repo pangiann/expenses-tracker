@@ -1,4 +1,4 @@
-import { MAX_CATEGORY_NAME_LENGTH } from '../../../shared/month/categories.js';
+import { MAX_CATEGORY_NAME_LENGTH } from '../../../shared/month/categories.ts';
 import { MonthRecord } from '../../../shared/month/month-record.js';
 import { categoryName, t } from '../i18n/Translator.js';
 import { escapeHtml, getElement } from '../utils/html.js';

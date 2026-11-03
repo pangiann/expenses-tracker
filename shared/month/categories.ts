@@ -10,7 +10,17 @@
  * `nameId`, a string id in web/i18n/*.json, so they show in the page language.
  * Categories people create store a `name` instead.
  */
-export const DEFAULT_CATEGORIES = Object.freeze([
+export interface Category {
+  id: string;
+  /** Default categories: the string id of the translated name. */
+  nameId?: string;
+  /** Categories people created or renamed: the name they typed. */
+  name?: string;
+  /** "#rrggbb" */
+  color: string;
+}
+
+export const DEFAULT_CATEGORIES: readonly Readonly<Category>[] = Object.freeze([
   { id: 'dinner', nameId: 'category.dinner', color: '#e8618c' },
   { id: 'lunch', nameId: 'category.lunch', color: '#f39c38' },
   { id: 'supermarket', nameId: 'category.supermarket', color: '#22a879' },
@@ -28,7 +38,7 @@ export const DEFAULT_CATEGORIES = Object.freeze([
  * Colours for categories people add. A new category gets the first colour no category in
  * the month uses yet (see pickCategoryColor in MonthRecord); after that they repeat.
  */
-export const CATEGORY_COLOR_PALETTE = Object.freeze([
+export const CATEGORY_COLOR_PALETTE: readonly string[] = Object.freeze([
   '#f59e0b',
   '#ef4444',
   '#10b981',
@@ -53,10 +63,13 @@ export const MAX_CATEGORIES_PER_MONTH = 40;
 export const RecurringCostList = Object.freeze({
   FIXED_COSTS: 'fixed',
   SUBSCRIPTIONS: 'subscriptions',
-});
+} as const);
+
+/** 'fixed' or 'subscriptions' */
+export type RecurringCostListName = (typeof RecurringCostList)[keyof typeof RecurringCostList];
 
 /**
  * Fixed costs a brand-new household starts with. The server creates these too, and it has
  * no language, so they are stored in English; people rename them as they like.
  */
-export const DEFAULT_FIXED_COST_NAMES = ['Rent', 'Internet', 'Electricity'];
+export const DEFAULT_FIXED_COST_NAMES: readonly string[] = ['Rent', 'Internet', 'Electricity'];

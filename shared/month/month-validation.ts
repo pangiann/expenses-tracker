@@ -5,16 +5,18 @@
 
 export const MONTH_KEY_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/;
 
-export function isValidMonthKey(monthKey) {
+export function isValidMonthKey(monthKey: unknown): monthKey is string {
   return typeof monthKey === 'string' && MONTH_KEY_PATTERN.test(monthKey);
 }
 
 /** True when the data has the basic shape of a month file. */
-export function isMonthData(monthData) {
+export function isMonthData(monthData: unknown): monthData is { month: string; expenses: unknown[] } {
   return (
     monthData !== null &&
     typeof monthData === 'object' &&
+    'month' in monthData &&
     isValidMonthKey(monthData.month) &&
+    'expenses' in monthData &&
     Array.isArray(monthData.expenses)
   );
 }
@@ -22,11 +24,10 @@ export function isMonthData(monthData) {
 /**
  * The saved month to copy budgets and recurring costs from when creating monthKey:
  * the latest saved month before it, or else the earliest one after it.
- * @param {string[]} savedMonthKeys  oldest first
- * @returns {string | null}
+ * @param savedMonthKeys  oldest first
  */
-export function closestSavedMonthKey(savedMonthKeys, monthKey) {
+export function closestSavedMonthKey(savedMonthKeys: readonly string[], monthKey: string): string | null {
   const earlierMonthKeys = savedMonthKeys.filter((savedKey) => savedKey < monthKey);
-  if (earlierMonthKeys.length > 0) return earlierMonthKeys[earlierMonthKeys.length - 1];
+  if (earlierMonthKeys.length > 0) return earlierMonthKeys.at(-1) ?? null;
   return savedMonthKeys.find((savedKey) => savedKey > monthKey) ?? null;
 }
