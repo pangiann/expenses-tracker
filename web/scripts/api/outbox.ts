@@ -1,5 +1,5 @@
 import type { BodyInputOf, EndpointName, MonthResponse, ParamsOf } from '../../../shared/api/endpoints.ts';
-import { ApiError, OfflineError, callEndpoint, checkBody } from './http.ts';
+import { ApiError, OfflineError, callEndpoint, isValidBody } from './http.ts';
 import type { WaitingEdit } from './waiting-edits.ts';
 
 export type OutboxState =
@@ -43,14 +43,15 @@ export class Outbox {
 
   /**
    * Queues an edit and starts sending.
-   * @throws {InvalidRequestError} at once, when the edit doesn't match its endpoint
+   * @returns false, and sends nothing, when the edit doesn't match its endpoint (for example an amount of 0)
    */
-  send<Name extends EndpointName>(name: Name, params: ParamsOf<Name>, body: BodyInputOf<Name>): void {
-    checkBody(name, body);
+  send<Name extends EndpointName>(name: Name, params: ParamsOf<Name>, body: BodyInputOf<Name>): boolean {
+    if (!isValidBody(name, body)) return false;
     this.#edits.push({ name, params, body });
     saveEdits(this.#edits);
     this.onEditsChange();
     void this.#sendWaitingEdits();
+    return true;
   }
 
   /** Tries again now, for example when the live connection is back. */

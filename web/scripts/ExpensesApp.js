@@ -1,26 +1,25 @@
 import * as categoriesApi from './api/categories-api.ts';
 import * as expensesApi from './api/expenses-api.ts';
-import { ApiError, InvalidRequestError, OfflineError } from './api/http.ts';
-import * as incomeApi from './api/income-api.ts';
+import { ApiError, OfflineError } from './api/http.ts';
 import { liveUpdates } from './api/live-updates.ts';
 import * as monthsApi from './api/months-api.ts';
 import { outbox } from './api/outbox.ts';
 import * as recurringCostsApi from './api/recurring-costs-api.ts';
 import { monthWithWaitingEdits } from './api/waiting-edits.ts';
 import { BackupButtons } from './features/backup/backup-buttons.ts';
+import { IncomeCard } from './features/income/income-card.ts';
 import { LanguagePicker } from './features/language/language-picker.ts';
 import { MonthNavigation } from './features/month-navigation/month-navigation.ts';
+import { QuickAdd } from './features/quick-add/quick-add.ts';
 import { StatusBar } from './features/status/status-bar.ts';
+import { BudgetBars } from './features/summary/budget-bars.ts';
+import { SpendingDonut } from './features/summary/spending-donut.ts';
+import { SummaryCards } from './features/summary/summary-cards.ts';
 import { t } from './i18n/translator.ts';
 import { SaveStatus } from './utils/save-status.ts';
 import { currentMonthKey } from './utils/month-keys.ts';
-import { BudgetBarsView } from './views/BudgetBarsView.js';
 import { CategoryCardsView } from './views/CategoryCardsView.js';
-import { IncomeView } from './views/IncomeView.js';
-import { QuickAddView } from './views/QuickAddView.js';
 import { RecurringCostsView } from './views/RecurringCostsView.js';
-import { SpendingDonutView } from './views/SpendingDonutView.js';
-import { SummaryCardsView } from './views/SummaryCardsView.js';
 
 /** String id of the message shown when the server explains why it refused the connection. */
 const REFUSAL_STRING_IDS = {
@@ -65,12 +64,12 @@ export class ExpensesApp {
     });
     new LanguagePicker();
     this.views = [
-      new QuickAddView(actions),
-      new SummaryCardsView(actions),
-      new BudgetBarsView(),
-      new SpendingDonutView(),
+      new QuickAdd(),
+      new SummaryCards(),
+      new BudgetBars(),
+      new SpendingDonut(),
       new CategoryCardsView(actions),
-      new IncomeView(actions),
+      new IncomeCard(),
       new RecurringCostsView(actions),
     ];
   }
@@ -165,13 +164,6 @@ export class ExpensesApp {
       changeExpenseAmount: (expenseId, amount) =>
         this.#edit((monthKey) => expensesApi.changeExpenseAmount(monthKey, expenseId, amount)),
 
-      // Income
-      addIncome: (income) => this.#edit((monthKey) => incomeApi.addIncome(monthKey, income)),
-      removeIncome: (incomeId) => this.#edit((monthKey) => incomeApi.removeIncome(monthKey, incomeId)),
-      changeIncomeAmount: (incomeId, amount) =>
-        this.#edit((monthKey) => incomeApi.changeIncomeAmount(monthKey, incomeId, amount)),
-      changeExpectedIncome: (amount) => this.#edit((monthKey) => incomeApi.changeExpectedIncome(monthKey, amount)),
-
       // Categories and budgets
       addCategory: (name) =>
         this.#edit((monthKey) =>
@@ -204,12 +196,7 @@ export class ExpensesApp {
    */
   #edit(sendEdit) {
     if (!this.currentMonth) return; // nothing loaded yet, for example while still connecting
-    try {
-      sendEdit(this.currentMonth.monthKey);
-    } catch (error) {
-      if (error instanceof InvalidRequestError) return; // for example an empty amount: nothing to send
-      throw error;
-    }
+    sendEdit(this.currentMonth.monthKey); // an invalid edit, for example an empty amount, is not sent
   }
 
   /** Draws the server's month with the waiting edits on top. */

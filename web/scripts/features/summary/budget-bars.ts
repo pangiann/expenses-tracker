@@ -1,20 +1,20 @@
-import { categoryName } from '../i18n/translator.ts';
-import { escapeHtml, getElement } from '../utils/html.ts';
-import { formatEuros } from '../utils/money.ts';
+import type { Category } from '../../../../shared/month/categories.ts';
+import type { MonthRecord } from '../../../../shared/month/month-record.ts';
+import { categoryName } from '../../i18n/translator.ts';
+import { escapeHtml, getElement } from '../../utils/html.ts';
+import { formatEuros } from '../../utils/money.ts';
 
 /** One bar per category: spent compared to budget, red when over budget. */
-export class BudgetBarsView {
-  constructor() {
-    this.container = getElement('budgetBars');
-  }
+export class BudgetBars {
+  readonly #container = getElement('budgetBars');
 
-  render(monthRecord) {
-    this.container.innerHTML = monthRecord.categories
+  render(monthRecord: MonthRecord): void {
+    this.#container.innerHTML = monthRecord.categories
       .map((category) => this.#renderBar(category, monthRecord))
       .join('');
   }
 
-  #renderBar(category, monthRecord) {
+  #renderBar(category: Category, monthRecord: MonthRecord): string {
     const spent = monthRecord.spentInCategory(category.id);
     const budget = monthRecord.budgetFor(category.id);
     const isOverBudget = spent > budget;

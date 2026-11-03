@@ -30,12 +30,9 @@ export class InvalidRequestError extends Error {}
 /** Cloudflare answers these while the Worker is restarting or briefly overloaded. */
 const TEMPORARY_STATUSES = new Set([502, 503, 504]);
 
-/**
- * Checks a request body against its endpoint without sending it.
- * @throws {InvalidRequestError}
- */
-export function checkBody<Name extends EndpointName>(name: Name, body: BodyInputOf<Name>): void {
-  if (!endpoints[name].body.safeParse(body).success) throw new InvalidRequestError(`Invalid ${name} request`);
+/** True when the body matches its endpoint, checked without sending it. */
+export function isValidBody<Name extends EndpointName>(name: Name, body: BodyInputOf<Name>): boolean {
+  return endpoints[name].body.safeParse(body).success;
 }
 
 /**
@@ -49,7 +46,7 @@ export async function callEndpoint<Name extends EndpointName>(
   params: ParamsOf<Name>,
   body: BodyInputOf<Name>,
 ): Promise<ResponseOf<Name>> {
-  checkBody(name, body);
+  if (!isValidBody(name, body)) throw new InvalidRequestError(`Invalid ${name} request`);
   const endpoint = endpoints[name];
   let response: Response;
   try {

@@ -56,14 +56,11 @@ test('edits are sent in the order they were made, and every answer is shown', as
   assert.equal(storedItems.size, 0, 'nothing left waiting');
 });
 
-test('an edit that does not match its endpoint is refused before sending', async () => {
+test('an edit that does not match its endpoint is not sent', async () => {
   const { outbox } = await newOutbox();
-  const { InvalidRequestError } = await import('../web/scripts/api/http.ts');
-  assert.throws(
-    () => outbox.send('addExpense', { month: '2026-11' }, { ...coffee, amount: null }),
-    InvalidRequestError,
-  );
+  assert.equal(outbox.send('addExpense', { month: '2026-11' }, { ...coffee, amount: 0 }), false);
   assert.equal(outbox.waitingCount, 0);
+  assert.deepEqual(requestsSeen, []);
 });
 
 test('without a connection, edits wait, survive a reload, and are sent when it is back', async () => {
