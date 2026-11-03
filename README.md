@@ -72,11 +72,14 @@ web/                      the page (HTML, CSS, JavaScript modules; bundled into 
   styles/                 one stylesheet per section of the page
   scripts/
     main.js               entry point: creates ExpensesApp
-    ExpensesApp.js        controller: turns user actions into changes
+    ExpensesApp.js        controller: turns user actions into API calls, draws what the server answers
+    api/                  one function per endpoint, grouped like the Worker's handlers
+      months-api.ts, expenses-api.ts, income-api.ts, categories-api.ts, recurring-costs-api.ts
+      http.ts             callEndpoint(): one HTTP request to an endpoint of shared/api/endpoints.ts
+      outbox.ts           sends edits in order; keeps them in the browser while offline
+      live-updates.ts     the WebSocket that brings other people's edits
     i18n/Translator.js    translations by string id (see "Languages" below)
     services/
-      CloudMonthSync.js   sends changes over a WebSocket, receives live updates
-      PendingChangeStore.js  keeps unconfirmed changes in the browser, so offline edits survive a closed tab
       SaveStatus.js       the states the status pill shows
     views/                one class per section of the page; CategoryDragController reorders cards
     utils/                money, month-key, id and HTML helpers
@@ -97,11 +100,24 @@ test/                     unit tests: npm test
 
 ## How data flows
 
-1. A user action, such as adding an expense, becomes a change object, for example `{ kind: 'addExpense', expense: {...} }`.
-2. `ExpensesApp` applies the change to the `MonthRecord` on screen with `applyMonthChange()` and redraws the views.
-3. `CloudMonthSync` sends only the change. The household's Durable Object applies it with the same `applyMonthChange()`, saves it, and sends the updated month to every screen showing that month.
+Adding an expense, from the click to every screen:
 
-A Durable Object handles one message at a time, so two people editing at once never overwrite each other. A change that isn't confirmed yet stays pending and is re-applied on top of any update from someone else, then resent after a lost connection. Expense ids are created on the device, so a resent expense is only added once.
+1. **View.** `QuickAddView` (or a category card) handles the form's submit event and calls the `addExpense` action.
+2. **Controller.** `ExpensesApp` calls the API function `addExpense()` in `web/scripts/api/expenses-api.ts`, which gives the expense a new id.
+3. **Outbox.** `api/outbox.ts` sends `POST /api/months/2026-11/expenses` with the expense as JSON. Edits go one at a time, in order. Without a connection they wait in the browser and go out when it is back.
+4. **Worker.** `worker/index.js` checks the sign-in and that the request comes from the site's own page, finds the household, and passes the request to its Durable Object.
+5. **Router.** `worker/household/router.ts` finds the endpoint in `shared/api/endpoints.ts`, checks the path and the body against it, and calls the handler with the same name, `addExpense` in `handlers/expenses.ts`.
+6. **Handler.** It runs `editMonth()`: load the month from storage (`month-repository.ts`), `month.addExpense(...)` (`shared/month/month-record.ts`, which enforces the month's rules), save it, and send the new month to every device showing it (`broadcaster.ts`).
+7. **Answer.** The handler's answer, the month after the edit, goes back to the page, and `ExpensesApp` draws it. Other devices get the same month over their WebSocket (`api/live-updates.ts`) and draw it too.
+
+The screen only shows what the server sent. Answers and live updates can arrive in either order, so each carries a revision number, and the page ignores anything older than what it shows. A Durable Object handles one request at a time, so two people editing at once never overwrite each other.
+
+To try an endpoint without the page, call it with curl while `npm run dev` runs. An edit needs the Origin header:
+
+```
+curl http://localhost:8787/api/months/2026-11
+curl -X POST -H "Origin: http://localhost:8787" -d '{"id":"x1","categoryId":"lunch","amount":4,"date":"2026-11-03"}' http://localhost:8787/api/months/2026-11/expenses
+```
 
 ## Languages
 
