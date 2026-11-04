@@ -11,7 +11,7 @@
     "watch": "npm run build -- --watch",
     "dev": "wrangler dev",
     "seed": "tsx scripts/seed-dev-data.mjs",
-    "typecheck": "npm run types && tsc -p shared && tsc -p web && tsc -p worker",
+    "typecheck": "npm run types && tsc -p shared && tsc -p web && tsc -p worker && tsc -p test",
     "lint": "eslint .",
     "types": "wrangler types worker/worker-configuration.d.ts --env-file /dev/null > /dev/null",
     "format": "prettier --write .",
@@ -19,7 +19,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "deploy": "wrangler deploy",
-    "check": "npm run types && prettier --check . && eslint . && tsc -p shared && tsc -p web && tsc -p worker && vitest run"
+    "check": "npm run types && prettier --check . && eslint . && tsc -p shared && tsc -p web && tsc -p worker && tsc -p test && vitest run"
   },
   "dependencies": {
     "@dnd-kit/core": "6.3.1",

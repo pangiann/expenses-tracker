@@ -1,0 +1,10 @@
+{
+  // Component tests (.tsx): run in a simulated browser (jsdom) by vitest.
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["es2023", "dom", "dom.iterable"],
+    "jsx": "react-jsx",
+    "types": []
+  },
+  "include": ["**/*.tsx"]
+}
