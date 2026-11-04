@@ -4,7 +4,7 @@ import {
   isMonthEdit,
   type MonthEditName,
   type MonthEditRequest,
-} from '../../../shared/api/month-edits.ts';
+} from '../../../shared/api/month-edit-per-endpoint.ts';
 import { MonthRecord, MonthRuleError, type MonthData } from '../../../shared/month/month-record.ts';
 
 /** An edit in the outbox that the server hasn't answered yet. */

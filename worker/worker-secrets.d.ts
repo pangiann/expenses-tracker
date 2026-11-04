@@ -1,5 +1,5 @@
 // Secrets the Worker reads, set in the Cloudflare dashboard (and in .dev.vars for `npm run dev`).
-// `wrangler types` only lists the bindings in wrangler.jsonc, so the secrets are declared here.
+// `npm run types` only lists the bindings in wrangler.jsonc, so the secrets are declared here.
 declare namespace Cloudflare {
   interface Env {
     /** JSON from email to household name, see households.ts */

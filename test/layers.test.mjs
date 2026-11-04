@@ -24,9 +24,15 @@ ruleTester.run('layers', layers.rules.layers, {
       filename: file('web/scripts/pages/month-page.ts'),
       code: "import { QuickAdd } from '../features/quick-add/quick-add.ts';",
     },
-    { filename: file('worker/household/handlers/months.ts'), code: "import { monthResponse } from '../household.ts';" },
+    {
+      filename: file('worker/household-durable-object/operations/get-month-operation.ts'),
+      code: "import { buildMonthResponse } from '../operation-context.ts';",
+    },
     { filename: file('shared/api/endpoints.ts'), code: "import * as z from 'zod/mini';" },
-    { filename: file('test/anything.test.mjs'), code: "import { routeRequest } from '../worker/household/router.ts';" },
+    {
+      filename: file('test/anything.test.mjs'),
+      code: "import { routeApiRequestToOperation } from '../worker/household-durable-object/api-request-router.ts';",
+    },
   ],
   invalid: [
     {
@@ -55,13 +61,18 @@ ruleTester.run('layers', layers.rules.layers, {
       errors: [{ messageId: 'layer' }],
     },
     {
-      filename: file('worker/household/month-repository.ts'),
-      code: "import { Broadcaster } from './broadcaster.ts';",
+      filename: file('worker/household-durable-object/durable-object-month-repository.ts'),
+      code: "import { LiveUpdateConnectionManager } from './live-update-connection-manager.ts';",
       errors: [{ messageId: 'layer' }],
     },
     {
-      filename: file('worker/index.ts'),
-      code: "import { routeRequest } from './household/router.ts';",
+      filename: file('worker/worker-entry-point.ts'),
+      code: "import { routeApiRequestToOperation } from './household-durable-object/api-request-router.ts';",
+      errors: [{ messageId: 'layer' }],
+    },
+    {
+      filename: file('worker/household-durable-object/operations/add-expense-operation.ts'),
+      code: "import { routeApiRequestToOperation } from '../api-request-router.ts';",
       errors: [{ messageId: 'layer' }],
     },
   ],

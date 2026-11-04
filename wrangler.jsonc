@@ -2,7 +2,7 @@
   // Cloudflare deployment. Settings that identify people (Access team, emails) are
   // secrets set in the Cloudflare dashboard, never in this file. See README.md.
   "name": "expenses-tracker",
-  "main": "worker/index.ts",
+  "main": "worker/worker-entry-point.ts",
   // Bundles the page (web/scripts -> web/dist) before every `wrangler deploy` and `wrangler dev`.
   // `wrangler dev` builds again whenever a file in web/scripts changes.
   "build": { "command": "npm run build", "watch_dir": "web/scripts" },
@@ -12,7 +12,10 @@
     "binding": "ASSETS",
   },
   "durable_objects": {
-    "bindings": [{ "name": "HOUSEHOLD", "class_name": "HouseholdRoom" }],
+    // "HouseholdRoom" is the name Cloudflare stores every household's months under. The code's
+    // class is HouseholdDurableObject, exported under this name in worker/worker-entry-point.ts.
+    // Changing this name needs a Durable Object rename migration, or the stored months are lost.
+    "bindings": [{ "name": "HOUSEHOLD_DURABLE_OBJECTS", "class_name": "HouseholdRoom" }],
   },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["HouseholdRoom"] }],
 }

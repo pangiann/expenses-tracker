@@ -1,0 +1,12 @@
+import { monthEditPerEndpoint } from '../../../shared/api/month-edit-per-endpoint.ts';
+import { loadEditSaveAndBroadcastMonth } from '../load-edit-save-and-broadcast-month.ts';
+import type { Operation } from './operation.ts';
+
+/**
+ * DELETE /api/months/:month/categories/:id: removes an empty category.
+ * The edit itself is monthEditPerEndpoint.removeCategory, which the page also runs to show the edit at once.
+ */
+export const removeCategoryOperation: Operation<'removeCategory'> = (request, context) =>
+  loadEditSaveAndBroadcastMonth(context, request.params.month, (month) =>
+    monthEditPerEndpoint.removeCategory(month, request),
+  );

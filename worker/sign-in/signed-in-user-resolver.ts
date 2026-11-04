@@ -31,7 +31,7 @@ export class AccessDeniedError extends Error {
 }
 
 /** The Worker context with what Cloudflare Access adds; access is undefined without a sign-in. */
-export interface AccessContext {
+export interface CloudflareAccessContext {
   access?: { getIdentity(): Promise<{ email?: unknown } | undefined> };
 }
 
@@ -43,10 +43,10 @@ const keySetsByTeamDomain = new Map<string, ReturnType<typeof createRemoteJWKSet
  * @returns the signed-in user's email, lowercase
  * @throws {AccessDeniedError}
  */
-export async function verifiedUserEmail(
+export async function resolveSignedInUserEmail(
   request: Request,
   env: AccessSettings,
-  context: AccessContext | undefined,
+  context: CloudflareAccessContext | undefined,
 ): Promise<string> {
   const testEmail = localTestBypassEmail(request, env);
   if (testEmail) return testEmail;

@@ -3,7 +3,9 @@
  * listed for it below, so the path of a click stays easy to follow (see ARCHITECTURE.md).
  *
  *   page:    main -> pages -> features -> api / components -> i18n / utils -> shared
- *   Worker:  index -> household room -> router -> handlers -> household -> repository / broadcaster -> shared
+ *   Worker:  entry point -> household Durable Object -> API request router -> operations
+ *            -> load-edit-save-and-broadcast -> operation context -> month repository / live update connections -> shared
+ *            (the entry point also uses sign-in/)
  *
  * Imports within the same layer are always allowed, except between two different features.
  * Tests (test/) may import anything.
@@ -36,20 +38,46 @@ const LAYERS = [
 
   // ----- The Worker -----
   {
-    name: 'household room',
-    files: /^worker\/household\/household-room\.ts$/,
-    mayImport: ['router', 'household', 'repository', 'broadcaster', 'shared'],
+    name: 'worker entry point',
+    files: /^worker\/worker-[^/]+$/,
+    mayImport: ['household durable object', 'sign-in', 'shared'],
   },
-  { name: 'router', files: /^worker\/household\/router\.ts$/, mayImport: ['handlers', 'household', 'shared'] },
-  { name: 'handlers', files: /^worker\/household\/handlers\//, mayImport: ['household', 'repository', 'shared'] },
+  { name: 'sign-in', files: /^worker\/sign-in\//, mayImport: ['shared'] },
   {
-    name: 'household',
-    files: /^worker\/household\/household\.ts$/,
-    mayImport: ['repository', 'broadcaster', 'shared'],
+    name: 'household durable object',
+    files: /^worker\/household-durable-object\/household-durable-object\.ts$/,
+    mayImport: ['api request router', 'month repository', 'live update connections', 'operation context', 'shared'],
   },
-  { name: 'repository', files: /^worker\/household\/month-repository\.ts$/, mayImport: ['shared'] },
-  { name: 'broadcaster', files: /^worker\/household\/broadcaster\.ts$/, mayImport: ['shared'] },
-  { name: 'worker entry', files: /^worker\/[^/]+$/, mayImport: ['household room', 'shared'] },
+  {
+    name: 'api request router',
+    files: /^worker\/household-durable-object\/api-request-router\.ts$/,
+    mayImport: ['operations', 'operation context', 'shared'],
+  },
+  {
+    name: 'operations',
+    files: /^worker\/household-durable-object\/operations\//,
+    mayImport: ['month edit steps', 'operation context', 'shared'],
+  },
+  {
+    name: 'month edit steps',
+    files: /^worker\/household-durable-object\/load-edit-save-and-broadcast-month\.ts$/,
+    mayImport: ['operation context', 'shared'],
+  },
+  {
+    name: 'operation context',
+    files: /^worker\/household-durable-object\/operation-context\.ts$/,
+    mayImport: ['month repository', 'live update connections', 'shared'],
+  },
+  {
+    name: 'month repository',
+    files: /^worker\/household-durable-object\/durable-object-month-repository\.ts$/,
+    mayImport: ['shared'],
+  },
+  {
+    name: 'live update connections',
+    files: /^worker\/household-durable-object\/live-update-connection-manager\.ts$/,
+    mayImport: ['shared'],
+  },
 ];
 
 /** The layer of a file, with `$1` filled in; null for files outside every layer (tests, configs). */

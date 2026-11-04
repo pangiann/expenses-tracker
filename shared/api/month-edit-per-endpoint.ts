@@ -20,7 +20,9 @@ export interface MonthEditRequest<Name extends MonthEditName> {
  * Because both run the same function, the page's guess and the server's answer agree. Each
  * throws MonthRuleError when the edit breaks a rule of the month.
  */
-export const monthEdits: { [Name in MonthEditName]: (month: MonthRecord, request: MonthEditRequest<Name>) => void } = {
+export const monthEditPerEndpoint: {
+  [Name in MonthEditName]: (month: MonthRecord, request: MonthEditRequest<Name>) => void;
+} = {
   addExpense: (month, { body }) => month.addExpense(body),
   changeExpenseAmount: (month, { params, body }) => month.updateExpenseAmount(params.id, body.amount),
   removeExpense: (month, { params }) => month.removeExpense(params.id),
@@ -44,7 +46,7 @@ export const monthEdits: { [Name in MonthEditName]: (month: MonthRecord, request
 };
 
 export function isMonthEdit(name: EndpointName): name is MonthEditName {
-  return name in monthEdits;
+  return name in monthEditPerEndpoint;
 }
 
 /** Applies one endpoint's edit to the month. @throws {MonthRuleError} */
@@ -53,7 +55,7 @@ export function applyMonthEdit<Name extends MonthEditName>(
   name: Name,
   request: MonthEditRequest<Name>,
 ): void {
-  // TypeScript can't follow the mapped type above through a generic name; this is monthEdits[name] as declared.
-  const edit = monthEdits[name] as (month: MonthRecord, request: MonthEditRequest<Name>) => void;
+  // TypeScript can't follow the mapped type above through a generic name; this is monthEditPerEndpoint[name] as declared.
+  const edit = monthEditPerEndpoint[name] as (month: MonthRecord, request: MonthEditRequest<Name>) => void;
   edit(month, request);
 }

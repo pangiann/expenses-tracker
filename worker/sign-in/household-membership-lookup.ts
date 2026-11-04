@@ -15,7 +15,7 @@ const HOUSEHOLD_NAME_PATTERN = /^[a-z0-9-]{1,40}$/;
  * @returns the household name
  * @throws {UnknownMemberError}
  */
-export function householdForEmail(email: string, env: Pick<Env, 'HOUSEHOLD_MEMBERS'>): string {
+export function findHouseholdNameForEmail(email: string, env: Pick<Env, 'HOUSEHOLD_MEMBERS'>): string {
   const householdName = parseHouseholdMembers(env.HOUSEHOLD_MEMBERS).get(email);
   if (!householdName) throw new UnknownMemberError(`${email} is not a member of any household`);
   return householdName;

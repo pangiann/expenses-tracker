@@ -8,7 +8,7 @@ import {
   encodeServerMessage,
   parseClientMessage,
   parseServerMessage,
-} from '../shared/protocol.ts';
+} from '../shared/live-update-messages.ts';
 
 test('the page says which month it shows, and the household sends that month', () => {
   const watch = { type: 'watchMonth', month: '2026-11' };

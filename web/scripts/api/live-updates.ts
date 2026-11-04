@@ -1,5 +1,5 @@
 import type { MonthResponse } from '../../../shared/api/endpoints.ts';
-import { InvalidMessageError, encodeClientMessage, parseServerMessage } from '../../../shared/protocol.ts';
+import { InvalidMessageError, encodeClientMessage, parseServerMessage } from '../../../shared/live-update-messages.ts';
 
 const LIVE_PATH = '/api/live';
 const STATUS_PATH = '/api/status';
