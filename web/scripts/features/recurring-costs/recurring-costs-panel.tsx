@@ -5,6 +5,7 @@ import type { MonthRecord, RecurringCost } from '../../../../shared/month/month-
 import * as recurringCostsApi from '../../api/recurring-costs-api.ts';
 import { t } from '../../i18n/translator.ts';
 import { formatEuros, parseAmount } from '../../utils/money.ts';
+import { AmountInput } from '../../components/amount-input.tsx';
 
 /**
  * The fixed costs and subscriptions panel. Every row's name and amount can be edited, rows
@@ -101,10 +102,7 @@ function RecurringCostRow({ cost, nameInput, onRename, onChangeAmount, onRemove 
       />
       <label className="recurring-cost-amount">
         €
-        <input
-          type="number"
-          step="0.01"
-          min="0"
+        <AmountInput
           value={amount}
           // As wide as the number, so the € sits right next to it.
           style={{ width: `${Math.max(amount.length, 1) + 0.5}ch` }}

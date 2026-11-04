@@ -1,5 +1,6 @@
 import { useState } from 'react';
 
+import { ignoreNonDigitKeys } from '../../components/amount-input.tsx';
 import { t } from '../../i18n/translator.ts';
 import { buildMonthKey, monthNames, parseMonthKey } from '../../utils/month-keys.ts';
 
@@ -66,6 +67,7 @@ function AddMonthForm({
           min={EARLIEST_YEAR}
           max={LATEST_YEAR}
           value={year}
+          onKeyDown={(keyEvent) => ignoreNonDigitKeys(keyEvent, false)}
           onChange={(changeEvent) => setYear(changeEvent.target.value)}
         />
       </div>

@@ -12,6 +12,7 @@ import { EntryRows } from '../../components/entry-rows.tsx';
 import { categoryName, t } from '../../i18n/translator.ts';
 import { formatEuros, parseAmount } from '../../utils/money.ts';
 import { defaultExpenseDate } from '../../utils/month-keys.ts';
+import { AmountInput } from '../../components/amount-input.tsx';
 
 /** Why a category's ✕ is greyed out, as string ids. */
 const REMOVAL_BLOCKER_STRING_IDS: Record<CategoryRemovalBlocker, string> = {
@@ -183,11 +184,8 @@ function AddExpenseForm({ month, categoryId }: { month: MonthRecord; categoryId:
         value={description}
         onChange={(changeEvent) => setDescription(changeEvent.target.value)}
       />
-      <input
+      <AmountInput
         name="amount"
-        type="number"
-        step="0.01"
-        min="0"
         placeholder="€"
         required
         value={amount}

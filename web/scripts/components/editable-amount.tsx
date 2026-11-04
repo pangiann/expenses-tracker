@@ -3,6 +3,7 @@ import { useRef, useState, type KeyboardEvent } from 'react';
 import { roundToCents } from '../../../shared/month/amounts.ts';
 import { t } from '../i18n/translator.ts';
 import { formatEuros, parseAmount } from '../utils/money.ts';
+import { AmountInput } from './amount-input.tsx';
 
 interface EditableAmountProps {
   amount: number;
@@ -47,10 +48,7 @@ export function EditableAmount({ amount, allowZero = false, className = '', onSa
   };
 
   return (
-    <input
-      type="number"
-      step="0.01"
-      min="0"
+    <AmountInput
       defaultValue={amount}
       className="inline-number-input"
       // Focus and select the number as soon as the field appears, so typing replaces it.

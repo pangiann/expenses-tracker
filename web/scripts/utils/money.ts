@@ -1,7 +1,7 @@
 /**
- * Money helpers. Formatting follows the page language (set once at start by main.js):
+ * Money helpers. Formatting follows the page language (set once at start by main.tsx):
  * English shows "€1,234.50", Greek shows "1.234,50 €".
- * Rounding and sums are in shared/month/amounts.js, because the Worker needs them too.
+ * Rounding and sums are in shared/month/amounts.ts, because the Worker needs them too.
  */
 
 let euroFormatter = new Intl.NumberFormat('en-IE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 });
@@ -31,8 +31,12 @@ export function formatPercent(fraction: number): string {
   return percentFormatter.format(fraction);
 }
 
-/** Parses an input value; returns null when it isn't a number. Accepts "3,50" as well as "3.50". */
+/**
+ * Parses a typed amount; returns null when it isn't one. Accepts "3,50" as well as "3.50",
+ * and nothing else: "1e3", "-5" or "3.50abc" are null rather than 1000, -5 or 3.5.
+ */
 export function parseAmount(text: string | number): number | null {
-  const amount = Number.parseFloat(String(text).replace(',', '.'));
-  return Number.isFinite(amount) ? amount : null;
+  const typed = String(text).trim();
+  if (!/^\d+([.,]\d+)?$/.test(typed)) return null;
+  return Number(typed.replace(',', '.'));
 }

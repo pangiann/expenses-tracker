@@ -5,6 +5,7 @@ import * as expensesApi from '../../api/expenses-api.ts';
 import { categoryName, t } from '../../i18n/translator.ts';
 import { parseAmount } from '../../utils/money.ts';
 import { defaultExpenseDate, monthDateRange } from '../../utils/month-keys.ts';
+import { AmountInput } from '../../components/amount-input.tsx';
 
 /**
  * The "Add expense" bar: amount, description, category, date. Submitting adds the expense
@@ -43,11 +44,8 @@ export function QuickAdd({ month }: { month: MonthRecord }) {
           amountInput.current?.focus();
         }}
       >
-        <input
+        <AmountInput
           ref={amountInput}
-          type="number"
-          step="0.01"
-          min="0"
           placeholder={t('common.amountPlaceholder')}
           required
           value={amount}

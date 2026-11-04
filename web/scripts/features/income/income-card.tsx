@@ -6,6 +6,7 @@ import { EntryRows } from '../../components/entry-rows.tsx';
 import { t } from '../../i18n/translator.ts';
 import { formatEuros, parseAmount } from '../../utils/money.ts';
 import { defaultExpenseDate } from '../../utils/month-keys.ts';
+import { AmountInput } from '../../components/amount-input.tsx';
 
 /**
  * The Income card: every amount earned this month (salary, each private lesson, ...), with
@@ -55,12 +56,9 @@ export function IncomeCard({ month }: { month: MonthRecord }) {
           value={description}
           onChange={(changeEvent) => setDescription(changeEvent.target.value)}
         />
-        <input
+        <AmountInput
           ref={amountInput}
           name="amount"
-          type="number"
-          step="0.01"
-          min="0"
           placeholder="€"
           required
           value={amount}

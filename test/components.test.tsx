@@ -5,6 +5,7 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { MonthRecord } from '../shared/month/month-record.ts';
 import * as categoriesApi from '../web/scripts/api/categories-api.ts';
 import * as expensesApi from '../web/scripts/api/expenses-api.ts';
+import { AmountInput } from '../web/scripts/components/amount-input.tsx';
 import { EditableAmount } from '../web/scripts/components/editable-amount.tsx';
 import { CategoryCardsGrid } from '../web/scripts/features/categories/category-cards-grid.tsx';
 import { QuickAdd } from '../web/scripts/features/quick-add/quick-add.tsx';
@@ -89,4 +90,13 @@ test('removing an expense from a card calls its endpoint', () => {
   render(<CategoryCardsGrid month={november()} />);
   fireEvent.click(screen.getByTitle('common.delete'));
   expect(expensesApi.removeExpense).toHaveBeenCalledWith('2026-11', 'e1');
+});
+
+test('amount fields ignore the keys browsers allow in numbers but amounts never use', () => {
+  const onKeyDown = vi.fn();
+  const { container } = render(<AmountInput onKeyDown={onKeyDown} />);
+  const input = container.querySelector('input')!;
+  for (const key of ['e', 'E', '+', '-']) expect(fireEvent.keyDown(input, { key })).toBe(false); // the key did nothing
+  for (const key of ['1', '.', ',', 'Enter']) expect(fireEvent.keyDown(input, { key })).toBe(true);
+  expect(onKeyDown).toHaveBeenCalledTimes(4); // only the allowed keys reach the field's own handler
 });
