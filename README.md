@@ -18,17 +18,17 @@ Run `npm run check` before you push. It runs every check below; each one also ha
 - `npm run format:check` checks the layout with Prettier. `npm run format` fixes it.
 - `npm run lint` looks for mistakes with ESLint.
 - `npm run typecheck` checks the TypeScript code. The page and the Worker each have a `tsconfig.json`, because one runs in a browser and the other on Cloudflare. Existing `.js` files aren't checked until they become `.ts`.
-- `npm test` runs the unit tests with vitest. `npm run test:watch` reruns them on every save.
+- `npm test` runs the unit tests with vitest, including the React components in `test/components.test.tsx` (React Testing Library, in a simulated browser). `npm run test:watch` reruns them on every save.
 
 The Worker's Cloudflare types are generated into `worker/worker-configuration.d.ts`, which is git-ignored. `npm run check` and `npm run typecheck` regenerate it first; after a fresh clone or a change to `wrangler.jsonc`, run `npm run types` once so your editor sees them too.
 
 ## Build
 
-The page's JavaScript lives in `web/scripts/` and imports npm packages by name, for example `import Sortable from 'sortablejs'`. `npm run build` uses esbuild to bundle it, together with the packages it imports from `node_modules/`, into `web/dist/main.js`, which `index.html` loads. `web/dist/` is generated and git-ignored.
+The page is React written in TypeScript (`.tsx` files) in `web/scripts/`, and it imports npm packages by name, for example `import { useState } from 'react'`. `npm run build` uses esbuild to bundle it, minified, together with the packages it imports from `node_modules/`, into `web/dist/main.js`, which `index.html` loads. `web/dist/` is generated and git-ignored.
 
 - `npm run build` builds once; `npm run watch` rebuilds on every save while you work on the page.
 - `wrangler deploy` and `wrangler dev` run the build first (`build.command` in `wrangler.jsonc`), so Cloudflare builds on every deploy with no dashboard setting.
-- To add a library: `npm install --save-dev <package>`, then import it by name.
+- To add a library: `npm install --save-exact <package>`, then import it by name.
 
 ## Deploy to Cloudflare
 
@@ -73,11 +73,12 @@ web/                      the page (HTML, CSS and TypeScript; bundled into web/d
   i18n/en.json, el.json   display text for every string id
   styles/                 one stylesheet per section of the page
   scripts/
-    main.ts               entry point: loads the translations, starts the month page
+    main.tsx              entry point: loads the translations, draws the month page with React, connects to the server
     pages/
-      month-page.ts       the month page: loads a month, draws it with every feature, draws it again on changes
-    features/             one folder per part of the page; each handles its own clicks and calls its API functions
-      categories/         the category cards (category-cards.ts) and dragging them (category-drag.ts)
+      month-page.tsx      the month page: lays out every feature with the month from the store
+      month-page-store.ts the page's state (the month with pending edits, save status, errors) and how it changes
+    features/             one folder per part of the page, each a React component that calls its API functions
+      categories/         the category cards (category-card.tsx), the grid that drags them (category-cards-grid.tsx, @dnd-kit), "New category"
       quick-add/          the "Add expense" bar
       income/             the Income card
       recurring-costs/    fixed costs and subscriptions
@@ -86,7 +87,7 @@ web/                      the page (HTML, CSS and TypeScript; bundled into web/d
       backup/             Export and Import
       language/           the EN / ΕΛ picker
       status/             the save status and the error banner
-    components/           pieces several features use: entry rows, inline number and text editors
+    components/           pieces several features use: entry rows, editable amounts and texts
     api/                  one function per endpoint, grouped by what they edit
       months-api.ts, expenses-api.ts, income-api.ts, categories-api.ts, recurring-costs-api.ts
       endpoint-http-client.ts    callEndpoint(): one HTTP request to an endpoint of shared/api/endpoints.ts
@@ -111,21 +112,21 @@ worker/                   Cloudflare Worker
     durable-object-month-repository.ts     the household's months in its Durable Object storage
     live-update-connection-manager.ts      which device shows which month, and sending it updates
 scripts/seed-dev-data.mjs made-up months for the local test site: npm run seed
-test/                     unit tests: npm test
+test/                     unit and component tests: npm test
 ```
 
 ## How data flows
 
 Adding an expense, from the click to every screen:
 
-1. **Feature.** The quick add bar (`features/quick-add/quick-add.ts`), or a category card's add form (`features/categories/category-cards.ts`), handles the form's submit event.
+1. **Feature.** The quick add bar (`features/quick-add/quick-add.tsx`), or a category card's add form (`features/categories/category-card.tsx`), handles the form's submit event.
 2. **API function.** It calls `addExpense()` in `web/scripts/api/expenses-api.ts`, which gives the expense a new id.
 3. **Outbox.** `api/pending-edits-outbox.ts` sends `POST /api/months/2026-11/expenses` with the expense as JSON. Edits go one at a time, in order. Without a connection they wait in the browser, also across a closed tab, and go out when it is back.
 4. **On screen at once.** While an edit waits for its answer, the page shows the server's last month with the pending edits applied on top (`api/month-with-pending-edits.ts`), so the expense appears right away, also offline.
 5. **Worker.** `worker/worker-entry-point.ts` checks that the request comes from the site's own page and who is signed in, finds their household, and passes the request to that household's Durable Object (`household-durable-object/household-durable-object.ts`).
 6. **Router.** `household-durable-object/api-request-router.ts` finds the endpoint in `shared/api/endpoints.ts`, checks the path and the body against it, and calls the operation with the same name, `addExpenseOperation` in `operations/add-operations.ts`.
 7. **Operation.** It runs `loadEditSaveAndBroadcastMonth()`: load the month from storage (`durable-object-month-repository.ts`), apply the endpoint's edit (`shared/api/month-edit-per-endpoint.ts`, here `month.addExpense(...)` in `shared/month/month-record.ts`, which enforces the month's rules), save it, and send the new month to every device showing it (`live-update-connection-manager.ts`).
-8. **Answer.** The operation's answer, the month after the edit, goes back to the page, and the month page (`pages/month-page.ts`) draws it with every feature. Other devices get the same month over their WebSocket (`api/live-update-connection.ts`) and draw it too.
+8. **Answer.** The operation's answer, the month after the edit, goes back to the page: the store (`pages/month-page-store.ts`) keeps it, and React draws the month page (`pages/month-page.tsx`) again. Other devices get the same month over their WebSocket (`api/live-update-connection.ts`) and draw it too.
 
 Steps 4 and 7 run the same edit function from `shared/api/month-edit-per-endpoint.ts`, so the page's early version and the server's answer agree. Answers and live updates can arrive in either order, so each carries a revision number, and the page ignores anything older than what it shows. A Durable Object handles one request at a time, so two people editing at once never overwrite each other.
 
@@ -138,7 +139,7 @@ curl -X POST -H "Origin: http://localhost:8787" -d '{"id":"x1","categoryId":"lun
 
 ## Languages
 
-The page is in English and Greek; the EN / ΕΛ picker in the top bar switches between them and the choice is remembered. The code contains no display text, only string ids such as `summary.earned`. Each language has one file, `web/i18n/en.json` and `web/i18n/el.json`, that maps every id to its text. In the HTML, elements name their id with `data-i18n` (text), `data-i18n-placeholder`, `data-i18n-title` or `data-i18n-aria-label`; in JavaScript, `t('summary.earned')`. English is the fallback for a missing translation.
+The page is in English and Greek; the EN / ΕΛ picker in the top bar switches between them and the choice is remembered. The code contains no display text, only string ids such as `summary.earned`. Each language has one file, `web/i18n/en.json` and `web/i18n/el.json`, that maps every id to its text. Components get their text with `t('summary.earned')`. English is the fallback for a missing translation.
 
 To add or change text, edit both files with the same id. `npm test` fails if the files don't have the same ids, if a placeholder like `{amount}` differs, or if the page uses an id that has no text. To add a language, add its file and an entry in `SUPPORTED_LANGUAGES` in `translator.ts`.
 

@@ -30,16 +30,16 @@ Each household has its own **Durable Object**: a small Cloudflare server with it
 
 Inside each part, the code is split into layers. A layer may use the layers below it, never the ones above. This is what makes a click easy to trace: each step of the path is in a known folder, and the next step is always one layer down.
 
-**The page (`web/scripts/`)**, top to bottom:
+**The page (`web/scripts/`)** is React, written in TypeScript (`.tsx` files). Top to bottom:
 
-| Layer     | Folder             | What it does                                                        |
-| --------- | ------------------ | ------------------------------------------------------------------- |
-| entry     | `main.ts`          | loads the translations, starts the month page                       |
-| page      | `pages/`           | loads a month, draws it with every feature, draws again on changes  |
-| feature   | `features/<name>/` | one part of the screen: handles its clicks, calls its API functions |
-| component | `components/`      | pieces several features share: entry rows, inline editors           |
-| API       | `api/`             | one function per endpoint, the outbox, live updates                 |
-| helpers   | `i18n/`, `utils/`  | translations, money formatting, month keys, HTML escaping           |
+| Layer     | Folder             | What it does                                                                                  |
+| --------- | ------------------ | --------------------------------------------------------------------------------------------- |
+| entry     | `main.tsx`         | loads the translations, draws the month page, connects to the server                          |
+| page      | `pages/`           | `month-page-store.ts` keeps the page's state; `month-page.tsx` lays out every feature with it |
+| feature   | `features/<name>/` | one part of the screen, as React components: handles its clicks, calls its API functions      |
+| component | `components/`      | pieces several features share: entry rows, editable amounts and texts                         |
+| API       | `api/`             | one function per endpoint, the outbox, live updates                                           |
+| helpers   | `i18n/`, `utils/`  | translations, money formatting, month keys                                                    |
 
 **The Worker (`worker/`)**, top to bottom. The files below `worker-entry-point.ts` and `sign-in/` are in `household-durable-object/`:
 
@@ -65,7 +65,7 @@ features/backup may not import features/categories (../categories/category-cards
 features/backup may import: api, components, i18n, utils, shared. See ARCHITECTURE.md.
 ```
 
-> **Sidebar: why not React?** A framework would add its own layer of concepts (components, hooks, state) on top of these. The app has one page and nine features, each a small class with a `render(month)` method. Plain modules keep the path from click to request visible in the code itself.
+> **Sidebar: what React does here.** A component is a function from data to markup: `QuickAdd({ month })` returns the form for that month. When the month changes, React calls the function again and changes only the parts of the screen that differ. So no code finds elements or writes HTML by hand, text is escaped automatically, and a click handler names what it changes: `onClick={() => removeExpense(expense.id)}`. Everything below React (the API functions, the outbox, the Worker) works the same as without it.
 
 ---
 
@@ -77,26 +77,25 @@ This part follows a single action through every layer: you type 4 into the "Add 
 
 **Step 1. The feature handles the click.** Each feature listens for its own events. The quick add bar listens for its form's submit event.
 
-Listing 3-1. The quick add bar sends the expense. Excerpt from `web/scripts/features/quick-add/quick-add.ts`, lines 25–38.
+Listing 3-1. The quick add bar sends the expense. Excerpt from `web/scripts/features/quick-add/quick-add.tsx`, lines 32–44.
 
-```ts
-this.#form.addEventListener('submit', (submitEvent) => {
+```tsx
+onSubmit={(submitEvent) => {
   submitEvent.preventDefault();
-  if (!this.#month) return;
-  const isSent = expensesApi.addExpense(this.#month.monthKey, {
-    categoryId: this.#categorySelect.value,
-    amount: parseAmount(this.#amountInput.value) ?? 0,
-    description: this.#descriptionInput.value,
-    date: this.#dateInput.value || defaultExpenseDate(this.#month.monthKey),
+  const isSent = expensesApi.addExpense(month.monthKey, {
+    categoryId,
+    amount: parseAmount(amount) ?? 0,
+    description,
+    date: date || defaultExpenseDate(month.monthKey),
   });
   if (!isSent) return; // for example no amount: keep what was typed
-  this.#amountInput.value = '';
-  this.#descriptionInput.value = '';
-  this.#amountInput.focus();
-});
+  setAmount('');
+  setDescription('');
+  amountInput.current?.focus();
+}}
 ```
 
-The feature knows the month on screen because the page called its `render(month)` last time. It reads the form fields and calls one API function. It never builds a request or changes the month itself. The category card's add form calls the same `addExpense()`, so both ways of adding an expense take the same path from here on.
+The component gets the month on screen as a prop (`<QuickAdd month={month} />` in `month-page.tsx`), and keeps what you type in React state (`amount`, `description`, `categoryId`, `date`). On submit it calls one API function. It never builds a request or changes the month itself. The category card's add form calls the same `addExpense()`, so both ways of adding an expense take the same path from here on.
 
 **Step 2. The API function names the endpoint.** Each function in `api/*-api.ts` matches one endpoint.
 
@@ -125,7 +124,7 @@ send<Name extends EndpointName>(name: Name, params: ParamsOf<Name>, body: BodyIn
 }
 ```
 
-`isValidBody` uses the same zod schema the Worker uses, so an amount of 0 is refused here, before any request. `onEditsChange` asks the page to draw again, which is how the expense appears on screen at once (step 4). `#sendPendingEdits` then sends the pending edits one at a time, oldest first, through `callEndpoint` in `api/endpoint-http-client.ts`, which makes the HTTP request: `POST /api/months/2026-11/expenses` with the expense as JSON.
+`isValidBody` uses the same zod schema the Worker uses, so an amount of 0 is refused here, before any request. `onEditsChange` tells the page's store, which computes the month on screen again (Listing 5-1); that is how the expense appears at once (step 4). `#sendPendingEdits` then sends the pending edits one at a time, oldest first, through `callEndpoint` in `api/endpoint-http-client.ts`, which makes the HTTP request: `POST /api/months/2026-11/expenses` with the expense as JSON.
 
 **Step 4. The page draws the edit before the server answers.** The page never changes its copy of the month directly. It always draws the server's last version with the outbox's pending edits applied on top.
 
@@ -317,33 +316,46 @@ The zod schemas check what can be checked without the month: types, lengths, for
 
 ### Chapter 5. The way back
 
-The operation's answer travels back to the outbox, and the outbox gives it to the month page.
+The operation's answer travels back to the outbox, and the outbox gives it to the page's store.
 
-Listing 5-1. The page shows a month from the server. Excerpt from `web/scripts/pages/month-page.ts`, lines 123–138.
+Listing 5-1. The store keeps a month from the server. Excerpt from `web/scripts/pages/month-page-store.ts`, lines 113–128.
 
 ```ts
 #show(answer: MonthResponse): void {
   if (answer.month.month !== this.#shownMonthKey || answer.revision < this.#shownRevision) return;
   this.#shownRevision = answer.revision;
   this.#serverMonth = answer.month;
-  this.#savedMonthKeys = answer.monthKeys;
-  this.#statusBar.showError(null);
-  this.#render();
+  this.#update({
+    month: monthWithPendingEdits(answer.month, pendingEditsOutbox.pendingEdits),
+    savedMonthKeys: answer.monthKeys,
+    errorText: null,
+  });
 }
 
-#render(): void {
+/** An edit was added to or left the outbox: compute the month on screen again. */
+#recomputeMonth(): void {
   if (!this.#serverMonth) return;
-  const month = monthWithPendingEdits(this.#serverMonth, pendingEditsOutbox.pendingEdits);
-  this.#monthNavigation.render(month.monthKey, this.#savedMonthKeys);
-  for (const feature of this.#features) feature.render(month);
+  this.#update({ month: monthWithPendingEdits(this.#serverMonth, pendingEditsOutbox.pendingEdits) });
 }
 ```
 
-The outbox has already dropped the answered edit, so `#render` now draws the server's month with only the edits still pending. On screen nothing moves: the expense was already shown, and now it is the server's copy.
+The outbox has already dropped the answered edit, so the month on screen is now the server's month with only the edits still pending. `#update` tells every subscriber. The month page subscribes with React's `useSyncExternalStore`, so React draws it again (Listing 5-2). On screen nothing moves: the expense was already shown, and now it is the server's copy.
+
+Listing 5-2. The month page reads the store. Excerpt from `web/scripts/pages/month-page.tsx`, lines 26–30.
+
+```tsx
+export function MonthPage() {
+  const { month, savedMonthKeys, saveStatus, errorText } = useSyncExternalStore(
+    monthPageStore.subscribe,
+    monthPageStore.getState,
+  );
+```
+
+The page passes `month` to every feature, for example `<QuickAdd month={month} />`. The store is the only place that keeps month data on the page.
 
 Three kinds of message reach `#show`: the answer to an edit, the answer to opening a month (`GET /api/months/:month`), and a live update from the WebSocket. They can arrive in any order. Every answer carries a **revision**, a number the household raises by one with every save. The page ignores anything older than what it shows, so a late answer can't replace a newer month.
 
-The other devices get the month through their WebSocket. Each page tells its household which month it shows (the `watchMonth` message in `shared/live-update-messages.ts`). After every save, `live-update-connection-manager.ts` sends the month to the sockets watching it. On those pages, `api/live-update-connection.ts` passes the month to the same `#show`.
+The other devices get the month through their WebSocket. Each page tells its household which month it shows (the `watchMonth` message in `shared/live-update-messages.ts`). After every save, `live-update-connection-manager.ts` sends the month to the sockets watching it. On those pages, `api/live-update-connection.ts` passes the month to the store's same `#show`.
 
 > **Sidebar: the WebSocket costs almost nothing.** Cloudflare answers the keepalive ping without waking the Durable Object, and messages sent to a device are free. The socket stays open while the Durable Object sleeps between requests.
 
@@ -401,10 +413,10 @@ An endpoint that only reads (like `getMonth`) skips steps 1 and 3: its operation
 
 ### Chapter 10. Adding a part of the screen
 
-1. Add the markup to `web/index.html`, with `data-i18n` attributes for its text.
-2. Create `web/scripts/features/<name>/<name>.ts` with a class that has a `render(month: MonthRecord)` method. It reads its elements with `getElement`, listens for its own events, and calls API functions.
-3. Add it to the `#features` list in `pages/month-page.ts`.
-4. Add its text to both `web/i18n/en.json` and `web/i18n/el.json`. `npm test` fails when an id is missing from either.
+1. Create `web/scripts/features/<name>/<name>.tsx` with a component that takes the month as a prop, for example `export function SavingsGoal({ month }: { month: MonthRecord })`. It returns its markup, keeps what someone types in React state, and calls API functions in its event handlers.
+2. Place it in `pages/month-page.tsx`, inside the part of the layout it belongs to.
+3. Give it text with `t('savingsGoal.title')`, and add every id to both `web/i18n/en.json` and `web/i18n/el.json`. `npm test` fails when an id is missing from either.
+4. Add a test in `test/components.test.tsx`: render it with a month, click or type, and check which API function it called.
 
 ### Chapter 11. Checking a change
 
@@ -426,10 +438,11 @@ An endpoint that only reads (like `getMonth`) skips steps 1 and 3: its operation
 | `shared/api/fields.ts`                                                  | shared                   | shapes of ids, amounts, text, dates                                                                                |
 | `shared/api/month-edit-per-endpoint.ts`                                 | shared                   | what each editing endpoint does to a month                                                                         |
 | `shared/live-update-messages.ts`                                        | shared                   | the two WebSocket messages: `watchMonth` and `month`                                                               |
-| `web/scripts/main.ts`                                                   | entry                    | loads translations, starts the month page                                                                          |
-| `web/scripts/pages/month-page.ts`                                       | page                     | loads, shows and redraws the month; save status                                                                    |
+| `web/scripts/main.tsx`                                                  | entry                    | loads translations, draws the month page, connects to the server                                                   |
+| `web/scripts/pages/month-page-store.ts`                                 | page                     | the page's state: the month with pending edits, save status, errors                                                |
+| `web/scripts/pages/month-page.tsx`                                      | page                     | lays out every feature with the store's state                                                                      |
 | `web/scripts/features/*/`                                               | feature                  | one folder per part of the screen                                                                                  |
-| `web/scripts/components/`                                               | component                | entry rows, inline number and text editors                                                                         |
+| `web/scripts/components/`                                               | component                | entry rows, editable amounts and texts                                                                             |
 | `web/scripts/api/*-api.ts`                                              | API                      | one function per endpoint                                                                                          |
 | `web/scripts/api/endpoint-http-client.ts`                               | API                      | `callEndpoint`: one HTTP request; `ApiError`, `OfflineError`                                                       |
 | `web/scripts/api/pending-edits-outbox.ts`                               | API                      | sends edits in order; keeps them while offline                                                                     |
