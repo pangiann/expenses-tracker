@@ -25,7 +25,7 @@ ruleTester.run('layers', layers.rules.layers, {
       code: "import { QuickAdd } from '../features/quick-add/quick-add.ts';",
     },
     {
-      filename: file('worker/household-durable-object/operations/get-month-operation.ts'),
+      filename: file('worker/household-durable-object/operations/read-operations.ts'),
       code: "import { buildMonthResponse } from '../operation-context.ts';",
     },
     { filename: file('shared/api/endpoints.ts'), code: "import * as z from 'zod/mini';" },
@@ -71,7 +71,7 @@ ruleTester.run('layers', layers.rules.layers, {
       errors: [{ messageId: 'layer' }],
     },
     {
-      filename: file('worker/household-durable-object/operations/add-expense-operation.ts'),
+      filename: file('worker/household-durable-object/operations/add-operations.ts'),
       code: "import { routeApiRequestToOperation } from '../api-request-router.ts';",
       errors: [{ messageId: 'layer' }],
     },

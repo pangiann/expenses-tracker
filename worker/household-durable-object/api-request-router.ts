@@ -4,7 +4,7 @@ import * as z from 'zod/mini';
 import { endpoints, matchPath, type EndpointName, type ErrorResponse } from '../../shared/api/endpoints.ts';
 import { MonthRuleError } from '../../shared/month/month-record.ts';
 import type { OperationContext } from './operation-context.ts';
-import { InvalidImportError } from './operations/import-months-operation.ts';
+import { InvalidImportError } from './operations/backup-operations.ts';
 import type { Operation } from './operations/operation.ts';
 import { operationRegistry } from './operations/operation-registry.ts';
 

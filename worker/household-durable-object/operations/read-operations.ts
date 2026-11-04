@@ -1,3 +1,4 @@
+/** Operations that only read: they change nothing and broadcast nothing. */
 import { buildMonthResponse } from '../operation-context.ts';
 import type { Operation } from './operation.ts';
 

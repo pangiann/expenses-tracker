@@ -8,8 +8,13 @@ export interface OperationRequest<Name extends EndpointName> {
 }
 
 /**
- * The function that answers one endpoint of shared/api/endpoints.ts. There is one file per
- * operation in this folder, named after the endpoint (addExpense -> add-expense-operation.ts).
+ * The function that answers one endpoint of shared/api/endpoints.ts, named after it
+ * (addExpense -> addExpenseOperation). They are grouped by what they do:
+ *   add-operations.ts      add an expense, income entry, category, fixed cost or subscription
+ *   change-operations.ts   change an amount, a name, a budget, the order of categories
+ *   remove-operations.ts   remove any of those
+ *   read-operations.ts     get a month
+ *   backup-operations.ts   export and import every month
  * The router has already checked the request against the endpoint, so the operation gets
  * its params and body typed and in range.
  */

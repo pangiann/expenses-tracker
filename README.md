@@ -105,7 +105,7 @@ worker/                   Cloudflare Worker
   household-durable-object/
     household-durable-object.ts     one per household: endpoint calls go to the router, WebSockets to the connection manager
     api-request-router.ts           request -> endpoint -> checked params and body -> operation -> JSON answer
-    operations/                     one file per endpoint, for example add-expense-operation.ts; operation-registry.ts lists them
+    operations/                     one function per endpoint, grouped in add-, change-, remove-, read- and backup-operations.ts; operation-registry.ts lists them
     load-edit-save-and-broadcast-month.ts  the four steps of every edit
     operation-context.ts            what every operation receives: the month repository and the live-update connections
     durable-object-month-repository.ts     the household's months in its Durable Object storage
@@ -123,7 +123,7 @@ Adding an expense, from the click to every screen:
 3. **Outbox.** `api/pending-edits-outbox.ts` sends `POST /api/months/2026-11/expenses` with the expense as JSON. Edits go one at a time, in order. Without a connection they wait in the browser, also across a closed tab, and go out when it is back.
 4. **On screen at once.** While an edit waits for its answer, the page shows the server's last month with the pending edits applied on top (`api/month-with-pending-edits.ts`), so the expense appears right away, also offline.
 5. **Worker.** `worker/worker-entry-point.ts` checks that the request comes from the site's own page and who is signed in, finds their household, and passes the request to that household's Durable Object (`household-durable-object/household-durable-object.ts`).
-6. **Router.** `household-durable-object/api-request-router.ts` finds the endpoint in `shared/api/endpoints.ts`, checks the path and the body against it, and calls the operation with the same name, `addExpenseOperation` in `operations/add-expense-operation.ts`.
+6. **Router.** `household-durable-object/api-request-router.ts` finds the endpoint in `shared/api/endpoints.ts`, checks the path and the body against it, and calls the operation with the same name, `addExpenseOperation` in `operations/add-operations.ts`.
 7. **Operation.** It runs `loadEditSaveAndBroadcastMonth()`: load the month from storage (`durable-object-month-repository.ts`), apply the endpoint's edit (`shared/api/month-edit-per-endpoint.ts`, here `month.addExpense(...)` in `shared/month/month-record.ts`, which enforces the month's rules), save it, and send the new month to every device showing it (`live-update-connection-manager.ts`).
 8. **Answer.** The operation's answer, the month after the edit, goes back to the page, and the month page (`pages/month-page.ts`) draws it with every feature. Other devices get the same month over their WebSocket (`api/live-update-connection.ts`) and draw it too.
 

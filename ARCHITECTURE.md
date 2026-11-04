@@ -49,7 +49,7 @@ Inside each part, the code is split into layers. A layer may use the layers belo
 | sign-in                  | `sign-in/`                                                                | who is signed in, which household they belong to, whether the request came from the site's own page |
 | household Durable Object | `household-durable-object.ts`                                             | one per household: HTTP requests to the router, WebSockets to the connection manager                |
 | API request router       | `api-request-router.ts`                                                   | finds the endpoint, checks the request, calls the operation                                         |
-| operations               | `operations/`                                                             | one file per endpoint, for example `add-expense-operation.ts`                                       |
+| operations               | `operations/`                                                             | one function per endpoint, grouped by what it does: add, change, remove, read, backup               |
 | edit steps               | `load-edit-save-and-broadcast-month.ts`                                   | the four steps every edit follows                                                                   |
 | operation context        | `operation-context.ts`                                                    | what every operation receives: the month repository and the live-update connections                 |
 | storage, live updates    | `durable-object-month-repository.ts`, `live-update-connection-manager.ts` | the household's months, and sending them to open pages                                              |
@@ -248,15 +248,12 @@ addExpense: endpoint(
 
 `InMonth` says the path has one parameter, `month`, in the form `YYYY-MM`. The field shapes (`Id`, `PositiveAmount` and so on) live in `shared/api/fields.ts`, so every endpoint uses the same limits: ids up to 64 characters, amounts up to 10 million, text up to 200 characters.
 
-**Step 4. The operation runs the edit.** Each endpoint has one file in `operations/`, named after it.
+**Step 4. The operation runs the edit.** Each endpoint has one function in `operations/`, named after it and grouped with similar ones: `add-operations.ts`, `change-operations.ts`, `remove-operations.ts`, `read-operations.ts` and `backup-operations.ts`.
 
-Listing 4-5. The addExpense operation. Excerpt from `worker/household-durable-object/operations/add-expense-operation.ts`, lines 5–12.
+Listing 4-5. The addExpense operation. Excerpt from `worker/household-durable-object/operations/add-operations.ts`, lines 12–16.
 
 ```ts
-/**
- * POST /api/months/:month/expenses: adds an expense.
- * The edit itself is monthEditPerEndpoint.addExpense, which the page also runs to show the edit at once.
- */
+/** POST /api/months/:month/expenses: adds an expense. */
 export const addExpenseOperation: Operation<'addExpense'> = (request, context) =>
   loadEditSaveAndBroadcastMonth(context, request.params.month, (month) =>
     monthEditPerEndpoint.addExpense(month, request),
@@ -395,12 +392,12 @@ Suppose you want to rename an expense. Each step below is in a different layer, 
 1. **Model.** Add `renameExpense(expenseId, newName)` to `MonthRecord` in `shared/month/month-record.ts`. Throw `MonthRuleError` for a broken month rule, and add the rule's name to `MonthRule`.
 2. **Endpoint.** Add `renameExpense` to `endpoints` in `shared/api/endpoints.ts`, for example `PUT /api/months/:month/expenses/:id/description` with `ItemInMonth` and a body of `z.object({ description: Text })`.
 3. **Edit.** Add one line to `monthEditPerEndpoint` in `shared/api/month-edit-per-endpoint.ts`. TypeScript fails until you do, because the table must cover every editing endpoint.
-4. **Operation.** Copy `operations/add-expense-operation.ts` to `rename-expense-operation.ts` and change the names to `renameExpense`, then add it to `operations/operation-registry.ts`. TypeScript fails until the registry has it.
+4. **Operation.** Add `renameExpenseOperation` to `operations/change-operations.ts`, written like the others there, then add it to `operations/operation-registry.ts`. TypeScript fails until the registry has it.
 5. **API function.** Add `renameExpense()` to `web/scripts/api/expenses-api.ts`; it calls `pendingEditsOutbox.send('renameExpense', ...)`.
 6. **Feature.** Call it from the feature that shows the expense, for example `features/categories/category-cards.ts`.
 7. **Tests.** Add a model test in `test/month-record.test.mjs` and an endpoint call in `test/api-operations.test.mjs`. `test/endpoints.test.mjs` already checks that no two endpoints match the same request.
 
-An endpoint that only reads (like `getMonth`) skips steps 1 and 3: its operation reads from `context.monthRepository` instead of calling `loadEditSaveAndBroadcastMonth` (see `get-month-operation.ts`), and its API function calls `callEndpoint` directly instead of the outbox.
+An endpoint that only reads (like `getMonth`) skips steps 1 and 3: its operation reads from `context.monthRepository` instead of calling `loadEditSaveAndBroadcastMonth` (see `read-operations.ts`), and its API function calls `callEndpoint` directly instead of the outbox.
 
 ### Chapter 10. Adding a part of the screen
 
@@ -419,41 +416,41 @@ An endpoint that only reads (like `getMonth`) skips steps 1 and 3: its operation
 
 ## Appendix A. Files
 
-| File                                                                    | Layer                    | What it holds                                                                                  |
-| ----------------------------------------------------------------------- | ------------------------ | ---------------------------------------------------------------------------------------------- |
-| `shared/month/month-record.ts`                                          | shared                   | `MonthRecord`: one month's data and its rules; `MonthRuleError`                                |
-| `shared/month/categories.ts`                                            | shared                   | default categories, colours, limits                                                            |
-| `shared/month/month-validation.ts`                                      | shared                   | month keys, the basic shape of a month file, which month a new one copies                      |
-| `shared/month/amounts.ts`                                               | shared                   | rounding to cents, sums                                                                        |
-| `shared/api/endpoints.ts`                                               | shared                   | every endpoint: method, path, params, body; response types                                     |
-| `shared/api/fields.ts`                                                  | shared                   | shapes of ids, amounts, text, dates                                                            |
-| `shared/api/month-edit-per-endpoint.ts`                                 | shared                   | what each editing endpoint does to a month                                                     |
-| `shared/live-update-messages.ts`                                        | shared                   | the two WebSocket messages: `watchMonth` and `month`                                           |
-| `web/scripts/main.ts`                                                   | entry                    | loads translations, starts the month page                                                      |
-| `web/scripts/pages/month-page.ts`                                       | page                     | loads, shows and redraws the month; save status                                                |
-| `web/scripts/features/*/`                                               | feature                  | one folder per part of the screen                                                              |
-| `web/scripts/components/`                                               | component                | entry rows, inline number and text editors                                                     |
-| `web/scripts/api/*-api.ts`                                              | API                      | one function per endpoint                                                                      |
-| `web/scripts/api/endpoint-http-client.ts`                               | API                      | `callEndpoint`: one HTTP request; `ApiError`, `OfflineError`                                   |
-| `web/scripts/api/pending-edits-outbox.ts`                               | API                      | sends edits in order; keeps them while offline                                                 |
-| `web/scripts/api/month-with-pending-edits.ts`                           | API                      | the server's month with pending edits on top                                                   |
-| `web/scripts/api/live-update-connection.ts`                             | API                      | the WebSocket for other people's edits                                                         |
-| `worker/worker-entry-point.ts`                                          | entry point              | routing, origin check, sign-in, forwarding to the household's Durable Object                   |
-| `worker/sign-in/`                                                       | sign-in                  | `signed-in-user-resolver.ts`, `household-membership-lookup.ts`, `same-origin-request-check.ts` |
-| `worker/household-durable-object/household-durable-object.ts`           | household Durable Object | one per household; builds the operation context                                                |
-| `worker/household-durable-object/api-request-router.ts`                 | API request router       | request to operation, errors to status codes                                                   |
-| `worker/household-durable-object/operations/`                           | operations               | one file per endpoint; `operation-registry.ts` maps names to operations                        |
-| `worker/household-durable-object/load-edit-save-and-broadcast-month.ts` | edit steps               | the four steps every edit follows                                                              |
-| `worker/household-durable-object/operation-context.ts`                  | operation context        | `OperationContext`, `buildMonthResponse`                                                       |
-| `worker/household-durable-object/durable-object-month-repository.ts`    | storage                  | months and the revision in Durable Object storage                                              |
-| `worker/household-durable-object/live-update-connection-manager.ts`     | live updates             | which device shows which month; sending updates                                                |
-| `eslint/layers.mjs`                                                     | tooling                  | the layer rule                                                                                 |
+| File                                                                    | Layer                    | What it holds                                                                                                      |
+| ----------------------------------------------------------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| `shared/month/month-record.ts`                                          | shared                   | `MonthRecord`: one month's data and its rules; `MonthRuleError`                                                    |
+| `shared/month/categories.ts`                                            | shared                   | default categories, colours, limits                                                                                |
+| `shared/month/month-validation.ts`                                      | shared                   | month keys, the basic shape of a month file, which month a new one copies                                          |
+| `shared/month/amounts.ts`                                               | shared                   | rounding to cents, sums                                                                                            |
+| `shared/api/endpoints.ts`                                               | shared                   | every endpoint: method, path, params, body; response types                                                         |
+| `shared/api/fields.ts`                                                  | shared                   | shapes of ids, amounts, text, dates                                                                                |
+| `shared/api/month-edit-per-endpoint.ts`                                 | shared                   | what each editing endpoint does to a month                                                                         |
+| `shared/live-update-messages.ts`                                        | shared                   | the two WebSocket messages: `watchMonth` and `month`                                                               |
+| `web/scripts/main.ts`                                                   | entry                    | loads translations, starts the month page                                                                          |
+| `web/scripts/pages/month-page.ts`                                       | page                     | loads, shows and redraws the month; save status                                                                    |
+| `web/scripts/features/*/`                                               | feature                  | one folder per part of the screen                                                                                  |
+| `web/scripts/components/`                                               | component                | entry rows, inline number and text editors                                                                         |
+| `web/scripts/api/*-api.ts`                                              | API                      | one function per endpoint                                                                                          |
+| `web/scripts/api/endpoint-http-client.ts`                               | API                      | `callEndpoint`: one HTTP request; `ApiError`, `OfflineError`                                                       |
+| `web/scripts/api/pending-edits-outbox.ts`                               | API                      | sends edits in order; keeps them while offline                                                                     |
+| `web/scripts/api/month-with-pending-edits.ts`                           | API                      | the server's month with pending edits on top                                                                       |
+| `web/scripts/api/live-update-connection.ts`                             | API                      | the WebSocket for other people's edits                                                                             |
+| `worker/worker-entry-point.ts`                                          | entry point              | routing, origin check, sign-in, forwarding to the household's Durable Object                                       |
+| `worker/sign-in/`                                                       | sign-in                  | `signed-in-user-resolver.ts`, `household-membership-lookup.ts`, `same-origin-request-check.ts`                     |
+| `worker/household-durable-object/household-durable-object.ts`           | household Durable Object | one per household; builds the operation context                                                                    |
+| `worker/household-durable-object/api-request-router.ts`                 | API request router       | request to operation, errors to status codes                                                                       |
+| `worker/household-durable-object/operations/`                           | operations               | `add-`, `change-`, `remove-`, `read-` and `backup-operations.ts`; `operation-registry.ts` maps names to operations |
+| `worker/household-durable-object/load-edit-save-and-broadcast-month.ts` | edit steps               | the four steps every edit follows                                                                                  |
+| `worker/household-durable-object/operation-context.ts`                  | operation context        | `OperationContext`, `buildMonthResponse`                                                                           |
+| `worker/household-durable-object/durable-object-month-repository.ts`    | storage                  | months and the revision in Durable Object storage                                                                  |
+| `worker/household-durable-object/live-update-connection-manager.ts`     | live updates             | which device shows which month; sending updates                                                                    |
+| `eslint/layers.mjs`                                                     | tooling                  | the layer rule                                                                                                     |
 
 ## Appendix B. Glossary
 
 - **Durable Object.** A Cloudflare server instance with its own storage. This app runs one per household and gives it the household's name as its id.
 - **Endpoint.** One HTTP method and path that does one thing, listed in `shared/api/endpoints.ts`.
-- **Operation.** The Worker function that answers one endpoint, one file per endpoint in `worker/household-durable-object/operations/`.
+- **Operation.** The Worker function that answers one endpoint, grouped by what it does in `worker/household-durable-object/operations/`.
 - **Operation context.** What every operation receives besides the request: the household's month repository and live-update connections.
 - **Month key.** A month as `YYYY-MM`, for example `2026-11`. Keys sort by date as plain text.
 - **Outbox.** The page's list of edits not yet answered by the server.

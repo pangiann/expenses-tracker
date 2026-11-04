@@ -1,23 +1,28 @@
 import type { EndpointName } from '../../../shared/api/endpoints.ts';
-import { addCategoryOperation } from './add-category-operation.ts';
-import { addExpenseOperation } from './add-expense-operation.ts';
-import { addIncomeOperation } from './add-income-operation.ts';
-import { addRecurringCostOperation } from './add-recurring-cost-operation.ts';
-import { changeBudgetOperation } from './change-budget-operation.ts';
-import { changeExpectedIncomeOperation } from './change-expected-income-operation.ts';
-import { changeExpenseAmountOperation } from './change-expense-amount-operation.ts';
-import { changeIncomeAmountOperation } from './change-income-amount-operation.ts';
-import { changeRecurringCostAmountOperation } from './change-recurring-cost-amount-operation.ts';
-import { exportMonthsOperation } from './export-months-operation.ts';
-import { getMonthOperation } from './get-month-operation.ts';
-import { importMonthsOperation } from './import-months-operation.ts';
-import { moveCategoryOperation } from './move-category-operation.ts';
-import { removeCategoryOperation } from './remove-category-operation.ts';
-import { removeExpenseOperation } from './remove-expense-operation.ts';
-import { removeIncomeOperation } from './remove-income-operation.ts';
-import { removeRecurringCostOperation } from './remove-recurring-cost-operation.ts';
-import { renameCategoryOperation } from './rename-category-operation.ts';
-import { renameRecurringCostOperation } from './rename-recurring-cost-operation.ts';
+import {
+  addExpenseOperation,
+  addIncomeOperation,
+  addCategoryOperation,
+  addRecurringCostOperation,
+} from './add-operations.ts';
+import { exportMonthsOperation, importMonthsOperation } from './backup-operations.ts';
+import {
+  changeExpenseAmountOperation,
+  changeIncomeAmountOperation,
+  changeExpectedIncomeOperation,
+  renameCategoryOperation,
+  moveCategoryOperation,
+  changeBudgetOperation,
+  renameRecurringCostOperation,
+  changeRecurringCostAmountOperation,
+} from './change-operations.ts';
+import { getMonthOperation } from './read-operations.ts';
+import {
+  removeExpenseOperation,
+  removeIncomeOperation,
+  removeCategoryOperation,
+  removeRecurringCostOperation,
+} from './remove-operations.ts';
 import type { Operation } from './operation.ts';
 
 /**
