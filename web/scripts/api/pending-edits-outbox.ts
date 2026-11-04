@@ -50,7 +50,7 @@ export class PendingEditsOutbox {
     this.#edits.push({ name, params, body });
     saveEdits(this.#edits);
     this.onEditsChange();
-    void this.#sendWaitingEdits();
+    void this.#sendPendingEdits();
     return true;
   }
 
@@ -58,7 +58,7 @@ export class PendingEditsOutbox {
   resume(): void {
     if (this.#retryTimer) clearTimeout(this.#retryTimer);
     this.#retryTimer = null;
-    void this.#sendWaitingEdits();
+    void this.#sendPendingEdits();
   }
 
   get pendingEditCount(): number {
@@ -70,7 +70,7 @@ export class PendingEditsOutbox {
     return this.#edits;
   }
 
-  async #sendWaitingEdits(): Promise<void> {
+  async #sendPendingEdits(): Promise<void> {
     if (this.#isSending) return;
     this.#isSending = true;
     try {

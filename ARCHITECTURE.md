@@ -1,6 +1,6 @@
 # How the expenses tracker works
 
-November 3, 2026
+November 4, 2026
 
 This document explains the whole app, from the three parts it runs in down to the code that adds one expense. It is for anyone who changes the code, including you a year from now. Read Part I for the map, Part II to follow one click from the screen to storage and back, Part III for the rules that keep the data correct, and Part IV before you add something new. The README covers setup and deployment; this document covers how the code fits together.
 
@@ -41,20 +41,22 @@ Inside each part, the code is split into layers. A layer may use the layers belo
 | API       | `api/`             | one function per endpoint, the outbox, live updates                 |
 | helpers   | `i18n/`, `utils/`  | translations, money formatting, month keys, HTML escaping           |
 
-**The Worker (`worker/`)**, top to bottom:
+**The Worker (`worker/`)**, top to bottom. The files below `worker-entry-point.ts` and `sign-in/` are in `household-durable-object/`:
 
-| Layer                   | File                                                        | What it does                                                          |
-| ----------------------- | ----------------------------------------------------------- | --------------------------------------------------------------------- |
-| entry                   | `index.ts`                                                  | routes by path, checks the sign-in and where the request came from    |
-| household room          | `household/household-room.ts`                               | the Durable Object: HTTP to the router, WebSockets to the broadcaster |
-| router                  | `household/router.ts`                                       | finds the endpoint, checks the request, calls the handler             |
-| handlers                | `household/handlers/`                                       | one handler per endpoint                                              |
-| household               | `household/household.ts`                                    | `editMonth()`: the steps every edit follows                           |
-| repository, broadcaster | `household/month-repository.ts`, `household/broadcaster.ts` | storage, and sending live updates                                     |
+| Layer                    | File                                                                      | What it does                                                                                        |
+| ------------------------ | ------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| entry point              | `worker-entry-point.ts`                                                   | every request arrives here: routes by path, checks where it came from and who is signed in          |
+| sign-in                  | `sign-in/`                                                                | who is signed in, which household they belong to, whether the request came from the site's own page |
+| household Durable Object | `household-durable-object.ts`                                             | one per household: HTTP requests to the router, WebSockets to the connection manager                |
+| API request router       | `api-request-router.ts`                                                   | finds the endpoint, checks the request, calls the operation                                         |
+| operations               | `operations/`                                                             | one file per endpoint, for example `add-expense-operation.ts`                                       |
+| edit steps               | `load-edit-save-and-broadcast-month.ts`                                   | the four steps every edit follows                                                                   |
+| operation context        | `operation-context.ts`                                                    | what every operation receives: the month repository and the live-update connections                 |
+| storage, live updates    | `durable-object-month-repository.ts`, `live-update-connection-manager.ts` | the household's months, and sending them to open pages                                              |
 
 **Shared (`shared/`)** sits under both. It may import nothing from `web/` or `worker/`, and no package except zod. Its own `tsconfig.json` has no browser and no Cloudflare types, so code that touches either fails to compile there.
 
-Two more rules hold the layers apart. A feature may not import another feature, so each part of the screen can be read alone. And nothing imports upward: an API function never calls a feature, and a handler never calls the router.
+Two more rules hold the layers apart. A feature may not import another feature, so each part of the screen can be read alone. And nothing imports upward: an API function never calls a feature, and an operation never calls the router.
 
 These rules are not a convention you have to remember. `eslint/layers.mjs` is an ESLint rule that lists every layer and what it may import, and `npm run check` fails when an import breaks it. The error names the layer and what it may import instead:
 
@@ -108,9 +110,9 @@ export function addExpense(monthKey: string, expense: NewExpense): boolean {
 
 The function gives the expense its id here, on the device. Chapter 6 explains why the id can't wait for the server.
 
-**Step 3. The outbox queues and sends.** Every edit goes through the outbox in `api/outbox.ts`. It checks the request against the endpoint, keeps it in a list that is also saved in the browser's localStorage, and starts sending.
+**Step 3. The outbox queues and sends.** Every edit goes through the outbox in `api/pending-edits-outbox.ts`. It checks the request against the endpoint, keeps it in a list that is also saved in the browser's localStorage, and starts sending.
 
-Listing 3-3. The outbox accepts an edit. Excerpt from `web/scripts/api/outbox.ts`, lines 48–55.
+Listing 3-3. The outbox accepts an edit. Excerpt from `web/scripts/api/pending-edits-outbox.ts`, lines 48–55.
 
 ```ts
 send<Name extends EndpointName>(name: Name, params: ParamsOf<Name>, body: BodyInputOf<Name>): boolean {
@@ -118,19 +120,19 @@ send<Name extends EndpointName>(name: Name, params: ParamsOf<Name>, body: BodyIn
   this.#edits.push({ name, params, body });
   saveEdits(this.#edits);
   this.onEditsChange();
-  void this.#sendWaitingEdits();
+  void this.#sendPendingEdits();
   return true;
 }
 ```
 
-`isValidBody` uses the same zod schema the Worker uses, so an amount of 0 is refused here, before any request. `onEditsChange` asks the page to draw again, which is how the expense appears on screen at once (step 4). `#sendWaitingEdits` then sends the waiting edits one at a time, oldest first, through `callEndpoint` in `api/http.ts`, which makes the HTTP request: `POST /api/months/2026-11/expenses` with the expense as JSON.
+`isValidBody` uses the same zod schema the Worker uses, so an amount of 0 is refused here, before any request. `onEditsChange` asks the page to draw again, which is how the expense appears on screen at once (step 4). `#sendPendingEdits` then sends the pending edits one at a time, oldest first, through `callEndpoint` in `api/endpoint-http-client.ts`, which makes the HTTP request: `POST /api/months/2026-11/expenses` with the expense as JSON.
 
-**Step 4. The page draws the edit before the server answers.** The page never changes its copy of the month directly. It always draws the server's last version with the outbox's waiting edits applied on top.
+**Step 4. The page draws the edit before the server answers.** The page never changes its copy of the month directly. It always draws the server's last version with the outbox's pending edits applied on top.
 
-Listing 3-4. The month to show. Excerpt from `web/scripts/api/waiting-edits.ts`, lines 26–39.
+Listing 3-4. The month to show. Excerpt from `web/scripts/api/month-with-pending-edits.ts`, lines 26–39.
 
 ```ts
-export function monthWithWaitingEdits(serverMonth: MonthData, edits: readonly WaitingEdit[]): MonthRecord {
+export function monthWithPendingEdits(serverMonth: MonthData, edits: readonly PendingEdit[]): MonthRecord {
   const month = new MonthRecord(serverMonth);
   for (const edit of edits) {
     if (edit.params.month !== month.monthKey || !isMonthEdit(edit.name)) continue;
@@ -146,81 +148,94 @@ export function monthWithWaitingEdits(serverMonth: MonthData, edits: readonly Wa
 }
 ```
 
-The function starts from a fresh copy of the server's month, then applies each waiting edit for that month in order. `applyMonthEdit` is the same function the Worker runs (Chapter 4, step 4), so the page's early version matches what the server will answer. An edit that breaks a rule, for example because someone else removed its category, is skipped here; the server refuses it too.
+The function starts from a fresh copy of the server's month, then applies each pending edit for that month in order. `applyMonthEdit` is the same function the Worker runs (Chapter 4, step 4), so the page's early version matches what the server will answer. An edit that breaks a rule, for example because someone else removed its category, is skipped here; the server refuses it too.
 
 ### Chapter 4. In the Worker
 
-**Step 1. The entry point checks who is asking.** `worker/index.ts` sends paths under `/api/months/`, `/api/export` and `/api/import` to `callHouseholdEndpoint`.
+**Step 1. The entry point picks the household.** Every request arrives in `worker/worker-entry-point.ts`. It sends paths under `/api/months/`, `/api/export` and `/api/import` to `handleApiEndpointRequest`.
 
-Listing 4-1. Where the request came from, and who sent it. Excerpt from `worker/index.ts`, lines 59–83.
+Listing 4-1. Where the request came from, who sent it, and which household it is for. Excerpt from `worker/worker-entry-point.ts`, lines 62–87, shortened.
 
 ```ts
-async function callHouseholdEndpoint(request: Request, env: Env, context: Context): Promise<Response> {
-  const fetchSite = request.headers.get('Sec-Fetch-Site');
-  const isFromAnotherSite = fetchSite !== null && fetchSite !== 'same-origin' && fetchSite !== 'none';
-  if (isFromAnotherSite || (request.method !== 'GET' && !isSameOriginRequest(request))) {
+async function handleApiEndpointRequest(request: Request, env: Env, context: WorkerContext): Promise<Response> {
+  if (isRequestFromAnotherSite(request) || (request.method !== 'GET' && !isRequestFromOwnPage(request))) {
     return textResponse('Forbidden', 403);
   }
-  return forwardToHousehold(request, env, context);
+  return forwardToHouseholdDurableObject(request, env, context);
 }
 
-async function forwardToHousehold(request: Request, env: Env, context: Context): Promise<Response> {
+async function forwardToHouseholdDurableObject(request: Request, env: Env, context: WorkerContext): Promise<Response> {
   let householdName: string;
   try {
-    const email = await verifiedUserEmail(request, env, context);
-    householdName = householdForEmail(email, env);
+    const email = await resolveSignedInUserEmail(request, env, context);
+    householdName = findHouseholdNameForEmail(email, env);
   } catch (error) {
     // ... a failed sign-in or an unknown email answers 403
   }
-  const household = env.HOUSEHOLD.get(env.HOUSEHOLD.idFromName(householdName));
-  return household.fetch(request);
+  const householdDurableObject = env.HOUSEHOLD_DURABLE_OBJECTS.getByName(householdName);
+  return householdDurableObject.fetch(request);
 }
 ```
 
-The first function refuses requests that another website started (Chapter 8). The second asks Cloudflare Access who is signed in (`access-auth.ts`) and looks up their household in the `HOUSEHOLD_MEMBERS` secret (`households.ts`). It then passes the request to that household's Durable Object. The household name becomes the Durable Object's id, so the same household always reaches the same object and its storage.
+The first function refuses requests that another website started (`sign-in/same-origin-request-check.ts`, Chapter 8). The second asks Cloudflare Access who is signed in (`sign-in/signed-in-user-resolver.ts`) and looks up their household in the `HOUSEHOLD_MEMBERS` secret (`sign-in/household-membership-lookup.ts`). It then forwards the request to that household's Durable Object.
 
-**Step 2. The household room hands HTTP requests to the router.**
+This is the only place a household is chosen. `getByName("home")` always reaches the same Durable Object, and Cloudflare gives each Durable Object its own storage. Everything after this step runs inside the household's Durable Object and can only see that household's months, so no later code looks a household up.
 
-Listing 4-2. The Durable Object's front door. Excerpt from `worker/household/household-room.ts`, lines 32–37.
+**Step 2. The household Durable Object hands HTTP requests to the router.**
+
+Listing 4-2. The Durable Object and its front door. Excerpt from `worker/household-durable-object/household-durable-object.ts`, lines 27–44, shortened.
 
 ```ts
+constructor(state: DurableObjectState, env: Env) {
+  super(state, env);
+  this.#operationContext = {
+    monthRepository: new DurableObjectMonthRepository(state.storage),
+    liveUpdateConnections: new LiveUpdateConnectionManager(state),
+  };
+}
+
 override async fetch(request: Request): Promise<Response> {
-  if (request.headers.get('Upgrade') !== 'websocket') return routeRequest(request, this.#household);
+  if (request.headers.get('Upgrade') !== 'websocket') {
+    return routeApiRequestToOperation(request, this.#operationContext);
+  }
   const { 0: deviceSocket, 1: serverSocket } = new WebSocketPair();
-  this.#household.broadcaster.accept(serverSocket);
+  this.#operationContext.liveUpdateConnections.acceptConnection(serverSocket);
   return new Response(null, { status: 101, webSocket: deviceSocket });
 }
 ```
 
-An ordinary request goes to the router. A WebSocket request becomes a live connection, which the broadcaster keeps (Chapter 5).
+`state.storage` is this household's storage. The constructor wraps it in the two tools every operation uses, the **operation context**: `monthRepository` reads and writes months, and `liveUpdateConnections` sends updates to the household's open pages. An ordinary request goes to the router with that context. A WebSocket request becomes a live-update connection (Chapter 5).
+
+> **Sidebar: the class has two names.** The code calls the class `HouseholdDurableObject`. Cloudflare stores every household's months under the name it had when it was first deployed, `HouseholdRoom`, so `worker-entry-point.ts` exports it under that name and `wrangler.jsonc` binds that name. Changing the stored name needs a Durable Object rename migration; otherwise Cloudflare treats it as a new class with empty storage.
 
 **Step 3. The router finds the endpoint and checks the request.**
 
-Listing 4-3. From request to handler. Excerpt from `worker/household/router.ts`, lines 20–56, shortened, with notes added.
+Listing 4-3. From request to operation. Excerpt from `worker/household-durable-object/api-request-router.ts`, lines 21–57, shortened, with notes added.
 
 ```ts
-export async function routeRequest(request: Request, household: Household): Promise<Response> {
+export async function routeApiRequestToOperation(request: Request, context: OperationContext): Promise<Response> {
   const { pathname } = new URL(request.url);
   for (const name of Object.keys(endpoints) as EndpointName[]) {
     const endpoint = endpoints[name];
     if (endpoint.method !== request.method) continue;
     const rawParams = matchPath(endpoint.path, pathname);
-    if (rawParams) return runEndpoint(name, rawParams, request, household);
+    if (rawParams) return runOperation(name, rawParams, request, context);
   }
   return errorResponse(404, { error: 'Not found' });
 }
 
-// in runEndpoint:
+// in runOperation:
 const params = endpoint.params.safeParse(rawParams); // 400 when the path is wrong
 const body = endpoint.body.safeParse(rawBody); // 400 when the body is wrong
-const result = await handler({ params: params.data, body: body.data }, household);
+const operation = operationRegistry[name] as Operation<EndpointName>;
+const result = await operation({ params: params.data, body: body.data }, context);
 return jsonResponse(200, result);
 // MonthRuleError -> 409 with the rule that was broken
 ```
 
-The router walks the same endpoint table the page used. Our request matches `addExpense`, whose entry is in Listing 4-4. The router checks the path parameters and the body against the entry's zod schemas. After that, the handler receives typed values in range and never checks shapes itself.
+The router walks the same endpoint table the page used. Our request matches `addExpense`, whose entry is in Listing 4-4. The router checks the path parameters and the body against the entry's zod schemas, then looks up the operation with the same name in `operations/operation-registry.ts`. The operation receives typed values in range and never checks shapes itself.
 
-Listing 4-4. The addExpense entry in the endpoint table. Excerpt from `shared/api/endpoints.ts`, lines 65–70.
+Listing 4-4. The addExpense entry in the endpoint table. Excerpt from `shared/api/endpoints.ts`, lines 66–71.
 
 ```ts
 addExpense: endpoint(
@@ -233,45 +248,62 @@ addExpense: endpoint(
 
 `InMonth` says the path has one parameter, `month`, in the form `YYYY-MM`. The field shapes (`Id`, `PositiveAmount` and so on) live in `shared/api/fields.ts`, so every endpoint uses the same limits: ids up to 64 characters, amounts up to 10 million, text up to 200 characters.
 
-**Step 4. The handler runs the edit.** Every editing endpoint has the same handler shape, built by `monthEditHandler` in `handlers/month-edit.ts`. It calls `editMonth`, which holds the four steps of every edit.
+**Step 4. The operation runs the edit.** Each endpoint has one file in `operations/`, named after it.
 
-Listing 4-5. The steps of every edit. Excerpt from `worker/household/household.ts`, lines 26–37.
+Listing 4-5. The addExpense operation. Excerpt from `worker/household-durable-object/operations/add-expense-operation.ts`, lines 5–12.
 
 ```ts
-export async function editMonth(
-  household: Household,
+/**
+ * POST /api/months/:month/expenses: adds an expense.
+ * The edit itself is monthEditPerEndpoint.addExpense, which the page also runs to show the edit at once.
+ */
+export const addExpenseOperation: Operation<'addExpense'> = (request, context) =>
+  loadEditSaveAndBroadcastMonth(context, request.params.month, (month) =>
+    monthEditPerEndpoint.addExpense(month, request),
+  );
+```
+
+Every editing operation looks like this. `loadEditSaveAndBroadcastMonth` holds the four steps every edit follows.
+
+Listing 4-6. The steps of every edit. Excerpt from `worker/household-durable-object/load-edit-save-and-broadcast-month.ts`, lines 14–25.
+
+```ts
+export async function loadEditSaveAndBroadcastMonth(
+  context: OperationContext,
   monthKey: string,
-  change: (month: MonthRecord) => void,
+  applyEdit: (month: MonthRecord) => void,
 ): Promise<MonthResponse> {
-  const month = await household.months.loadOrCreate(monthKey);
-  change(month);
-  await household.months.save(month);
-  const response = await monthResponse(household, month);
-  household.broadcaster.sendMonth(response);
+  const month = await context.monthRepository.loadMonthOrCreateFromClosestMonth(monthKey);
+  applyEdit(month);
+  await context.monthRepository.saveMonth(month);
+  const response = await buildMonthResponse(context, month);
+  context.liveUpdateConnections.sendMonthToDevicesWatchingIt(response);
   return response;
 }
 ```
 
 1. **Load.** The repository reads the month from storage, or creates it from the closest saved month if it doesn't exist yet.
-2. **Change.** `change` is the endpoint's edit function from `shared/api/month-edits.ts` (Listing 4-6).
+2. **Edit.** `applyEdit` is the endpoint's edit from `shared/api/month-edit-per-endpoint.ts` (Listing 4-7).
 3. **Save.** The repository writes the month and raises the household's revision number by one (Chapter 5).
-4. **Broadcast.** The broadcaster sends the new month to every device showing it. The same month is the answer to the request.
+4. **Broadcast.** The connection manager sends the new month to every device showing it. The same month is the answer to the request.
 
-Listing 4-6. What each edit does to the month. Excerpt from `shared/api/month-edits.ts`, lines 23–26.
+Listing 4-7. What each edit does to the month. Excerpt from `shared/api/month-edit-per-endpoint.ts`, lines 23–29.
 
 ```ts
-export const monthEdits: { [Name in MonthEditName]: (month: MonthRecord, request: MonthEditRequest<Name>) => void } = {
+export const monthEditPerEndpoint: {
+  [Name in MonthEditName]: (month: MonthRecord, request: MonthEditRequest<Name>) => void;
+} = {
   addExpense: (month, { body }) => month.addExpense(body),
   changeExpenseAmount: (month, { params, body }) => month.updateExpenseAmount(params.id, body.amount),
   removeExpense: (month, { params }) => month.removeExpense(params.id),
   // ... one line per editing endpoint
 ```
 
-This table is the one place that says what each endpoint does to a month. The Worker runs it on the stored month; the page runs it on its copy for waiting edits (Listing 3-4).
+This table is the one place that says what each endpoint does to a month. The Worker's operations run it on the stored month; the page runs it on its copy for pending edits (Listing 3-4).
 
 **Step 5. The model enforces the month's rules.** `MonthRecord` in `shared/month/month-record.ts` is the only code that changes month data.
 
-Listing 4-7. Adding an expense. Excerpt from `shared/month/month-record.ts`, lines 184–207, shortened, with notes added.
+Listing 4-8. Adding an expense. Excerpt from `shared/month/month-record.ts`, lines 184–207, shortened, with notes added.
 
 ```ts
 addExpense({ id, categoryId, amount, description, date }: { ... }): void {
@@ -288,7 +320,7 @@ The zod schemas check what can be checked without the month: types, lengths, for
 
 ### Chapter 5. The way back
 
-The handler's answer travels back to the outbox, and the outbox gives it to the month page.
+The operation's answer travels back to the outbox, and the outbox gives it to the month page.
 
 Listing 5-1. The page shows a month from the server. Excerpt from `web/scripts/pages/month-page.ts`, lines 123–138.
 
@@ -304,17 +336,17 @@ Listing 5-1. The page shows a month from the server. Excerpt from `web/scripts/p
 
 #render(): void {
   if (!this.#serverMonth) return;
-  const month = monthWithWaitingEdits(this.#serverMonth, outbox.waitingEdits);
+  const month = monthWithPendingEdits(this.#serverMonth, pendingEditsOutbox.pendingEdits);
   this.#monthNavigation.render(month.monthKey, this.#savedMonthKeys);
   for (const feature of this.#features) feature.render(month);
 }
 ```
 
-The outbox has already dropped the answered edit, so `#render` now draws the server's month with only the edits still waiting. On screen nothing moves: the expense was already shown, and now it is the server's copy.
+The outbox has already dropped the answered edit, so `#render` now draws the server's month with only the edits still pending. On screen nothing moves: the expense was already shown, and now it is the server's copy.
 
 Three kinds of message reach `#show`: the answer to an edit, the answer to opening a month (`GET /api/months/:month`), and a live update from the WebSocket. They can arrive in any order. Every answer carries a **revision**, a number the household raises by one with every save. The page ignores anything older than what it shows, so a late answer can't replace a newer month.
 
-The other devices get the month through their WebSocket. Each page tells its household which month it shows (the `watchMonth` message in `shared/protocol.ts`). After every save, `broadcaster.ts` sends the month to the sockets watching it. On those pages, `api/live-updates.ts` passes the month to the same `#show`.
+The other devices get the month through their WebSocket. Each page tells its household which month it shows (the `watchMonth` message in `shared/live-update-messages.ts`). After every save, `live-update-connection-manager.ts` sends the month to the sockets watching it. On those pages, `api/live-update-connection.ts` passes the month to the same `#show`.
 
 > **Sidebar: the WebSocket costs almost nothing.** Cloudflare answers the keepalive ping without waking the Durable Object, and messages sent to a device are free. The socket stays open while the Durable Object sleeps between requests.
 
@@ -336,7 +368,7 @@ This is why the outbox needs no request ids and the server keeps no list of hand
 
 Without a connection, `callEndpoint` throws `OfflineError`. The outbox keeps the edit, sets its state to offline (the status shows "Offline, reconnecting…"), and tries again every 5 seconds, when the browser reports it is online, and when the live connection comes back. The waiting edits are in localStorage too, so they survive a closed tab and go out the next time the page opens.
 
-Meanwhile the screen shows every waiting edit (Listing 3-4). The outbox sends edits one at a time, in order, so a later edit never reaches the server before an earlier one.
+Meanwhile the screen shows every pending edit (Listing 3-4). The outbox sends edits one at a time, in order, so a later edit never reaches the server before an earlier one.
 
 When the server refuses an edit for good (a 400 or 409 answer), the outbox drops it, the status shows "Not saved", and the page loads the month again to show the server's version.
 
@@ -346,8 +378,8 @@ When the server refuses an edit for good (a 400 or 409 answer), the outbox drops
 
 Cloudflare Access sits in front of the whole site and asks for a sign-in. Behind it, the Worker checks three things on every endpoint call (Listing 4-1):
 
-1. **The sign-in.** `access-auth.ts` gets the email from Cloudflare Access. Without a verified email, the answer is 403.
-2. **The household.** `households.ts` maps the email to a household through the `HOUSEHOLD_MEMBERS` secret. Each household has its own Durable Object, so one household can't reach another's months.
+1. **The sign-in.** `sign-in/signed-in-user-resolver.ts` gets the email from Cloudflare Access. Without a verified email, the answer is 403.
+2. **The household.** `sign-in/household-membership-lookup.ts` maps the email to a household through the `HOUSEHOLD_MEMBERS` secret. Each household has its own Durable Object, so one household can't reach another's months.
 3. **The origin.** A browser sends the sign-in cookie with requests that other websites start too. The Worker refuses any request the browser marks as coming from another site, and any edit without this site's own Origin header.
 
 For local testing, `ACCESS_TEST_BYPASS_EMAIL` in `.dev.vars` replaces the sign-in. It works only when the host is `localhost` or `127.0.0.1`, so it can't open the real site.
@@ -362,13 +394,13 @@ Suppose you want to rename an expense. Each step below is in a different layer, 
 
 1. **Model.** Add `renameExpense(expenseId, newName)` to `MonthRecord` in `shared/month/month-record.ts`. Throw `MonthRuleError` for a broken month rule, and add the rule's name to `MonthRule`.
 2. **Endpoint.** Add `renameExpense` to `endpoints` in `shared/api/endpoints.ts`, for example `PUT /api/months/:month/expenses/:id/description` with `ItemInMonth` and a body of `z.object({ description: Text })`.
-3. **Edit.** Add one line to `monthEdits` in `shared/api/month-edits.ts`. TypeScript fails until you do, because the table must cover every editing endpoint.
-4. **Handler.** Add `renameExpense: monthEditHandler('renameExpense')` to `worker/household/handlers/index.ts`. TypeScript fails until you do here too.
-5. **API function.** Add `renameExpense()` to `web/scripts/api/expenses-api.ts`; it calls `outbox.send('renameExpense', ...)`.
+3. **Edit.** Add one line to `monthEditPerEndpoint` in `shared/api/month-edit-per-endpoint.ts`. TypeScript fails until you do, because the table must cover every editing endpoint.
+4. **Operation.** Copy `operations/add-expense-operation.ts` to `rename-expense-operation.ts` and change the names to `renameExpense`, then add it to `operations/operation-registry.ts`. TypeScript fails until the registry has it.
+5. **API function.** Add `renameExpense()` to `web/scripts/api/expenses-api.ts`; it calls `pendingEditsOutbox.send('renameExpense', ...)`.
 6. **Feature.** Call it from the feature that shows the expense, for example `features/categories/category-cards.ts`.
-7. **Tests.** Add a model test in `test/monthRecord.test.mjs` and an endpoint call in `test/household.test.mjs`. `test/endpoints.test.mjs` already checks that no two endpoints match the same request.
+7. **Tests.** Add a model test in `test/month-record.test.mjs` and an endpoint call in `test/api-operations.test.mjs`. `test/endpoints.test.mjs` already checks that no two endpoints match the same request.
 
-An endpoint that only reads (like `getMonth`) skips steps 1 and 3: it gets its own handler in `handlers/months.ts` and its API function calls `callEndpoint` directly instead of the outbox.
+An endpoint that only reads (like `getMonth`) skips steps 1 and 3: its operation reads from `context.monthRepository` instead of calling `loadEditSaveAndBroadcastMonth` (see `get-month-operation.ts`), and its API function calls `callEndpoint` directly instead of the outbox.
 
 ### Chapter 10. Adding a part of the screen
 
@@ -387,42 +419,44 @@ An endpoint that only reads (like `getMonth`) skips steps 1 and 3: it gets its o
 
 ## Appendix A. Files
 
-| File                                            | Layer          | What it holds                                                                           |
-| ----------------------------------------------- | -------------- | --------------------------------------------------------------------------------------- |
-| `shared/month/month-record.ts`                  | shared         | `MonthRecord`: one month's data and its rules; `MonthRuleError`                         |
-| `shared/month/categories.ts`                    | shared         | default categories, colours, limits                                                     |
-| `shared/month/month-validation.ts`              | shared         | month keys, the basic shape of a month file, which month a new one copies               |
-| `shared/month/amounts.ts`                       | shared         | rounding to cents, sums                                                                 |
-| `shared/api/endpoints.ts`                       | shared         | every endpoint: method, path, params, body; response types                              |
-| `shared/api/fields.ts`                          | shared         | shapes of ids, amounts, text, dates                                                     |
-| `shared/api/month-edits.ts`                     | shared         | what each editing endpoint does to a month                                              |
-| `shared/protocol.ts`                            | shared         | the two WebSocket messages: `watchMonth` and `month`                                    |
-| `web/scripts/main.ts`                           | entry          | loads translations, starts the month page                                               |
-| `web/scripts/pages/month-page.ts`               | page           | loads, shows and redraws the month; save status                                         |
-| `web/scripts/features/*/`                       | feature        | one folder per part of the screen                                                       |
-| `web/scripts/components/`                       | component      | entry rows, inline number and text editors                                              |
-| `web/scripts/api/*-api.ts`                      | API            | one function per endpoint                                                               |
-| `web/scripts/api/http.ts`                       | API            | `callEndpoint`: one HTTP request; `ApiError`, `OfflineError`                            |
-| `web/scripts/api/outbox.ts`                     | API            | sends edits in order; keeps them while offline                                          |
-| `web/scripts/api/waiting-edits.ts`              | API            | the server's month with waiting edits on top                                            |
-| `web/scripts/api/live-updates.ts`               | API            | the WebSocket for other people's edits                                                  |
-| `worker/index.ts`                               | Worker entry   | routing, sign-in, origin check                                                          |
-| `worker/access-auth.ts`, `worker/households.ts` | Worker entry   | who is signed in; which household they belong to                                        |
-| `worker/household/household-room.ts`            | household room | the Durable Object                                                                      |
-| `worker/household/router.ts`                    | router         | request to handler, errors to status codes                                              |
-| `worker/household/handlers/`                    | handlers       | `months.ts` (get, export, import), `month-edit.ts` (every edit), `index.ts` (the table) |
-| `worker/household/household.ts`                 | household      | `editMonth`, `monthResponse`                                                            |
-| `worker/household/month-repository.ts`          | repository     | months and the revision in Durable Object storage                                       |
-| `worker/household/broadcaster.ts`               | broadcaster    | which device shows which month; sending updates                                         |
-| `eslint/layers.mjs`                             | tooling        | the layer rule                                                                          |
+| File                                                                    | Layer                    | What it holds                                                                                  |
+| ----------------------------------------------------------------------- | ------------------------ | ---------------------------------------------------------------------------------------------- |
+| `shared/month/month-record.ts`                                          | shared                   | `MonthRecord`: one month's data and its rules; `MonthRuleError`                                |
+| `shared/month/categories.ts`                                            | shared                   | default categories, colours, limits                                                            |
+| `shared/month/month-validation.ts`                                      | shared                   | month keys, the basic shape of a month file, which month a new one copies                      |
+| `shared/month/amounts.ts`                                               | shared                   | rounding to cents, sums                                                                        |
+| `shared/api/endpoints.ts`                                               | shared                   | every endpoint: method, path, params, body; response types                                     |
+| `shared/api/fields.ts`                                                  | shared                   | shapes of ids, amounts, text, dates                                                            |
+| `shared/api/month-edit-per-endpoint.ts`                                 | shared                   | what each editing endpoint does to a month                                                     |
+| `shared/live-update-messages.ts`                                        | shared                   | the two WebSocket messages: `watchMonth` and `month`                                           |
+| `web/scripts/main.ts`                                                   | entry                    | loads translations, starts the month page                                                      |
+| `web/scripts/pages/month-page.ts`                                       | page                     | loads, shows and redraws the month; save status                                                |
+| `web/scripts/features/*/`                                               | feature                  | one folder per part of the screen                                                              |
+| `web/scripts/components/`                                               | component                | entry rows, inline number and text editors                                                     |
+| `web/scripts/api/*-api.ts`                                              | API                      | one function per endpoint                                                                      |
+| `web/scripts/api/endpoint-http-client.ts`                               | API                      | `callEndpoint`: one HTTP request; `ApiError`, `OfflineError`                                   |
+| `web/scripts/api/pending-edits-outbox.ts`                               | API                      | sends edits in order; keeps them while offline                                                 |
+| `web/scripts/api/month-with-pending-edits.ts`                           | API                      | the server's month with pending edits on top                                                   |
+| `web/scripts/api/live-update-connection.ts`                             | API                      | the WebSocket for other people's edits                                                         |
+| `worker/worker-entry-point.ts`                                          | entry point              | routing, origin check, sign-in, forwarding to the household's Durable Object                   |
+| `worker/sign-in/`                                                       | sign-in                  | `signed-in-user-resolver.ts`, `household-membership-lookup.ts`, `same-origin-request-check.ts` |
+| `worker/household-durable-object/household-durable-object.ts`           | household Durable Object | one per household; builds the operation context                                                |
+| `worker/household-durable-object/api-request-router.ts`                 | API request router       | request to operation, errors to status codes                                                   |
+| `worker/household-durable-object/operations/`                           | operations               | one file per endpoint; `operation-registry.ts` maps names to operations                        |
+| `worker/household-durable-object/load-edit-save-and-broadcast-month.ts` | edit steps               | the four steps every edit follows                                                              |
+| `worker/household-durable-object/operation-context.ts`                  | operation context        | `OperationContext`, `buildMonthResponse`                                                       |
+| `worker/household-durable-object/durable-object-month-repository.ts`    | storage                  | months and the revision in Durable Object storage                                              |
+| `worker/household-durable-object/live-update-connection-manager.ts`     | live updates             | which device shows which month; sending updates                                                |
+| `eslint/layers.mjs`                                                     | tooling                  | the layer rule                                                                                 |
 
 ## Appendix B. Glossary
 
 - **Durable Object.** A Cloudflare server instance with its own storage. This app runs one per household and gives it the household's name as its id.
 - **Endpoint.** One HTTP method and path that does one thing, listed in `shared/api/endpoints.ts`.
-- **Handler.** The Worker function that answers one endpoint.
+- **Operation.** The Worker function that answers one endpoint, one file per endpoint in `worker/household-durable-object/operations/`.
+- **Operation context.** What every operation receives besides the request: the household's month repository and live-update connections.
 - **Month key.** A month as `YYYY-MM`, for example `2026-11`. Keys sort by date as plain text.
 - **Outbox.** The page's list of edits not yet answered by the server.
 - **Revision.** A number the household raises by one with every save; the page uses it to ignore older answers.
-- **Waiting edit.** An edit in the outbox. The page shows it on top of the server's month.
+- **Pending edit.** An edit in the outbox that the server hasn't answered yet. The page shows it on top of the server's month.
 - **zod.** A library that describes the shape of data and checks real data against it. The app uses its smaller form, `zod/mini`, to keep the page small.
