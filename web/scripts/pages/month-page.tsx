@@ -1,7 +1,16 @@
-import { useEffect } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 
+import { BackupButtons } from '../features/backup/backup-buttons.tsx';
+import { LanguagePicker } from '../features/language/language-picker.tsx';
+import { AddMonthDialog } from '../features/month-navigation/add-month-dialog.tsx';
+import { MonthNavigation } from '../features/month-navigation/month-navigation.tsx';
+import { ErrorBanner } from '../features/status/error-banner.tsx';
+import { SaveStatusPill } from '../features/status/save-status.tsx';
 import { t } from '../i18n/translator.ts';
+import { monthPageStore } from './month-page-store.ts';
 import { VanillaFeatures } from './vanilla-features.ts';
+
+const openMonth = (monthKey: string) => void monthPageStore.openMonth(monthKey);
 
 let vanillaFeatures: VanillaFeatures | null = null;
 
@@ -11,6 +20,13 @@ let vanillaFeatures: VanillaFeatures | null = null;
  * calls its API functions (api/*-api.ts). The page never handles an edit itself.
  */
 export function MonthPage() {
+  const { month, savedMonthKeys, saveStatus, errorText } = useSyncExternalStore(
+    monthPageStore.subscribe,
+    monthPageStore.getState,
+  );
+  /** The month the "Add a month" dialog suggests; null while it is closed. */
+  const [addMonthSuggestion, setAddMonthSuggestion] = useState<string | null>(null);
+
   // The features that aren't React components yet find their elements by id once React has drawn them.
   useEffect(() => {
     if (vanillaFeatures) return;
@@ -24,32 +40,20 @@ export function MonthPage() {
         <div className="brand">
           <img src="assets/icon.svg" alt="" className="brand-icon" /> <span>{t('app.title')}</span>
         </div>
-        <nav className="month-navigation">
-          <button id="previousMonthButton" className="round-button" title={t('nav.previousMonth')} disabled>
-            ‹
-          </button>
-          <h1 id="monthTitle">{t('app.loading')}</h1>
-          <button id="nextMonthButton" className="round-button" title={t('nav.nextMonth')} disabled>
-            ›
-          </button>
-          <button id="addMonthButton" className="round-button add-month-button" title={t('nav.addMonth')}>
-            +
-          </button>
-        </nav>
+        <MonthNavigation
+          monthKey={month?.monthKey ?? null}
+          savedMonthKeys={savedMonthKeys}
+          onOpenMonth={openMonth}
+          onAddMonth={setAddMonthSuggestion}
+        />
         <div className="top-bar-actions">
-          <span id="saveStatus" className="save-status"></span>
-          <select id="languageSelect" className="language-select" aria-label={t('language.label')}></select>
-          <button id="exportButton" className="secondary-button" title={t('backup.exportHint')}>
-            {t('backup.export')}
-          </button>
-          <button id="importButton" className="secondary-button" title={t('backup.importHint')}>
-            {t('backup.import')}
-          </button>
-          <input id="importFileInput" type="file" accept="application/json,.json" hidden />
+          <SaveStatusPill saveStatus={saveStatus} />
+          <LanguagePicker />
+          <BackupButtons onImported={() => monthPageStore.reloadShownMonth()} />
         </div>
       </header>
 
-      <div id="errorBanner" className="error-banner" hidden></div>
+      <ErrorBanner text={errorText} />
 
       <main className="page-content">
         <section className="card quick-add">
@@ -150,25 +154,11 @@ export function MonthPage() {
         </section>
       </main>
 
-      <div id="addMonthDialog" className="dialog-backdrop" hidden>
-        <form id="addMonthForm" className="card dialog">
-          <h2>{t('addMonth.title')}</h2>
-          <div className="dialog-fields">
-            <select id="addMonthMonthSelect"></select>
-            <input id="addMonthYearInput" type="number" min="1900" max="2999" />
-          </div>
-          <p className="dialog-hint">{t('addMonth.hint')}</p>
-          <p id="addMonthError" className="dialog-error"></p>
-          <div className="dialog-actions">
-            <button type="button" id="addMonthCancelButton" className="secondary-button">
-              {t('addMonth.cancel')}
-            </button>
-            <button type="submit" className="primary-button">
-              {t('addMonth.submit')}
-            </button>
-          </div>
-        </form>
-      </div>
+      <AddMonthDialog
+        suggestedMonthKey={addMonthSuggestion}
+        onOpenMonth={openMonth}
+        onClose={() => setAddMonthSuggestion(null)}
+      />
     </>
   );
 }
