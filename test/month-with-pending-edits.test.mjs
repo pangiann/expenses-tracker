@@ -2,13 +2,13 @@ import assert from 'node:assert/strict';
 import { test } from 'vitest';
 
 import { MonthRecord } from '../shared/month/month-record.ts';
-import { monthWithWaitingEdits } from '../web/scripts/api/waiting-edits.ts';
+import { monthWithPendingEdits } from '../web/scripts/api/month-with-pending-edits.ts';
 
 const serverMonth = MonthRecord.createEmpty('2026-11').toJSON();
 const coffee = { id: 'e1', categoryId: 'lunch', amount: 3.5, date: '2026-11-03' };
 
 test('edits waiting in the outbox show on top of the server month, in order', () => {
-  const shown = monthWithWaitingEdits(serverMonth, [
+  const shown = monthWithPendingEdits(serverMonth, [
     { name: 'addExpense', params: { month: '2026-11' }, body: coffee },
     { name: 'changeExpenseAmount', params: { month: '2026-11', id: 'e1' }, body: { amount: 4 } },
     { name: 'renameCategory', params: { month: '2026-11', id: 'lunch' }, body: { name: 'Coffee' } },
@@ -19,7 +19,7 @@ test('edits waiting in the outbox show on top of the server month, in order', ()
 });
 
 test('edits for other months, malformed edits and edits that break a rule are skipped', () => {
-  const shown = monthWithWaitingEdits(serverMonth, [
+  const shown = monthWithPendingEdits(serverMonth, [
     { name: 'addExpense', params: { month: '2026-10' }, body: { ...coffee, date: '2026-10-03' } },
     { name: 'addExpense', params: { month: '2026-11' }, body: { ...coffee, amount: 'lots' } },
     { name: 'addExpense', params: { month: '2026-11' }, body: { ...coffee, categoryId: 'casino' } },

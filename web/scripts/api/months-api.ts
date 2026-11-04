@@ -1,5 +1,5 @@
 import type { ExportResponse, ImportResponse, MonthResponse } from '../../../shared/api/endpoints.ts';
-import { callEndpoint } from './http.ts';
+import { callEndpoint } from './endpoint-http-client.ts';
 
 /** GET /api/months/:month: the month, created on the server if it doesn't exist yet. */
 export function getMonth(monthKey: string): Promise<MonthResponse> {

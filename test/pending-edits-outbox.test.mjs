@@ -28,15 +28,15 @@ beforeEach(() => {
 
 afterEach(() => vi.unstubAllGlobals());
 
-async function newOutbox() {
+async function newPendingEditsOutbox() {
   vi.resetModules(); // a fresh outbox that reads localStorage again, like a reloaded page
-  const { Outbox } = await import('../web/scripts/api/outbox.ts');
-  const outbox = new Outbox();
+  const { PendingEditsOutbox } = await import('../web/scripts/api/pending-edits-outbox.ts');
+  const pendingEditsOutbox = new PendingEditsOutbox();
   const answers = [];
   const states = [];
-  outbox.onAnswer = (answer) => answers.push(answer.month.sent);
-  outbox.onStateChange = (state) => states.push(state.kind);
-  return { outbox, answers, states };
+  pendingEditsOutbox.onAnswer = (answer) => answers.push(answer.month.sent);
+  pendingEditsOutbox.onStateChange = (state) => states.push(state.kind);
+  return { pendingEditsOutbox, answers, states };
 }
 
 const until = async (condition) => {
@@ -47,9 +47,9 @@ const until = async (condition) => {
 const coffee = { id: 'e1', categoryId: 'lunch', amount: 3.5, description: 'coffee', date: '2026-11-03' };
 
 test('edits are sent in the order they were made, and every answer is shown', async () => {
-  const { outbox, answers, states } = await newOutbox();
-  outbox.send('addExpense', { month: '2026-11' }, coffee);
-  outbox.send('changeExpenseAmount', { month: '2026-11', id: 'e1' }, { amount: 4 });
+  const { pendingEditsOutbox, answers, states } = await newPendingEditsOutbox();
+  pendingEditsOutbox.send('addExpense', { month: '2026-11' }, coffee);
+  pendingEditsOutbox.send('changeExpenseAmount', { month: '2026-11', id: 'e1' }, { amount: 4 });
   await until(() => states.at(-1) === 'idle');
   assert.deepEqual(requestsSeen, ['POST /api/months/2026-11/expenses', 'PUT /api/months/2026-11/expenses/e1/amount']);
   assert.deepEqual(answers, [{ ...coffee }, { amount: 4 }]);
@@ -57,36 +57,36 @@ test('edits are sent in the order they were made, and every answer is shown', as
 });
 
 test('an edit that does not match its endpoint is not sent', async () => {
-  const { outbox } = await newOutbox();
-  assert.equal(outbox.send('addExpense', { month: '2026-11' }, { ...coffee, amount: 0 }), false);
-  assert.equal(outbox.waitingCount, 0);
+  const { pendingEditsOutbox } = await newPendingEditsOutbox();
+  assert.equal(pendingEditsOutbox.send('addExpense', { month: '2026-11' }, { ...coffee, amount: 0 }), false);
+  assert.equal(pendingEditsOutbox.pendingEditCount, 0);
   assert.deepEqual(requestsSeen, []);
 });
 
 test('without a connection, edits wait, survive a reload, and are sent when it is back', async () => {
   serverIsReachable = false;
-  const first = await newOutbox();
-  first.outbox.send('addExpense', { month: '2026-11' }, coffee);
+  const first = await newPendingEditsOutbox();
+  first.pendingEditsOutbox.send('addExpense', { month: '2026-11' }, coffee);
   await until(() => first.states.at(-1) === 'offline');
   assert.equal(JSON.parse(storedItems.get('expenses.outbox')).length, 1);
 
   serverIsReachable = true;
-  const reloaded = await newOutbox(); // the tab was closed and opened again
-  reloaded.outbox.start();
+  const reloaded = await newPendingEditsOutbox(); // the tab was closed and opened again
+  reloaded.pendingEditsOutbox.start();
   await until(() => reloaded.states.at(-1) === 'idle');
   assert.deepEqual(requestsSeen, ['POST /api/months/2026-11/expenses']);
   assert.deepEqual(reloaded.answers, [{ ...coffee }]);
 });
 
 test('an edit the server refuses is dropped, and the next one is still sent', async () => {
-  const { outbox, states } = await newOutbox();
-  outbox.send('removeCategory', { month: '2026-11', id: 'lunch' }, undefined);
-  outbox.send('changeExpectedIncome', { month: '2026-11' }, { amount: 3000 });
+  const { pendingEditsOutbox, states } = await newPendingEditsOutbox();
+  pendingEditsOutbox.send('removeCategory', { month: '2026-11', id: 'lunch' }, undefined);
+  pendingEditsOutbox.send('changeExpectedIncome', { month: '2026-11' }, { amount: 3000 });
   await until(() => states.at(-1) === 'idle');
   assert.ok(states.includes('refused'));
   assert.deepEqual(requestsSeen, [
     'DELETE /api/months/2026-11/categories/lunch',
     'PUT /api/months/2026-11/expected-income',
   ]);
-  assert.equal(outbox.waitingCount, 0);
+  assert.equal(pendingEditsOutbox.pendingEditCount, 0);
 });

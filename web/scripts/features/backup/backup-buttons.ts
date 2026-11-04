@@ -1,5 +1,5 @@
 import { isMonthData } from '../../../../shared/month/month-validation.ts';
-import { OfflineError } from '../../api/http.ts';
+import { OfflineError } from '../../api/endpoint-http-client.ts';
 import * as monthsApi from '../../api/months-api.ts';
 import { t } from '../../i18n/translator.ts';
 import { getElement } from '../../utils/html.ts';

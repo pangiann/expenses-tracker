@@ -1,8 +1,8 @@
 import type { BodyInputOf, EndpointName, MonthResponse, ParamsOf } from '../../../shared/api/endpoints.ts';
-import { ApiError, OfflineError, callEndpoint, isValidBody } from './http.ts';
-import type { WaitingEdit } from './waiting-edits.ts';
+import { ApiError, OfflineError, callEndpoint, isValidBody } from './endpoint-http-client.ts';
+import type { PendingEdit } from './month-with-pending-edits.ts';
 
-export type OutboxState =
+export type PendingEditsOutboxState =
   /** nothing waiting */
   | { kind: 'idle' }
   /** an edit is on its way */
@@ -22,16 +22,16 @@ const RETRY_DELAY_MS = 5_000;
  *
  * Without a connection, edits wait here and in localStorage, so they survive a closed tab,
  * and are sent when the connection is back. Sending an edit twice is harmless: new items
- * carry the id the page gave them. Until the server answers, the page shows waiting edits
- * on top of the server's month (see waiting-edits.ts).
+ * carry the id the page gave them. Until the server answers, the page shows pending edits
+ * on top of the server's month (see month-with-pending-edits.ts).
  */
-export class Outbox {
+export class PendingEditsOutbox {
   onAnswer: (answer: MonthResponse) => void = () => {};
-  onStateChange: (state: OutboxState) => void = () => {};
+  onStateChange: (state: PendingEditsOutboxState) => void = () => {};
   /** An edit was added or left the outbox: the month on screen should be drawn again. */
   onEditsChange: () => void = () => {};
 
-  #edits: WaitingEdit[] = loadEdits();
+  #edits: PendingEdit[] = loadEdits();
   #isSending = false;
   #retryTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -61,12 +61,12 @@ export class Outbox {
     void this.#sendWaitingEdits();
   }
 
-  get waitingCount(): number {
+  get pendingEditCount(): number {
     return this.#edits.length;
   }
 
   /** The edits the server hasn't answered yet, oldest first. */
-  get waitingEdits(): readonly WaitingEdit[] {
+  get pendingEdits(): readonly PendingEdit[] {
     return this.#edits;
   }
 
@@ -74,7 +74,7 @@ export class Outbox {
     if (this.#isSending) return;
     this.#isSending = true;
     try {
-      let edit: WaitingEdit | undefined;
+      let edit: PendingEdit | undefined;
       while ((edit = this.#edits[0])) {
         this.onStateChange({ kind: 'sending', waiting: this.#edits.length });
         try {
@@ -107,7 +107,7 @@ export class Outbox {
   }
 }
 
-function loadEdits(): WaitingEdit[] {
+function loadEdits(): PendingEdit[] {
   try {
     const stored: unknown = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]');
     return Array.isArray(stored) ? stored.filter(isWaitingEdit) : [];
@@ -116,7 +116,7 @@ function loadEdits(): WaitingEdit[] {
   }
 }
 
-function saveEdits(edits: WaitingEdit[]): void {
+function saveEdits(edits: PendingEdit[]): void {
   try {
     if (edits.length === 0) localStorage.removeItem(STORAGE_KEY);
     else localStorage.setItem(STORAGE_KEY, JSON.stringify(edits));
@@ -125,7 +125,7 @@ function saveEdits(edits: WaitingEdit[]): void {
   }
 }
 
-function isWaitingEdit(value: unknown): value is WaitingEdit {
+function isWaitingEdit(value: unknown): value is PendingEdit {
   return (
     typeof value === 'object' &&
     value !== null &&
@@ -137,4 +137,4 @@ function isWaitingEdit(value: unknown): value is WaitingEdit {
 }
 
 /** The page's one outbox. */
-export const outbox = new Outbox();
+export const pendingEditsOutbox = new PendingEditsOutbox();

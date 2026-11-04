@@ -3,8 +3,9 @@
  * parameters and request body. This table is the contract between the page and the Worker:
  *
  *   - the page's API functions (web/scripts/api/) build requests from it, and
- *   - the Worker's router (worker/household/router.ts) matches requests against it, checks
- *     them, and calls the handler with the same name (worker/household/handlers/).
+ *   - the Worker's router (worker/household-durable-object/api-request-router.ts) matches
+ *     requests against it, checks them, and calls the operation with the same name
+ *     (worker/household-durable-object/operations/).
  *
  * Path parameters are written ":name". Every endpoint that edits a month answers with the
  * whole month after the edit (MonthResponse), which the page then shows. Edits are safe to
@@ -58,7 +59,7 @@ export const endpoints = {
   getMonth: endpoint('GET', '/api/months/:month', InMonth),
   /** Every saved month, for a backup file. */
   exportMonths: endpoint('GET', '/api/export', {}),
-  /** Replaces the months in a backup file. Each month is checked by the handler. */
+  /** Replaces the months in a backup file. Each month is checked by the operation. */
   importMonths: endpoint('POST', '/api/import', {}, z.object({ months: z.array(z.unknown()) })),
 
   // ----- Expenses -----

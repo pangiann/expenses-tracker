@@ -71,7 +71,7 @@ export class RecurringCostsPanel {
     }
   }
 
-  /** After adding a row (drawn at once, see api/waiting-edits.ts), select its "New item" name to type over it. */
+  /** After adding a row (drawn at once, see api/month-with-pending-edits.ts), select its "New item" name to type over it. */
   #selectLastRowName(listName: RecurringCostListName): void {
     const nameInputs = this.#listElements[listName].querySelectorAll<HTMLInputElement>('.recurring-cost-name');
     nameInputs[nameInputs.length - 1]?.select();

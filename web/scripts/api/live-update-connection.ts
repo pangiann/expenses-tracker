@@ -9,7 +9,7 @@ const KEEPALIVE_INTERVAL_MS = 50_000;
 const RECONNECT_DELAY_MS = 2_000;
 const REFUSED_RETRY_DELAY_MS = 20_000; // when the server refuses us, retrying fast won't help
 
-/** Why the server refused the connection, from /api/status (see describeAccess in worker/index.ts). */
+/** Why the server refused the connection, from /api/status (see explainSignInStatus in worker/worker-entry-point.ts). */
 export interface Refusal {
   problem: string;
   email?: string;
@@ -18,10 +18,10 @@ export interface Refusal {
 
 /**
  * The WebSocket that brings other people's edits to this page. It carries no edits of its
- * own: edits are HTTP requests (see outbox.ts). The page says which month it shows, and
+ * own: edits are HTTP requests (see pending-edits-outbox.ts). The page says which month it shows, and
  * the household sends that month after every save by anyone.
  */
-export class LiveUpdates {
+export class LiveUpdateConnection {
   /** A newer version of the watched month. */
   onMonth: (answer: MonthResponse) => void = () => {};
   /** Connected again after a drop: updates may have been missed. */
@@ -108,4 +108,4 @@ export class LiveUpdates {
 }
 
 /** The page's one live connection. */
-export const liveUpdates = new LiveUpdates();
+export const liveUpdateConnection = new LiveUpdateConnection();

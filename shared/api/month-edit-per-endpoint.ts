@@ -13,8 +13,8 @@ export interface MonthEditRequest<Name extends MonthEditName> {
 /**
  * What each editing endpoint does to the month, in one place, used by both sides:
  *
- *   - the Worker's handler runs it on the stored month and saves the result;
- *   - the page runs it on its copy of the month for edits still in the outbox, so an edit
+ *   - the Worker's operation runs it on the stored month and saves the result (worker/household-durable-object/operations/);
+ *   - the page runs it on its copy of the month for edits still in the pendingEditsOutbox, so an edit
  *     shows at once, also without a connection.
  *
  * Because both run the same function, the page's guess and the server's answer agree. Each

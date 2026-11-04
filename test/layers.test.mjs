@@ -37,7 +37,7 @@ ruleTester.run('layers', layers.rules.layers, {
   invalid: [
     {
       filename: file('shared/api/endpoints.ts'),
-      code: "import { outbox } from '../../web/scripts/api/outbox.ts';",
+      code: "import { pendingEditsOutbox } from '../../web/scripts/api/pending-edits-outbox.ts';",
       errors: [{ messageId: 'layer' }],
     },
     {
@@ -51,13 +51,13 @@ ruleTester.run('layers', layers.rules.layers, {
       errors: [{ messageId: 'layer' }],
     },
     {
-      filename: file('web/scripts/api/outbox.ts'),
+      filename: file('web/scripts/api/pending-edits-outbox.ts'),
       code: "import { QuickAdd } from '../features/quick-add/quick-add.ts';",
       errors: [{ messageId: 'layer' }],
     },
     {
       filename: file('web/scripts/components/entry-rows.ts'),
-      code: "export { outbox } from '../api/outbox.ts';",
+      code: "export { pendingEditsOutbox } from '../api/pending-edits-outbox.ts';",
       errors: [{ messageId: 'layer' }],
     },
     {
