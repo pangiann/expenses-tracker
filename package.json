@@ -7,7 +7,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "build": "esbuild web/scripts/main.ts --bundle --format=esm --target=es2022 --jsx=automatic --define:process.env.NODE_ENV=\\\"production\\\" --minify --sourcemap --outfile=web/dist/main.js",
+    "build": "esbuild web/scripts/main.tsx --bundle --format=esm --target=es2022 --jsx=automatic --define:process.env.NODE_ENV=\\\"production\\\" --minify --sourcemap --outfile=web/dist/main.js",
     "watch": "npm run build -- --watch",
     "dev": "wrangler dev",
     "seed": "tsx scripts/seed-dev-data.mjs",

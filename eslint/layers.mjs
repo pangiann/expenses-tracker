@@ -20,7 +20,7 @@ const LAYERS = [
   { name: 'shared', files: /^shared\//, mayImport: [], packages: ['zod/mini'] },
 
   // ----- The page (web/scripts) -----
-  { name: 'main', files: /^web\/scripts\/main\.ts$/, mayImport: ['pages', 'i18n', 'utils'] },
+  { name: 'main', files: /^web\/scripts\/main\.tsx?$/, mayImport: ['pages', 'i18n', 'utils'] },
   {
     name: 'pages',
     files: /^web\/scripts\/pages\//,

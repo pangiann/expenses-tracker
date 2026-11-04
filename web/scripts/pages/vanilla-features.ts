@@ -18,13 +18,11 @@ interface MonthFeature {
 }
 
 /**
- * The month page: the only page of the app. It draws the state of month-page-store.ts with
- * every feature (features/) and draws it again whenever the state changes.
- *
- * Each feature handles its own clicks and calls its API functions (api/*-api.ts); for example
- * the category cards call expensesApi.addExpense(). The page never handles an edit itself.
+ * The features that are not React components yet. They find their elements by id in the
+ * markup month-page.tsx renders, and draw the state of month-page-store.ts into them.
+ * Each one moves into month-page.tsx as a component; this file goes away with the last one.
  */
-export class MonthPage {
+export class VanillaFeatures {
   readonly #statusBar = new StatusBar();
   readonly #monthNavigation = new MonthNavigation((monthKey) => void monthPageStore.openMonth(monthKey));
   readonly #features: MonthFeature[] = [
@@ -43,10 +41,10 @@ export class MonthPage {
     new LanguagePicker();
   }
 
-  /** Draws on every change of the store, then connects to the server. */
-  async start(): Promise<void> {
+  /** Draws on every change of the store. */
+  start(): void {
     monthPageStore.subscribe(() => this.#render(monthPageStore.getState()));
-    await monthPageStore.start();
+    this.#render(monthPageStore.getState());
   }
 
   #render(state: MonthPageState): void {

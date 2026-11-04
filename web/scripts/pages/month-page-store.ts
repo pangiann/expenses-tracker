@@ -98,7 +98,8 @@ export class MonthPageStore {
       }
       if (error instanceof OfflineError) this.#update({ errorText: t('error.cloudUnreachable') });
       // 403: the live connection explains why the server refused us.
-      else if (!(error instanceof ApiError && error.status === 403)) this.#update({ errorText: t('error.startFailed') });
+      else if (!(error instanceof ApiError && error.status === 403))
+        this.#update({ errorText: t('error.startFailed') });
     }
   }
 
