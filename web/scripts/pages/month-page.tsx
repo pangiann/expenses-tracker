@@ -1,6 +1,7 @@
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 
 import { BackupButtons } from '../features/backup/backup-buttons.tsx';
+import { CategoryCardsGrid } from '../features/categories/category-cards-grid.tsx';
 import { IncomeCard } from '../features/income/income-card.tsx';
 import { LanguagePicker } from '../features/language/language-picker.tsx';
 import { AddMonthDialog } from '../features/month-navigation/add-month-dialog.tsx';
@@ -14,11 +15,8 @@ import { SpendingDonut } from '../features/summary/spending-donut.tsx';
 import { SummaryCards } from '../features/summary/summary-cards.tsx';
 import { t } from '../i18n/translator.ts';
 import { monthPageStore } from './month-page-store.ts';
-import { VanillaFeatures } from './vanilla-features.ts';
 
 const openMonth = (monthKey: string) => void monthPageStore.openMonth(monthKey);
-
-let vanillaFeatures: VanillaFeatures | null = null;
 
 /**
  * The month page: the only page of the app. Each part of the page is a feature
@@ -32,13 +30,6 @@ export function MonthPage() {
   );
   /** The month the "Add a month" dialog suggests; null while it is closed. */
   const [addMonthSuggestion, setAddMonthSuggestion] = useState<string | null>(null);
-
-  // The features that aren't React components yet find their elements by id once React has drawn them.
-  useEffect(() => {
-    if (vanillaFeatures) return;
-    vanillaFeatures = new VanillaFeatures();
-    vanillaFeatures.start();
-  }, []);
 
   return (
     <>
@@ -74,7 +65,7 @@ export function MonthPage() {
         )}
 
         <section className="month-details">
-          <div id="categoryCards" className="category-cards"></div>
+          {month && <CategoryCardsGrid month={month} />}
           <div className="side-column">
             {month && <IncomeCard month={month} />}
 

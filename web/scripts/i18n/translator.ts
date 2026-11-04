@@ -52,31 +52,6 @@ class Translator {
     return text.replace(/\{(\w+)\}/g, (placeholder, name: string) => String(values[name] ?? placeholder));
   }
 
-  /**
-   * Translates the static page. Elements name their string ids in attributes:
-   *   data-i18n="id"              text content
-   *   data-i18n-placeholder="id"  placeholder attribute
-   *   data-i18n-title="id"        title (tooltip) attribute
-   *   data-i18n-aria-label="id"   aria-label attribute
-   */
-  translatePage(root: ParentNode = document): void {
-    for (const element of root.querySelectorAll<HTMLElement>('[data-i18n]')) {
-      element.textContent = this.translate(element.dataset.i18n ?? '');
-    }
-    const attributeBindings = [
-      ['i18nPlaceholder', 'placeholder'],
-      ['i18nTitle', 'title'],
-      ['i18nAriaLabel', 'aria-label'],
-    ] as const;
-    for (const [datasetKey, attributeName] of attributeBindings) {
-      const selector = `[data-${datasetKey.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}]`;
-      for (const element of root.querySelectorAll<HTMLElement>(selector)) {
-        element.setAttribute(attributeName, this.translate(element.dataset[datasetKey] ?? ''));
-      }
-    }
-    document.title = this.translate('app.title');
-  }
-
   /** Remembers the language for next time. The page reloads to show it everywhere. */
   saveLanguage(language: string): void {
     if (!isLanguage(language)) return;
