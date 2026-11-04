@@ -1,5 +1,6 @@
 import js from '@eslint/js';
 import prettier from 'eslint-config-prettier';
+import reactHooks from 'eslint-plugin-react-hooks';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
@@ -14,7 +15,7 @@ export default tseslint.config(
 
   // TypeScript files also get the rules that need type information, using the nearest tsconfig.json.
   {
-    files: ['**/*.ts'],
+    files: ['**/*.ts', '**/*.tsx'],
     extends: [tseslint.configs.recommendedTypeChecked],
     languageOptions: {
       parserOptions: {
@@ -23,6 +24,9 @@ export default tseslint.config(
       },
     },
   },
+
+  // React components: hooks must follow React's rules (called in the same order on every render, and so on).
+  { files: ['web/scripts/**/*.tsx', 'test/**/*.tsx'], ...reactHooks.configs.flat['recommended-latest'] },
 
   // Which built-in globals each part of the project may use.
   { files: ['web/scripts/**'], languageOptions: { globals: globals.browser } },

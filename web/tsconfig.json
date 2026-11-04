@@ -1,8 +1,10 @@
 {
-  // The page: browser built-ins (DOM), no Node.js or Cloudflare types.
+  // The page: browser built-ins (DOM) and React, no Node.js or Cloudflare types.
   "extends": "../tsconfig.base.json",
   "compilerOptions": {
     "lib": ["es2023", "dom", "dom.iterable"],
+    // React components are .tsx files; JSX compiles to React's automatic runtime.
+    "jsx": "react-jsx",
     "types": []
   },
   "include": ["scripts/**/*"]

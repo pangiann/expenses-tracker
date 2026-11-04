@@ -10,12 +10,12 @@ const readTranslations = (language) => JSON.parse(readFileSync(join(WEB_DIR, 'i1
 const english = readTranslations('en');
 const greek = readTranslations('el');
 
-/** The page's source files: .ts, and .js files not yet converted. */
+/** The page's source files: .ts and .tsx. */
 function sourceFilesUnder(directory) {
   return readdirSync(directory).flatMap((name) => {
     const path = join(directory, name);
     if (statSync(path).isDirectory()) return sourceFilesUnder(path);
-    return /\.(ts|js)$/.test(path) ? [path] : [];
+    return /\.(ts|tsx)$/.test(path) ? [path] : [];
   });
 }
 
