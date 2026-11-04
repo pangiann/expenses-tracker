@@ -6,6 +6,7 @@ import { LanguagePicker } from '../features/language/language-picker.tsx';
 import { AddMonthDialog } from '../features/month-navigation/add-month-dialog.tsx';
 import { MonthNavigation } from '../features/month-navigation/month-navigation.tsx';
 import { QuickAdd } from '../features/quick-add/quick-add.tsx';
+import { RecurringCostsPanel } from '../features/recurring-costs/recurring-costs-panel.tsx';
 import { ErrorBanner } from '../features/status/error-banner.tsx';
 import { SaveStatusPill } from '../features/status/save-status.tsx';
 import { BudgetBars } from '../features/summary/budget-bars.tsx';
@@ -77,15 +78,7 @@ export function MonthPage() {
           <div className="side-column">
             {month && <IncomeCard month={month} />}
 
-            <aside id="recurringCostsPanel" className="card recurring-costs-panel">
-              <h2>{t('recurring.fixedCosts')}</h2>
-              <ul id="fixedCostsList" className="recurring-cost-list"></ul>
-              <h3>{t('recurring.subscriptions')}</h3>
-              <ul id="subscriptionsList" className="recurring-cost-list"></ul>
-              <div className="recurring-costs-total">
-                <span>{t('recurring.total')}</span> <span id="recurringCostsTotal"></span>
-              </div>
-            </aside>
+            {month && <RecurringCostsPanel month={month} />}
           </div>
         </section>
       </main>

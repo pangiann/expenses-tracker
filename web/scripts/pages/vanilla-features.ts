@@ -1,6 +1,5 @@
 import type { MonthRecord } from '../../../shared/month/month-record.ts';
 import { CategoryCards } from '../features/categories/category-cards.ts';
-import { RecurringCostsPanel } from '../features/recurring-costs/recurring-costs-panel.ts';
 import { monthPageStore, type MonthPageState } from './month-page-store.ts';
 
 /** A part of the page that shows the month. */
@@ -14,7 +13,7 @@ interface MonthFeature {
  * Each one moves into month-page.tsx as a component; this file goes away with the last one.
  */
 export class VanillaFeatures {
-  readonly #features: MonthFeature[] = [new CategoryCards(), new RecurringCostsPanel()];
+  readonly #features: MonthFeature[] = [new CategoryCards()];
   #drawnState: MonthPageState | null = null;
 
   /** Draws on every change of the store. */
