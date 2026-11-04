@@ -11,15 +11,15 @@
     "watch": "npm run build -- --watch",
     "dev": "wrangler dev",
     "seed": "tsx scripts/seed-dev-data.mjs",
-    "typecheck": "tsc -p shared && tsc -p web && tsc -p worker",
+    "typecheck": "npm run types && tsc -p shared && tsc -p web && tsc -p worker",
     "lint": "eslint .",
-    "types": "wrangler types worker/worker-configuration.d.ts --env-file /dev/null",
+    "types": "wrangler types worker/worker-configuration.d.ts --env-file /dev/null > /dev/null",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:watch": "vitest",
     "deploy": "wrangler deploy",
-    "check": "prettier --check . && eslint . && npm run typecheck && vitest run"
+    "check": "npm run types && prettier --check . && eslint . && tsc -p shared && tsc -p web && tsc -p worker && vitest run"
   },
   "dependencies": {
     "jose": "^6.0.0",

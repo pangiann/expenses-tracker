@@ -20,7 +20,7 @@ Run `npm run check` before you push. It runs every check below; each one also ha
 - `npm run typecheck` checks the TypeScript code. The page and the Worker each have a `tsconfig.json`, because one runs in a browser and the other on Cloudflare. Existing `.js` files aren't checked until they become `.ts`.
 - `npm test` runs the unit tests with vitest. `npm run test:watch` reruns them on every save.
 
-After changing `wrangler.jsonc`, run `npm run types` to regenerate the Worker's types in `worker/worker-configuration.d.ts`.
+The Worker's Cloudflare types are generated into `worker/worker-configuration.d.ts`, which is git-ignored. `npm run check` and `npm run typecheck` regenerate it first; after a fresh clone or a change to `wrangler.jsonc`, run `npm run types` once so your editor sees them too.
 
 ## Build
 
