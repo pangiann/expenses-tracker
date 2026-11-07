@@ -12,24 +12,24 @@ const MAX_AMOUNT = 10_000_000;
 const MAX_TEXT_LENGTH = 200;
 const MAX_ID_LENGTH = 64;
 
-export const Id = z.string().check(z.minLength(1), z.maxLength(MAX_ID_LENGTH));
+export const ItemIdField = z.string().check(z.minLength(1), z.maxLength(MAX_ID_LENGTH));
 /** 0 or more, for budgets and fixed costs */
-export const Amount = z.number().check(z.gte(0), z.lte(MAX_AMOUNT));
+export const NonNegativeAmountField = z.number().check(z.gte(0), z.lte(MAX_AMOUNT));
 /** more than 0, for expenses and income */
-export const PositiveAmount = z.number().check(z.gt(0), z.lte(MAX_AMOUNT));
+export const PositiveAmountField = z.number().check(z.gt(0), z.lte(MAX_AMOUNT));
 /** Required text: at least one character that isn't a space. */
-export const Text = z.string().check(
+export const RequiredTextField = z.string().check(
   z.maxLength(MAX_TEXT_LENGTH),
   z.refine((text) => text.trim() !== '', 'Text is empty'),
 );
 /** Optional text; a missing description becomes ''. */
-export const OptionalText = z.pipe(
+export const OptionalTextField = z.pipe(
   z.nullish(z.string().check(z.maxLength(MAX_TEXT_LENGTH))),
   z.transform((text) => text ?? ''),
 );
-export const IsoDate = z.string().check(z.regex(/^\d{4}-\d{2}-\d{2}$/));
-export const Color = z.string().check(z.regex(/^#[0-9a-f]{6}$/i));
-export const RecurringListName = z.enum([RecurringCostList.FIXED_COSTS, RecurringCostList.SUBSCRIPTIONS]);
+export const IsoDateField = z.string().check(z.regex(/^\d{4}-\d{2}-\d{2}$/));
+export const HexColorField = z.string().check(z.regex(/^#[0-9a-f]{6}$/i));
+export const RecurringCostListNameField = z.enum([RecurringCostList.FIXED_COSTS, RecurringCostList.SUBSCRIPTIONS]);
 
 /** "YYYY-MM" */
-export const MonthKey = z.string().check(z.regex(MONTH_KEY_PATTERN));
+export const MonthKeyField = z.string().check(z.regex(MONTH_KEY_PATTERN));

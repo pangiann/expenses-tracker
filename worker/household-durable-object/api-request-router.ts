@@ -1,7 +1,12 @@
 // zod/mini has the same checks as zod in a form bundlers can trim (see shared/api/fields.ts).
 import * as z from 'zod/mini';
 
-import { endpoints, matchPath, type EndpointName, type ErrorResponse } from '../../shared/api/endpoints.ts';
+import {
+  endpoints,
+  readPathParamsIfPathMatches,
+  type EndpointName,
+  type ErrorResponse,
+} from '../../shared/api/endpoints.ts';
 import { MonthRuleError } from '../../shared/month/month-record.ts';
 import type { OperationContext } from './operation-context.ts';
 import { InvalidImportError } from './operations/backup-operations.ts';
@@ -23,7 +28,7 @@ export async function routeApiRequestToOperation(request: Request, context: Oper
   for (const name of Object.keys(endpoints) as EndpointName[]) {
     const endpoint = endpoints[name];
     if (endpoint.method !== request.method) continue;
-    const rawParams = matchPath(endpoint.path, pathname);
+    const rawParams = readPathParamsIfPathMatches(endpoint.path, pathname);
     if (rawParams) return runOperation(name, rawParams, request, context);
   }
   return errorResponse(404, { error: 'Not found' });

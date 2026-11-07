@@ -12,7 +12,7 @@
 import * as z from 'zod/mini';
 
 import type { MonthResponse } from './api/endpoints.ts';
-import { MonthKey } from './api/fields.ts';
+import { MonthKeyField } from './api/fields.ts';
 import type { MonthData } from './month/month-record.ts';
 import { isMonthData } from './month/month-validation.ts';
 
@@ -21,14 +21,14 @@ const Month = z.custom<MonthData>(isMonthData, 'Not a month');
 
 export const ClientMessageSchema = z.discriminatedUnion('type', [
   /** This device shows this month now. Its current version comes from GET /api/months/:month. */
-  z.object({ type: z.literal('watchMonth'), month: MonthKey }),
+  z.object({ type: z.literal('watchMonth'), month: MonthKeyField }),
 ]);
 
 export type ClientMessage = z.output<typeof ClientMessageSchema>;
 
 export const ServerMessageSchema = z.discriminatedUnion('type', [
   /** The same as the answer to an edit: see MonthResponse. */
-  z.object({ type: z.literal('month'), month: Month, monthKeys: z.array(MonthKey), revision: z.number() }),
+  z.object({ type: z.literal('month'), month: Month, monthKeys: z.array(MonthKeyField), revision: z.number() }),
 ]);
 
 export type ServerMessage = { type: 'month' } & MonthResponse;

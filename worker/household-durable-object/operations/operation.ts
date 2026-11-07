@@ -1,10 +1,10 @@
-import type { BodyOf, EndpointName, ParamsOf, ResponseOf } from '../../../shared/api/endpoints.ts';
+import type { CheckedRequestBodyOf, EndpointName, PathParamsOf, ResponseOf } from '../../../shared/api/endpoints.ts';
 import type { OperationContext } from '../operation-context.ts';
 
 /** The checked path parameters and body of one endpoint's request. */
 export interface OperationRequest<Name extends EndpointName> {
-  params: ParamsOf<Name>;
-  body: BodyOf<Name>;
+  params: PathParamsOf<Name>;
+  body: CheckedRequestBodyOf<Name>;
 }
 
 /**

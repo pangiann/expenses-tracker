@@ -1,4 +1,4 @@
-import type { BodyInputOf, EndpointName, MonthResponse, ParamsOf } from '../../../shared/api/endpoints.ts';
+import type { RequestBodyInputOf, EndpointName, MonthResponse, PathParamsOf } from '../../../shared/api/endpoints.ts';
 import type { MonthData, MonthRecord } from '../../../shared/month/month-record.ts';
 import { ApiError, OfflineError, callEndpoint } from '../api/endpoint-http-client.ts';
 import { t } from '../i18n/translator.ts';
@@ -76,7 +76,11 @@ export class MonthPageState {
    *   2. show it at once, on top of the saved month (an optimistic update).
    * @returns false, and changes nothing, when the edit doesn't match its endpoint (for example an amount of 0)
    */
-  recordEdit<Name extends EndpointName>(name: Name, params: ParamsOf<Name>, body: BodyInputOf<Name>): boolean {
+  recordEdit<Name extends EndpointName>(
+    name: Name,
+    params: PathParamsOf<Name>,
+    body: RequestBodyInputOf<Name>,
+  ): boolean {
     if (!unsavedEditsOutbox.add(name, params, body)) return false;
     if (this.#snapshot.refusedEditText) this.#update({ refusedEditText: null });
     this.#showOptimisticMonth();

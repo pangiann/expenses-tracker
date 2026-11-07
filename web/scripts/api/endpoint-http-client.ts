@@ -1,10 +1,10 @@
 import {
   endpoints,
-  pathFor,
-  type BodyInputOf,
+  buildRequestPath,
+  type RequestBodyInputOf,
   type EndpointName,
   type ErrorResponse,
-  type ParamsOf,
+  type PathParamsOf,
   type ResponseOf,
 } from '../../../shared/api/endpoints.ts';
 import type { MonthRule } from '../../../shared/month/month-record.ts';
@@ -31,7 +31,7 @@ export class InvalidRequestError extends Error {}
 const TEMPORARY_STATUSES = new Set([502, 503, 504]);
 
 /** True when the body matches its endpoint, checked without sending it. */
-export function isValidBody<Name extends EndpointName>(name: Name, body: BodyInputOf<Name>): boolean {
+export function isValidBody<Name extends EndpointName>(name: Name, body: RequestBodyInputOf<Name>): boolean {
   return endpoints[name].body.safeParse(body).success;
 }
 
@@ -43,14 +43,14 @@ export function isValidBody<Name extends EndpointName>(name: Name, body: BodyInp
  */
 export async function callEndpoint<Name extends EndpointName>(
   name: Name,
-  params: ParamsOf<Name>,
-  body: BodyInputOf<Name>,
+  params: PathParamsOf<Name>,
+  body: RequestBodyInputOf<Name>,
 ): Promise<ResponseOf<Name>> {
   if (!isValidBody(name, body)) throw new InvalidRequestError(`Invalid ${name} request`);
   const endpoint = endpoints[name];
   let response: Response;
   try {
-    response = await fetch(pathFor(endpoint.path, params), {
+    response = await fetch(buildRequestPath(endpoint.path, params), {
       method: endpoint.method,
       headers: body === undefined ? {} : { 'Content-Type': 'application/json' },
       body: body === undefined ? undefined : JSON.stringify(body),

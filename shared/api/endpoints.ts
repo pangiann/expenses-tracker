@@ -17,15 +17,15 @@ import * as z from 'zod/mini';
 
 import type { MonthData, MonthRule, StoredMonthData } from '../month/month-record.ts';
 import {
-  Amount,
-  Color,
-  Id,
-  IsoDate,
-  MonthKey,
-  OptionalText,
-  PositiveAmount,
-  RecurringListName,
-  Text,
+  NonNegativeAmountField,
+  HexColorField,
+  ItemIdField,
+  IsoDateField,
+  MonthKeyField,
+  OptionalTextField,
+  PositiveAmountField,
+  RecurringCostListNameField,
+  RequiredTextField,
 } from './fields.ts';
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE';
@@ -38,25 +38,25 @@ export interface Endpoint<Params extends z.ZodMiniType = z.ZodMiniType, Body ext
   body: Body;
 }
 
-const NoBody = z.undefined();
+const EmptyRequestBody = z.undefined();
 
-function endpoint<ParamShape extends z.core.$ZodLooseShape, Body extends z.ZodMiniType = typeof NoBody>(
+function endpoint<ParamShape extends z.core.$ZodLooseShape, Body extends z.ZodMiniType = typeof EmptyRequestBody>(
   method: HttpMethod,
   path: string,
   params: ParamShape,
   body?: Body,
 ): Endpoint<z.ZodMiniObject<ParamShape>, Body> {
-  return { method, path, params: z.object(params), body: (body ?? NoBody) as Body };
+  return { method, path, params: z.object(params), body: (body ?? EmptyRequestBody) as Body };
 }
 
-const InMonth = { month: MonthKey };
-const ItemInMonth = { month: MonthKey, id: Id };
-const RecurringCostInMonth = { month: MonthKey, list: RecurringListName, id: Id };
+const MonthPathParams = { month: MonthKeyField };
+const MonthItemPathParams = { month: MonthKeyField, id: ItemIdField };
+const RecurringCostPathParams = { month: MonthKeyField, list: RecurringCostListNameField, id: ItemIdField };
 
 export const endpoints = {
   // ----- Months -----
   /** The month, created from the closest saved month if it doesn't exist yet. */
-  getMonth: endpoint('GET', '/api/months/:month', InMonth),
+  getMonth: endpoint('GET', '/api/months/:month', MonthPathParams),
   /** Every saved month, for a backup file. */
   exportMonths: endpoint('GET', '/api/export', {}),
   /** Replaces the months in a backup file. Each month is checked by the operation. */
@@ -66,81 +66,102 @@ export const endpoints = {
   addExpense: endpoint(
     'POST',
     '/api/months/:month/expenses',
-    InMonth,
-    z.object({ id: Id, categoryId: Id, amount: PositiveAmount, description: OptionalText, date: IsoDate }),
+    MonthPathParams,
+    z.object({
+      id: ItemIdField,
+      categoryId: ItemIdField,
+      amount: PositiveAmountField,
+      description: OptionalTextField,
+      date: IsoDateField,
+    }),
   ),
   changeExpenseAmount: endpoint(
     'PUT',
     '/api/months/:month/expenses/:id/amount',
-    ItemInMonth,
-    z.object({ amount: PositiveAmount }),
+    MonthItemPathParams,
+    z.object({ amount: PositiveAmountField }),
   ),
-  removeExpense: endpoint('DELETE', '/api/months/:month/expenses/:id', ItemInMonth),
+  removeExpense: endpoint('DELETE', '/api/months/:month/expenses/:id', MonthItemPathParams),
 
   // ----- Income -----
   addIncome: endpoint(
     'POST',
     '/api/months/:month/income',
-    InMonth,
-    z.object({ id: Id, amount: PositiveAmount, description: OptionalText, date: IsoDate }),
+    MonthPathParams,
+    z.object({ id: ItemIdField, amount: PositiveAmountField, description: OptionalTextField, date: IsoDateField }),
   ),
   changeIncomeAmount: endpoint(
     'PUT',
     '/api/months/:month/income/:id/amount',
-    ItemInMonth,
-    z.object({ amount: PositiveAmount }),
+    MonthItemPathParams,
+    z.object({ amount: PositiveAmountField }),
   ),
-  removeIncome: endpoint('DELETE', '/api/months/:month/income/:id', ItemInMonth),
-  changeExpectedIncome: endpoint('PUT', '/api/months/:month/expected-income', InMonth, z.object({ amount: Amount })),
+  removeIncome: endpoint('DELETE', '/api/months/:month/income/:id', MonthItemPathParams),
+  changeExpectedIncome: endpoint(
+    'PUT',
+    '/api/months/:month/expected-income',
+    MonthPathParams,
+    z.object({ amount: NonNegativeAmountField }),
+  ),
 
   // ----- Categories and budgets -----
   addCategory: endpoint(
     'POST',
     '/api/months/:month/categories',
-    InMonth,
-    z.object({ id: Id, name: Text, color: Color }),
+    MonthPathParams,
+    z.object({ id: ItemIdField, name: RequiredTextField, color: HexColorField }),
   ),
-  renameCategory: endpoint('PUT', '/api/months/:month/categories/:id/name', ItemInMonth, z.object({ name: Text })),
+  renameCategory: endpoint(
+    'PUT',
+    '/api/months/:month/categories/:id/name',
+    MonthItemPathParams,
+    z.object({ name: RequiredTextField }),
+  ),
   /** Moves the category just before another one, or to the end when beforeCategoryId is null. */
   moveCategory: endpoint(
     'PUT',
     '/api/months/:month/categories/:id/position',
-    ItemInMonth,
-    z.object({ beforeCategoryId: z.nullable(Id) }),
+    MonthItemPathParams,
+    z.object({ beforeCategoryId: z.nullable(ItemIdField) }),
   ),
-  changeBudget: endpoint('PUT', '/api/months/:month/categories/:id/budget', ItemInMonth, z.object({ amount: Amount })),
-  removeCategory: endpoint('DELETE', '/api/months/:month/categories/:id', ItemInMonth),
+  changeBudget: endpoint(
+    'PUT',
+    '/api/months/:month/categories/:id/budget',
+    MonthItemPathParams,
+    z.object({ amount: NonNegativeAmountField }),
+  ),
+  removeCategory: endpoint('DELETE', '/api/months/:month/categories/:id', MonthItemPathParams),
 
   // ----- Fixed costs and subscriptions ("recurring/:list" is "recurring/fixed" or "recurring/subscriptions") -----
   addRecurringCost: endpoint(
     'POST',
     '/api/months/:month/recurring/:list',
-    { month: MonthKey, list: RecurringListName },
-    z.object({ id: Id, name: Text }),
+    { month: MonthKeyField, list: RecurringCostListNameField },
+    z.object({ id: ItemIdField, name: RequiredTextField }),
   ),
   renameRecurringCost: endpoint(
     'PUT',
     '/api/months/:month/recurring/:list/:id/name',
-    RecurringCostInMonth,
-    z.object({ name: Text }),
+    RecurringCostPathParams,
+    z.object({ name: RequiredTextField }),
   ),
   changeRecurringCostAmount: endpoint(
     'PUT',
     '/api/months/:month/recurring/:list/:id/amount',
-    RecurringCostInMonth,
-    z.object({ amount: Amount }),
+    RecurringCostPathParams,
+    z.object({ amount: NonNegativeAmountField }),
   ),
-  removeRecurringCost: endpoint('DELETE', '/api/months/:month/recurring/:list/:id', RecurringCostInMonth),
+  removeRecurringCost: endpoint('DELETE', '/api/months/:month/recurring/:list/:id', RecurringCostPathParams),
 } as const;
 
 export type EndpointName = keyof typeof endpoints;
 
 /** The path parameters of an endpoint, after checking. */
-export type ParamsOf<Name extends EndpointName> = z.output<(typeof endpoints)[Name]['params']>;
+export type PathParamsOf<Name extends EndpointName> = z.output<(typeof endpoints)[Name]['params']>;
 /** The request body of an endpoint, after checking. */
-export type BodyOf<Name extends EndpointName> = z.output<(typeof endpoints)[Name]['body']>;
+export type CheckedRequestBodyOf<Name extends EndpointName> = z.output<(typeof endpoints)[Name]['body']>;
 /** The request body an endpoint accepts, before checking (for example a description may be missing). */
-export type BodyInputOf<Name extends EndpointName> = z.input<(typeof endpoints)[Name]['body']>;
+export type RequestBodyInputOf<Name extends EndpointName> = z.input<(typeof endpoints)[Name]['body']>;
 
 // ----- Responses -----
 
@@ -185,9 +206,9 @@ export interface ErrorResponse {
 
 /**
  * The path for an endpoint with its parameters filled in, for example
- * pathFor('/api/months/:month/expenses', { month: '2026-11' }) -> '/api/months/2026-11/expenses'.
+ * buildRequestPath('/api/months/:month/expenses', { month: '2026-11' }) -> '/api/months/2026-11/expenses'.
  */
-export function pathFor(path: string, params: Record<string, string>): string {
+export function buildRequestPath(path: string, params: Record<string, string>): string {
   return path.replace(/:([a-z]+)/gi, (_placeholder, name: string) => {
     const value = params[name];
     if (value === undefined) throw new Error(`Missing path parameter: ${name}`);
@@ -197,9 +218,9 @@ export function pathFor(path: string, params: Record<string, string>): string {
 
 /**
  * The parameters in a request path, if it matches the endpoint path:
- * matchPath('/api/months/:month', '/api/months/2026-11') -> { month: '2026-11' }; otherwise null.
+ * readPathParamsIfPathMatches('/api/months/:month', '/api/months/2026-11') -> { month: '2026-11' }; otherwise null.
  */
-export function matchPath(path: string, requestPath: string): Record<string, string> | null {
+export function readPathParamsIfPathMatches(path: string, requestPath: string): Record<string, string> | null {
   const pathSegments = path.split('/');
   const requestSegments = requestPath.split('/');
   if (pathSegments.length !== requestSegments.length) return null;
