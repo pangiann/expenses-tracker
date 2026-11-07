@@ -3,9 +3,10 @@ import type { MonthData, MonthRecord } from '../../../shared/month/month-record.
 import { ApiError, OfflineError, callEndpoint } from '../api/endpoint-http-client.ts';
 import { t } from '../i18n/translator.ts';
 import { currentMonthKey } from '../utils/month-keys.ts';
-import { SaveStatus, type SaveStatusValue } from '../utils/save-status.ts';
+import type { SaveStatusValue } from '../utils/save-status.ts';
 import { liveUpdateConnection, type Refusal } from './live-update-connection.ts';
 import { buildOptimisticMonth } from './optimistic-month.ts';
+import { saveStatusFor } from './save-status.ts';
 import { unsavedEditsOutbox, type UnsavedEditsOutboxState } from './unsaved-edits-outbox.ts';
 
 /** Everything the month page shows. A new object every time something changes. */
@@ -149,12 +150,7 @@ export class MonthPageState {
   }
 
   #updateSaveStatus(): void {
-    const { kind } = this.#outboxState;
-    let saveStatus: SaveStatusValue = SaveStatus.SAVED;
-    if (!liveUpdateConnection.isConnected || kind === 'offline') saveStatus = SaveStatus.OFFLINE;
-    else if (kind === 'sending') saveStatus = SaveStatus.SAVING;
-    else if (kind === 'refused') saveStatus = SaveStatus.FAILED;
-    this.#update({ saveStatus });
+    this.#update({ saveStatus: saveStatusFor(liveUpdateConnection.isConnected, this.#outboxState) });
   }
 
   #update(changes: Partial<MonthPageSnapshot>): void {
