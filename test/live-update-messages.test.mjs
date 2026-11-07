@@ -14,7 +14,7 @@ test('the page says which month it shows, and the household sends that month', (
   const watch = { type: 'watchMonth', month: '2026-11' };
   assert.deepEqual(parseClientMessage(encodeClientMessage(watch)), watch);
 
-  const month = MonthRecord.createEmpty('2026-11').toJSON();
+  const month = MonthRecord.createEmptyMonth('2026-11').toJSON();
   const update = { type: 'month', month, monthKeys: ['2026-11'], revision: 7 };
   assert.deepEqual(parseServerMessage(encodeServerMessage(update)), update);
 });

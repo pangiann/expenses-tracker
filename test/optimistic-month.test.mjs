@@ -4,7 +4,7 @@ import { test } from 'vitest';
 import { MonthRecord } from '../shared/month/month-record.ts';
 import { buildOptimisticMonth } from '../web/scripts/sync/optimistic-month.ts';
 
-const serverMonth = MonthRecord.createEmpty('2026-11').toJSON();
+const serverMonth = MonthRecord.createEmptyMonth('2026-11').toJSON();
 const coffee = { id: 'e1', categoryId: 'lunch', amount: 3.5, date: '2026-11-03' };
 
 test('unsaved edits show on top of the saved month, in order', () => {

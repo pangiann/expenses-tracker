@@ -138,7 +138,7 @@ export class MonthRecord {
   expenses: Expense[];
   recurringCosts: Record<RecurringCostListName, RecurringCost[]>;
   /** Fields this version doesn't know about (for example "importedFrom"), kept as they are. */
-  private readonly extraFields: Record<string, unknown>;
+  private readonly fieldsThisCodeDoesNotKnow: Record<string, unknown>;
 
   /** @param monthData  the parsed contents of a month file */
   constructor(monthData: StoredMonthData) {
@@ -146,7 +146,7 @@ export class MonthRecord {
     this.expectedIncome = monthData.income?.expected ?? 0;
     this.incomes = MonthRecord.#readIncomeEntries(monthData);
     this.categories = MonthRecord.#readCategories(monthData);
-    this.budgets = { ...MonthRecord.#zeroBudgets(this.categories), ...monthData.budgets };
+    this.budgets = { ...MonthRecord.#zeroBudgetForEachCategory(this.categories), ...monthData.budgets };
     this.expenses = (monthData.expenses ?? []).map((expense) => ({ ...expense }));
     this.recurringCosts = {
       [RecurringCostList.FIXED_COSTS]: MonthRecord.#readRecurringCosts(monthData.fixed, RecurringCostList.FIXED_COSTS),
@@ -155,11 +155,11 @@ export class MonthRecord {
         RecurringCostList.SUBSCRIPTIONS,
       ),
     };
-    this.extraFields = MonthRecord.#unknownFields(monthData);
+    this.fieldsThisCodeDoesNotKnow = MonthRecord.#readFieldsThisCodeDoesNotKnow(monthData);
   }
 
   /** A month for a brand-new user: no budgets, no expenses. */
-  static createEmpty(monthKey: string): MonthRecord {
+  static createEmptyMonth(monthKey: string): MonthRecord {
     return new MonthRecord({
       month: monthKey,
       fixed: DEFAULT_FIXED_COST_NAMES.map((name) => ({ name, amount: 0 })),
@@ -167,15 +167,15 @@ export class MonthRecord {
   }
 
   /** A new month that keeps the template's categories, budgets, expected income and recurring costs. */
-  static createFromTemplate(templateRecord: MonthRecord, monthKey: string): MonthRecord {
-    const templateData = templateRecord.toJSON();
+  static createFromTemplateMonth(templateRecord: MonthRecord, monthKey: string): MonthRecord {
+    const templateMonthData = templateRecord.toJSON();
     return new MonthRecord({
       month: monthKey,
-      income: { expected: templateData.income.expected, entries: [] },
-      categories: templateData.categories,
-      budgets: templateData.budgets,
-      fixed: templateData.fixed,
-      subscriptions: templateData.subscriptions,
+      income: { expected: templateMonthData.income.expected, entries: [] },
+      categories: templateMonthData.categories,
+      budgets: templateMonthData.budgets,
+      fixed: templateMonthData.fixed,
+      subscriptions: templateMonthData.subscriptions,
     });
   }
 
@@ -221,7 +221,7 @@ export class MonthRecord {
 
   /** Expenses in one category, newest first; undated (imported) expenses come last. */
   expensesInCategory(categoryId: string): Expense[] {
-    return MonthRecord.#newestFirst(this.expenses.filter((expense) => expense.category === categoryId));
+    return MonthRecord.#sortNewestFirst(this.expenses.filter((expense) => expense.category === categoryId));
   }
 
   spentInCategory(categoryId: string): number {
@@ -260,7 +260,7 @@ export class MonthRecord {
   }
 
   incomesNewestFirst(): IncomeEntry[] {
-    return MonthRecord.#newestFirst(this.incomes);
+    return MonthRecord.#sortNewestFirst(this.incomes);
   }
 
   get totalIncome(): number {
@@ -282,12 +282,12 @@ export class MonthRecord {
    * @param exceptCategoryId  the category being renamed, which may keep its own name
    */
   hasCategoryNamed(name: string, exceptCategoryId?: string): boolean {
-    const wantedName = MonthRecord.normalizeCategoryName(name);
+    const normalizedWantedName = MonthRecord.normalizeCategoryName(name);
     return this.categories.some(
       (category) =>
         category.id !== exceptCategoryId &&
         category.name !== undefined &&
-        MonthRecord.normalizeCategoryName(category.name) === wantedName,
+        MonthRecord.normalizeCategoryName(category.name) === normalizedWantedName,
     );
   }
 
@@ -317,9 +317,9 @@ export class MonthRecord {
   addCategory({ id, name, color }: { id: string; name: string; color: string }): void {
     if (this.findCategory(id)) return; // already added (the same edit sent twice)
     if (this.categories.length >= MAX_CATEGORIES_PER_MONTH) throw new MonthRuleError('too-many-categories');
-    const freeName = this.#requireFreeCategoryName(name);
+    const uniqueCategoryName = this.#requireFreeCategoryName(name);
     const isColorTaken = this.categories.some((category) => category.color.toLowerCase() === color.toLowerCase());
-    this.categories.push({ id, name: freeName, color: isColorTaken ? this.pickCategoryColor() : color });
+    this.categories.push({ id, name: uniqueCategoryName, color: isColorTaken ? this.pickCategoryColor() : color });
     this.budgets[id] ??= 0;
   }
 
@@ -336,8 +336,9 @@ export class MonthRecord {
    */
   removeCategory(categoryId: string): void {
     if (!this.findCategory(categoryId)) return;
-    const blocker = this.categoryRemovalBlocker(categoryId);
-    if (blocker) throw new MonthRuleError(blocker === 'has-expenses' ? 'category-has-expenses' : 'last-category');
+    const removalBlocker = this.categoryRemovalBlocker(categoryId);
+    if (removalBlocker)
+      throw new MonthRuleError(removalBlocker === 'has-expenses' ? 'category-has-expenses' : 'last-category');
     this.categories = this.categories.filter((category) => category.id !== categoryId);
     delete this.budgets[categoryId];
   }
@@ -434,7 +435,7 @@ export class MonthRecord {
   /** The month in file format; JSON.stringify calls this automatically. */
   toJSON(): MonthData {
     return {
-      ...this.extraFields,
+      ...this.fieldsThisCodeDoesNotKnow,
       month: this.monthKey,
       income: {
         expected: this.expectedIncome,
@@ -502,7 +503,7 @@ export class MonthRecord {
     return (costs ?? []).map((cost, position) => ({ ...cost, id: cost.id ?? `${listName}-${position + 1}` }));
   }
 
-  static #newestFirst<Item extends { date?: string | null }>(items: Item[]): Item[] {
+  static #sortNewestFirst<Item extends { date?: string | null }>(items: Item[]): Item[] {
     return [...items].sort((first, second) => (second.date ?? '').localeCompare(first.date ?? ''));
   }
 
@@ -512,11 +513,11 @@ export class MonthRecord {
     return categories.map((category) => ({ ...category }));
   }
 
-  static #zeroBudgets(categories: Category[]): Record<string, number> {
+  static #zeroBudgetForEachCategory(categories: Category[]): Record<string, number> {
     return Object.fromEntries(categories.map((category) => [category.id, 0]));
   }
 
-  static #unknownFields(monthData: StoredMonthData): Record<string, unknown> {
+  static #readFieldsThisCodeDoesNotKnow(monthData: StoredMonthData): Record<string, unknown> {
     return Object.fromEntries(Object.entries(monthData).filter(([fieldName]) => !KNOWN_FIELDS.has(fieldName)));
   }
 }

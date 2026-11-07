@@ -25,7 +25,7 @@ vi.mock('../web/scripts/api/categories-api.ts', () => ({
 }));
 
 const november = () => {
-  const month = MonthRecord.createEmpty('2026-11');
+  const month = MonthRecord.createEmptyMonth('2026-11');
   month.addExpense({ id: 'e1', categoryId: 'lunch', amount: 3.5, description: 'coffee', date: '2026-11-03' });
   return month;
 };

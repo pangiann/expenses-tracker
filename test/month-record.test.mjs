@@ -17,7 +17,7 @@ const novemberWithRent = () =>
     subscriptions: [],
   });
 
-const november = () => MonthRecord.createEmpty('2026-11');
+const november = () => MonthRecord.createEmptyMonth('2026-11');
 const coffee = { id: 'e1', categoryId: 'lunch', amount: 3.5, description: 'coffee', date: '2026-11-03' };
 const lesson = { id: 'income-1', amount: 40, description: 'lesson', date: '2026-11-04' };
 
@@ -123,7 +123,7 @@ test('a new month copies budgets, expected income and fixed costs, not expenses 
   const october = novemberWithRent();
   october.addExpense(coffee);
   october.addIncome(lesson);
-  const december = MonthRecord.createFromTemplate(october, '2026-12');
+  const december = MonthRecord.createFromTemplateMonth(october, '2026-12');
   assert.equal(december.expenses.length, 0);
   assert.equal(december.totalIncome, 0);
   assert.equal(december.expectedIncome, 4000);
@@ -162,7 +162,7 @@ test('a month keeps its own category list, and a new month copies it', () => {
     ],
     budgets: { kids: 100, other: 20 },
   });
-  const nextMonth = MonthRecord.createFromTemplate(october, '2026-11');
+  const nextMonth = MonthRecord.createFromTemplateMonth(october, '2026-11');
   assert.deepEqual(
     nextMonth.categories.map((category) => category.id),
     ['kids', 'other'],
@@ -208,7 +208,7 @@ test('adding a category puts it at the end with a budget of 0', () => {
   assert.equal(month.budgetFor('kids'), 0);
   month.addExpense({ id: 'e-k', categoryId: 'kids', amount: 15, description: 'toys', date: '2026-11-05' });
   assert.equal(month.spentInCategory('kids'), 15);
-  assert.equal(MonthRecord.createFromTemplate(month, '2026-12').findCategory('kids').name, 'Kids');
+  assert.equal(MonthRecord.createFromTemplateMonth(month, '2026-12').findCategory('kids').name, 'Kids');
 });
 
 test('a new category gets a colour no other category in the month uses', () => {
@@ -278,7 +278,7 @@ test('an empty category can be removed, with its budget; removing it again does 
   assert.equal(month.findCategory('gifts'), undefined);
   assert.equal(month.budgets.gifts, undefined);
   assert.equal(month.categories.length, 10);
-  assert.equal(MonthRecord.createFromTemplate(month, '2026-12').findCategory('gifts'), undefined);
+  assert.equal(MonthRecord.createFromTemplateMonth(month, '2026-12').findCategory('gifts'), undefined);
 });
 
 test('a category with expenses, or the last category, cannot be removed', () => {
@@ -310,7 +310,7 @@ test('moving a category puts it before another one, or last', () => {
   month.moveCategory('dinner', 'dinner');
   assert.equal(order().length, 11);
   assert.deepEqual(
-    MonthRecord.createFromTemplate(month, '2026-12').categories.map((category) => category.id),
+    MonthRecord.createFromTemplateMonth(month, '2026-12').categories.map((category) => category.id),
     order(),
   );
 });

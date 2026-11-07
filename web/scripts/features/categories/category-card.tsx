@@ -204,9 +204,10 @@ function AddExpenseForm({ month, categoryId }: { month: MonthRecord; categoryId:
  * @param exceptCategoryId  the category being renamed, which may keep its own name
  */
 export function isNameShown(month: MonthRecord, name: string, exceptCategoryId?: string): boolean {
-  const wantedName = MonthRecord.normalizeCategoryName(name);
+  const normalizedWantedName = MonthRecord.normalizeCategoryName(name);
   return month.categories.some(
     (category) =>
-      category.id !== exceptCategoryId && MonthRecord.normalizeCategoryName(categoryName(category)) === wantedName,
+      category.id !== exceptCategoryId &&
+      MonthRecord.normalizeCategoryName(categoryName(category)) === normalizedWantedName,
   );
 }

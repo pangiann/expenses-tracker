@@ -85,8 +85,8 @@ export class DurableObjectMonthRepository {
     const templateMonthKey = closestSavedMonthKey(await this.savedMonthKeys(), monthKey);
     const templateMonth = templateMonthKey ? await this.loadMonth(templateMonthKey) : null;
     const newMonth = templateMonth
-      ? MonthRecord.createFromTemplate(templateMonth, monthKey)
-      : MonthRecord.createEmpty(monthKey);
+      ? MonthRecord.createFromTemplateMonth(templateMonth, monthKey)
+      : MonthRecord.createEmptyMonth(monthKey);
     await this.saveMonth(newMonth);
     return newMonth;
   }
