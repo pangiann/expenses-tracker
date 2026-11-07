@@ -5,24 +5,30 @@
  * does to the month is in shared/month/apply-edit-to-month.ts, which the page also runs to
  * show the edit at once.
  */
-import { editsByEndpoint } from '../../../shared/month/apply-edit-to-month.ts';
+import { monthEditFunctionByEndpointName } from '../../../shared/month/apply-edit-to-month.ts';
 import { loadEditSaveAndBroadcastMonth } from '../load-edit-save-and-broadcast-month.ts';
 import type { Operation } from './operation.ts';
 
 /** POST /api/months/:month/expenses: adds an expense. */
 export const addExpenseOperation: Operation<'addExpense'> = (request, context) =>
-  loadEditSaveAndBroadcastMonth(context, request.params.month, (month) => editsByEndpoint.addExpense(month, request));
+  loadEditSaveAndBroadcastMonth(context, request.params.month, (month) =>
+    monthEditFunctionByEndpointName.addExpense(month, request),
+  );
 
 /** POST /api/months/:month/income: adds an income entry. */
 export const addIncomeOperation: Operation<'addIncome'> = (request, context) =>
-  loadEditSaveAndBroadcastMonth(context, request.params.month, (month) => editsByEndpoint.addIncome(month, request));
+  loadEditSaveAndBroadcastMonth(context, request.params.month, (month) =>
+    monthEditFunctionByEndpointName.addIncome(month, request),
+  );
 
 /** POST /api/months/:month/categories: adds a category at the end, with a budget of 0. */
 export const addCategoryOperation: Operation<'addCategory'> = (request, context) =>
-  loadEditSaveAndBroadcastMonth(context, request.params.month, (month) => editsByEndpoint.addCategory(month, request));
+  loadEditSaveAndBroadcastMonth(context, request.params.month, (month) =>
+    monthEditFunctionByEndpointName.addCategory(month, request),
+  );
 
 /** POST /api/months/:month/recurring/:list: adds a fixed cost or subscription. */
 export const addRecurringCostOperation: Operation<'addRecurringCost'> = (request, context) =>
   loadEditSaveAndBroadcastMonth(context, request.params.month, (month) =>
-    editsByEndpoint.addRecurringCost(month, request),
+    monthEditFunctionByEndpointName.addRecurringCost(month, request),
   );

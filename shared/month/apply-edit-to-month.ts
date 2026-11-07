@@ -2,10 +2,10 @@ import type { BodyOf, EndpointName, ParamsOf } from '../api/endpoints.ts';
 import type { MonthRecord } from './month-record.ts';
 
 /** The endpoints that edit a month: every one except reading, export and import. */
-export type MonthEditName = Exclude<EndpointName, 'getMonth' | 'exportMonths' | 'importMonths'>;
+export type MonthEditingEndpointName = Exclude<EndpointName, 'getMonth' | 'exportMonths' | 'importMonths'>;
 
 /** A checked edit request: the path parameters and body of one endpoint. */
-export interface MonthEditRequest<Name extends MonthEditName> {
+export interface CheckedMonthEditRequest<Name extends MonthEditingEndpointName> {
   params: ParamsOf<Name>;
   body: BodyOf<Name>;
 }
@@ -21,8 +21,8 @@ export interface MonthEditRequest<Name extends MonthEditName> {
  * Because both run the same function, the page's guess and the server's answer agree. Each
  * throws MonthRuleError when the edit breaks a rule of the month.
  */
-export const editsByEndpoint: {
-  [Name in MonthEditName]: (month: MonthRecord, request: MonthEditRequest<Name>) => void;
+export const monthEditFunctionByEndpointName: {
+  [Name in MonthEditingEndpointName]: (month: MonthRecord, request: CheckedMonthEditRequest<Name>) => void;
 } = {
   addExpense: (month, { body }) => month.addExpense(body),
   changeExpenseAmount: (month, { params, body }) => month.updateExpenseAmount(params.id, body.amount),
@@ -46,17 +46,24 @@ export const editsByEndpoint: {
   removeRecurringCost: (month, { params }) => month.removeRecurringCost(params.list, params.id),
 };
 
-export function isMonthEdit(name: EndpointName): name is MonthEditName {
-  return name in editsByEndpoint;
+/**
+ * Whether the endpoint changes a month (addExpense, renameCategory, ...), rather than only
+ * reading months (getMonth) or replacing them all (exportMonths, importMonths).
+ */
+export function isEndpointThatEditsAMonth(name: EndpointName): name is MonthEditingEndpointName {
+  return name in monthEditFunctionByEndpointName;
 }
 
 /** Applies one endpoint's edit to the month. @throws {MonthRuleError} */
-export function applyEditToMonth<Name extends MonthEditName>(
+export function applyEndpointEditToMonth<Name extends MonthEditingEndpointName>(
   month: MonthRecord,
   name: Name,
-  request: MonthEditRequest<Name>,
+  request: CheckedMonthEditRequest<Name>,
 ): void {
-  // TypeScript can't follow the mapped type above through a generic name; this is editsByEndpoint[name] as declared.
-  const edit = editsByEndpoint[name] as (month: MonthRecord, request: MonthEditRequest<Name>) => void;
-  edit(month, request);
+  // TypeScript can't follow the mapped type above through a generic name; this is monthEditFunctionByEndpointName[name] as declared.
+  const editFunction = monthEditFunctionByEndpointName[name] as (
+    month: MonthRecord,
+    request: CheckedMonthEditRequest<Name>,
+  ) => void;
+  editFunction(month, request);
 }
