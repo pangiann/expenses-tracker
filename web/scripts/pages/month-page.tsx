@@ -24,7 +24,7 @@ const openMonth = (monthKey: string) => void monthPageState.openMonth(monthKey);
  * calls its API functions (api/*-api.ts). The page never handles an edit itself.
  */
 export function MonthPage() {
-  const { month, savedMonthKeys, saveStatus, errorText } = useSyncExternalStore(
+  const { month, savedMonthKeys, saveStatus, errorText, refusedEditText } = useSyncExternalStore(
     monthPageState.subscribe,
     monthPageState.getSnapshot,
   );
@@ -50,7 +50,7 @@ export function MonthPage() {
         </div>
       </header>
 
-      <ErrorBanner text={errorText} />
+      <ErrorBanner text={errorText ?? refusedEditText} />
 
       <main className="page-content">
         {month && (

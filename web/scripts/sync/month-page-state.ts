@@ -6,6 +6,7 @@ import { currentMonthKey } from '../utils/month-keys.ts';
 import type { SaveStatusValue } from '../utils/save-status.ts';
 import { liveUpdateConnection, type Refusal } from './live-update-connection.ts';
 import { buildOptimisticMonth } from './optimistic-month.ts';
+import { refusedEditMessage } from './refused-edit-message.ts';
 import { saveStatusFor } from './save-status.ts';
 import { unsavedEditsOutbox, type UnsavedEditsOutboxState } from './unsaved-edits-outbox.ts';
 
@@ -19,6 +20,8 @@ export interface MonthPageSnapshot {
   saveStatus: SaveStatusValue | null;
   /** The red banner under the top bar, as plain text; null hides it. */
   errorText: string | null;
+  /** Why the server didn't save an edit, shown in the same banner until the next edit; null when none. */
+  refusedEditText: string | null;
 }
 
 /** String id of the message shown when the server explains why it refused the connection. */
@@ -43,7 +46,13 @@ const REFUSAL_STRING_IDS: Record<string, string> = {
  * built again at once. When the server saves it, its answer becomes the saved month.
  */
 export class MonthPageState {
-  #snapshot: MonthPageSnapshot = { month: null, savedMonthKeys: [], saveStatus: null, errorText: null };
+  #snapshot: MonthPageSnapshot = {
+    month: null,
+    savedMonthKeys: [],
+    saveStatus: null,
+    errorText: null,
+    refusedEditText: null,
+  };
   readonly #listeners = new Set<() => void>();
 
   /** The month being shown or loaded. */
@@ -69,6 +78,7 @@ export class MonthPageState {
    */
   recordEdit<Name extends EndpointName>(name: Name, params: ParamsOf<Name>, body: BodyInputOf<Name>): boolean {
     if (!unsavedEditsOutbox.add(name, params, body)) return false;
+    if (this.#snapshot.refusedEditText) this.#update({ refusedEditText: null });
     this.#showOptimisticMonth();
     return true;
   }
@@ -143,6 +153,7 @@ export class MonthPageState {
       // For example someone removed the category meanwhile: stop showing the edit, then load
       // the month as it is now.
       console.error('The server refused an edit:', state.error.message);
+      this.#update({ refusedEditText: refusedEditMessage(state.error) });
       this.#showOptimisticMonth();
       void this.openMonth(this.#shownMonthKey);
     }
