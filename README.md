@@ -50,7 +50,7 @@ Cloudflare builds and deploys the Worker from GitHub. Nothing personal is in thi
 
 ### Cost
 
-Everything fits in Cloudflare's free plan. The page files are static assets, which are free and unlimited. Opening the page uses 2 of the 100,000 requests allowed per day: one for the WebSocket and one for the household. Every change after that travels over the open WebSocket, where 20 messages count as one request, and updates sent back to the screens are free. A keepalive message every 50 seconds adds about 3 requests per hour that a page stays open. A busy day, with two people logging 50 expenses and each keeping the page open for 8 hours, uses about 60 requests.
+Everything fits in Cloudflare's free plan. The page files are static assets, which are free and unlimited. Opening the page uses 2 of the 100,000 requests allowed per day: one for the WebSocket and one to load the month. Every edit is one HTTP request. Updates sent back to the screens over the WebSocket are free. A keepalive message every 50 seconds adds about 3 requests per hour that a page stays open. A busy day, with two people logging 50 expenses and each keeping the page open for 8 hours, uses about 100 requests.
 
 ## Project layout
 
@@ -62,12 +62,12 @@ shared/                   code that runs in the page and in the Worker (no DOM, 
   api/
     endpoints.ts          every HTTP endpoint: method, path, request body; shared by page and Worker
     fields.ts             the shapes of ids, amounts, text and dates in requests
-    month-edit-per-endpoint.ts  what each editing endpoint does to the month; run by the Worker, and by the page for pending edits
   month/
     categories.ts         default categories, colours and limits
     amounts.ts            rounding and sums
     month-record.ts       one month's data and the rules for changing it
     month-validation.ts   month keys, month shape, which month a new one copies
+    apply-edit-to-month.ts  what each editing endpoint does to the month; run by the Worker, and by the page for unsaved edits
 web/                      the page (HTML, CSS and TypeScript; bundled into web/dist/ by `npm run build`)
   index.html
   i18n/en.json, el.json   display text for every string id
@@ -75,8 +75,7 @@ web/                      the page (HTML, CSS and TypeScript; bundled into web/d
   scripts/
     main.tsx              entry point: loads the translations, draws the month page with React, connects to the server
     pages/
-      month-page.tsx      the month page: lays out every feature with the month from the store
-      month-page-store.ts the page's state (the month with pending edits, save status, errors) and how it changes
+      month-page.tsx      the month page: lays out every feature with the page's state
     features/             one folder per part of the page, each a React component that calls its API functions
       categories/         the category cards (category-card.tsx), the grid that drags them (category-cards-grid.tsx, @dnd-kit), "New category"
       quick-add/          the "Add expense" bar
@@ -88,14 +87,18 @@ web/                      the page (HTML, CSS and TypeScript; bundled into web/d
       language/           the EN / ΕΛ picker
       status/             the save status and the error banner
     components/           pieces several features use: entry rows, editable amounts and texts
-    api/                  one function per endpoint, grouped by what they edit
+    api/                  one function per endpoint, grouped by what they edit; each edit calls monthPageState.recordEdit()
       months-api.ts, expenses-api.ts, income-api.ts, categories-api.ts, recurring-costs-api.ts
       endpoint-http-client.ts    callEndpoint(): one HTTP request to an endpoint of shared/api/endpoints.ts
-      pending-edits-outbox.ts    sends edits in order; keeps them in the browser while offline
-      month-with-pending-edits.ts  the month to show: the server's month with pending edits on top
-      live-update-connection.ts  the WebSocket that brings other people's edits
+    sync/                 keeping the page in step with the server
+      month-page-state.ts        the page's state (the month shown, save status, errors), recordEdit(), and how it changes
+      unsaved-edits-outbox.ts    sends edits in order; keeps them in the browser while offline
+      optimistic-month.ts        the month to show: the saved month with the unsaved edits on top
+      live-update-connection.ts  the WebSocket that brings other people's edits; replaces a socket that stops answering
+      save-status.ts             what the save status says
+      refused-edit-message.ts    why the server refused an edit, for the red banner
     i18n/translator.ts    translations by string id (see "Languages" below)
-    utils/                money, month-key, id and HTML helpers, and the save status
+    utils/                money, month-key and id helpers, and the save status values
 worker/                   Cloudflare Worker
   worker-entry-point.ts   every request arrives here: routing, sign-in, forwarding to the household's Durable Object
   worker-secrets.d.ts     the secrets the Worker reads
@@ -121,14 +124,14 @@ Adding an expense, from the click to every screen:
 
 1. **Feature.** The quick add bar (`features/quick-add/quick-add.tsx`), or a category card's add form (`features/categories/category-card.tsx`), handles the form's submit event.
 2. **API function.** It calls `addExpense()` in `web/scripts/api/expenses-api.ts`, which gives the expense a new id.
-3. **Outbox.** `api/pending-edits-outbox.ts` sends `POST /api/months/2026-11/expenses` with the expense as JSON. Edits go one at a time, in order. Without a connection they wait in the browser, also across a closed tab, and go out when it is back.
-4. **On screen at once.** While an edit waits for its answer, the page shows the server's last month with the pending edits applied on top (`api/month-with-pending-edits.ts`), so the expense appears right away, also offline.
+3. **Record and send.** It calls `monthPageState.recordEdit()` (`sync/month-page-state.ts`), which puts the edit in the outbox (`sync/unsaved-edits-outbox.ts`). The outbox sends `POST /api/months/2026-11/expenses` with the expense as JSON. Edits go one at a time, in order. Without a connection they wait in the browser, also across a closed tab, and go out when it is back.
+4. **On screen at once.** `recordEdit()` then draws the month again: the saved month, the server's last answer, with the unsaved edits applied on top (`sync/optimistic-month.ts`). The expense appears right away, also offline.
 5. **Worker.** `worker/worker-entry-point.ts` checks that the request comes from the site's own page and who is signed in, finds their household, and passes the request to that household's Durable Object (`household-durable-object/household-durable-object.ts`).
 6. **Router.** `household-durable-object/api-request-router.ts` finds the endpoint in `shared/api/endpoints.ts`, checks the path and the body against it, and calls the operation with the same name, `addExpenseOperation` in `operations/add-operations.ts`.
-7. **Operation.** It runs `loadEditSaveAndBroadcastMonth()`: load the month from storage (`durable-object-month-repository.ts`), apply the endpoint's edit (`shared/api/month-edit-per-endpoint.ts`, here `month.addExpense(...)` in `shared/month/month-record.ts`, which enforces the month's rules), save it, and send the new month to every device showing it (`live-update-connection-manager.ts`).
-8. **Answer.** The operation's answer, the month after the edit, goes back to the page: the store (`pages/month-page-store.ts`) keeps it, and React draws the month page (`pages/month-page.tsx`) again. Other devices get the same month over their WebSocket (`api/live-update-connection.ts`) and draw it too.
+7. **Operation.** It runs `loadEditSaveAndBroadcastMonth()`: load the month from storage (`durable-object-month-repository.ts`), apply the endpoint's edit (`shared/month/apply-edit-to-month.ts`, here `month.addExpense(...)` in `shared/month/month-record.ts`, which enforces the month's rules), save it, and send the new month to every device showing it (`live-update-connection-manager.ts`).
+8. **Answer.** The operation's answer, the month after the edit, goes back to the page: the page's state (`sync/month-page-state.ts`) keeps it as the saved month, and React draws the month page (`pages/month-page.tsx`) again. Other devices get the same month over their WebSocket (`sync/live-update-connection.ts`) and draw it too.
 
-Steps 4 and 7 run the same edit function from `shared/api/month-edit-per-endpoint.ts`, so the page's early version and the server's answer agree. Answers and live updates can arrive in either order, so each carries a revision number, and the page ignores anything older than what it shows. A Durable Object handles one request at a time, so two people editing at once never overwrite each other.
+Steps 4 and 7 run the same edit function from `shared/month/apply-edit-to-month.ts`, so the page's early version and the server's answer agree. Answers and live updates can arrive in either order, so each carries a revision number, and the page ignores anything older than what it shows. A Durable Object handles one request at a time, so two people editing at once never overwrite each other.
 
 To try an endpoint without the page, call it with curl while `npm run dev` runs. An edit needs the Origin header:
 
