@@ -4,7 +4,7 @@ import { ApiError, OfflineError, callEndpoint } from '../api/endpoint-http-clien
 import { t } from '../i18n/translator.ts';
 import { currentMonthKey } from '../utils/month-keys.ts';
 import type { SaveStatusValue } from '../utils/save-status.ts';
-import { liveUpdateConnection, type Refusal } from './live-update-connection.ts';
+import { liveUpdateConnection, type ConnectionRefusal } from './live-update-connection.ts';
 import { buildOptimisticMonth } from './optimistic-month.ts';
 import { refusedEditMessage } from './refused-edit-message.ts';
 import { saveStatusFor } from './save-status.ts';
@@ -82,25 +82,30 @@ export class MonthPageState {
     body: RequestBodyInputOf<Name>,
   ): boolean {
     if (!unsavedEditsOutbox.add(name, params, body)) return false;
-    if (this.#snapshot.refusedEditText) this.#update({ refusedEditText: null });
+    if (this.#snapshot.refusedEditText) this.#updateSnapshotAndNotifyListeners({ refusedEditText: null });
     this.#showOptimisticMonth();
     return true;
   }
 
   /** Connects to the server and opens the current month, creating it if needed. */
   async start(): Promise<void> {
-    if (location.protocol === 'file:') return this.#update({ errorText: t('error.openedAsFile') });
+    if (location.protocol === 'file:')
+      return this.#updateSnapshotAndNotifyListeners({ errorText: t('error.openedAsFile') });
 
-    unsavedEditsOutbox.onSaved = (answer) => this.#showSavedMonth(answer);
-    unsavedEditsOutbox.onStateChange = (state) => this.#handleOutboxState(state);
-    liveUpdateConnection.onMonth = (answer) => this.#showSavedMonth(answer);
+    unsavedEditsOutbox.onSaved = (monthResponse) => this.#showSavedMonth(monthResponse);
+    unsavedEditsOutbox.onStateChange = (outboxState) => this.#handleOutboxState(outboxState);
+    liveUpdateConnection.onNewerSavedMonth = (monthResponse) => this.#showSavedMonth(monthResponse);
     liveUpdateConnection.onReconnect = () => {
       void this.openMonth(this.#shownMonthKey); // catch up on edits missed while disconnected
       unsavedEditsOutbox.resume();
     };
     liveUpdateConnection.onConnectionChange = () => this.#updateSaveStatus();
-    liveUpdateConnection.onRefused = (refusal) => this.#update({ errorText: refusal ? refusalMessage(refusal) : null });
-    liveUpdateConnection.onUnreachable = () => this.#update({ errorText: t('error.cloudUnreachable') });
+    liveUpdateConnection.onRefused = (connectionRefusal) =>
+      this.#updateSnapshotAndNotifyListeners({
+        errorText: connectionRefusal ? refusalMessage(connectionRefusal) : null,
+      });
+    liveUpdateConnection.onUnreachable = () =>
+      this.#updateSnapshotAndNotifyListeners({ errorText: t('error.cloudUnreachable') });
 
     liveUpdateConnection.start();
     unsavedEditsOutbox.start();
@@ -123,10 +128,11 @@ export class MonthPageState {
         this.#shownMonthKey = previousMonthKey;
         liveUpdateConnection.watch(previousMonthKey);
       }
-      if (error instanceof OfflineError) this.#update({ errorText: t('error.cloudUnreachable') });
+      if (error instanceof OfflineError)
+        this.#updateSnapshotAndNotifyListeners({ errorText: t('error.cloudUnreachable') });
       // 403: the live connection explains why the server refused us.
       else if (!(error instanceof ApiError && error.status === 403))
-        this.#update({ errorText: t('error.startFailed') });
+        this.#updateSnapshotAndNotifyListeners({ errorText: t('error.startFailed') });
     }
   }
 
@@ -137,27 +143,29 @@ export class MonthPageState {
   }
 
   /** A month the server saved. Answers can arrive out of order, so only a newer revision is used. */
-  #showSavedMonth(answer: MonthResponse): void {
-    if (answer.month.month !== this.#shownMonthKey || answer.revision < this.#savedRevision) return;
-    this.#savedRevision = answer.revision;
-    this.#savedMonth = answer.month;
-    this.#update({ savedMonthKeys: answer.monthKeys, errorText: null });
+  #showSavedMonth(monthResponse: MonthResponse): void {
+    if (monthResponse.month.month !== this.#shownMonthKey || monthResponse.revision < this.#savedRevision) return;
+    this.#savedRevision = monthResponse.revision;
+    this.#savedMonth = monthResponse.month;
+    this.#updateSnapshotAndNotifyListeners({ savedMonthKeys: monthResponse.monthKeys, errorText: null });
     this.#showOptimisticMonth();
   }
 
   /** Shows the saved month with the edits not saved yet on top. */
   #showOptimisticMonth(): void {
     if (!this.#savedMonth) return;
-    this.#update({ month: buildOptimisticMonth(this.#savedMonth, unsavedEditsOutbox.unsavedEdits) });
+    this.#updateSnapshotAndNotifyListeners({
+      month: buildOptimisticMonth(this.#savedMonth, unsavedEditsOutbox.unsavedEdits),
+    });
   }
 
-  #handleOutboxState(state: UnsavedEditsOutboxState): void {
-    this.#outboxState = state;
-    if (state.kind === 'refused') {
+  #handleOutboxState(outboxState: UnsavedEditsOutboxState): void {
+    this.#outboxState = outboxState;
+    if (outboxState.kind === 'refused') {
       // For example someone removed the category meanwhile: stop showing the edit, then load
       // the month as it is now.
-      console.error('The server refused an edit:', state.error.message);
-      this.#update({ refusedEditText: refusedEditMessage(state.error) });
+      console.error('The server refused an edit:', outboxState.error.message);
+      this.#updateSnapshotAndNotifyListeners({ refusedEditText: refusedEditMessage(outboxState.error) });
       this.#showOptimisticMonth();
       void this.openMonth(this.#shownMonthKey);
     }
@@ -165,17 +173,19 @@ export class MonthPageState {
   }
 
   #updateSaveStatus(): void {
-    this.#update({ saveStatus: saveStatusFor(liveUpdateConnection.isConnected, this.#outboxState) });
+    this.#updateSnapshotAndNotifyListeners({
+      saveStatus: saveStatusFor(liveUpdateConnection.isConnected, this.#outboxState),
+    });
   }
 
-  #update(changes: Partial<MonthPageSnapshot>): void {
+  #updateSnapshotAndNotifyListeners(changes: Partial<MonthPageSnapshot>): void {
     this.#snapshot = { ...this.#snapshot, ...changes };
     for (const listener of this.#listeners) listener();
   }
 }
 
 /** The text explaining why the server refused the connection (see explainSignInStatus in worker/worker-entry-point.ts). */
-function refusalMessage({ problem, email, reason }: Refusal): string {
+function refusalMessage({ problem, email, reason }: ConnectionRefusal): string {
   return t(REFUSAL_STRING_IDS[problem] ?? 'error.refused', { email: email ?? '', reason: reason ?? '' });
 }
 

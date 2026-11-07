@@ -16,7 +16,7 @@ const RECONNECT_DELAY_MS = 2_000;
 const REFUSED_RETRY_DELAY_MS = 20_000; // when the server refuses us, retrying fast won't help
 
 /** Why the server refused the connection, from /api/status (see explainSignInStatus in worker/worker-entry-point.ts). */
-export interface Refusal {
+export interface ConnectionRefusal {
   problem: string;
   email?: string;
   reason?: string;
@@ -29,12 +29,12 @@ export interface Refusal {
  */
 export class LiveUpdateConnection {
   /** A newer version of the watched month. */
-  onMonth: (answer: MonthResponse) => void = () => {};
+  onNewerSavedMonth: (monthResponse: MonthResponse) => void = () => {};
   /** Connected again after a drop: updates may have been missed. */
   onReconnect: () => void = () => {};
   onConnectionChange: (isConnected: boolean) => void = () => {};
   /** The server refused the connection on purpose (null: no longer refused), or can't be reached. */
-  onRefused: (refusal: Refusal | null) => void = () => {};
+  onRefused: (connectionRefusal: ConnectionRefusal | null) => void = () => {};
   onUnreachable: () => void = () => {};
 
   #socket: WebSocket | null = null;
@@ -50,9 +50,9 @@ export class LiveUpdateConnection {
     this.#connect();
     // Coming back to the page or the network is when a socket has most likely died quietly.
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible') this.#checkAlive();
+      if (document.visibilityState === 'visible') this.#pingAndReplaceSocketIfSilent();
     });
-    window.addEventListener('online', () => this.#checkAlive());
+    window.addEventListener('online', () => this.#pingAndReplaceSocketIfSilent());
   }
 
   get isConnected(): boolean {
@@ -68,28 +68,28 @@ export class LiveUpdateConnection {
   #connect(): void {
     const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
     const socket = new WebSocket(`${protocol}//${location.host}${LIVE_PATH}`);
-    const handlers = new AbortController();
+    const socketEventHandlers = new AbortController();
     this.#socket = socket;
-    this.#socketHandlers = handlers;
-    let didOpen = false;
+    this.#socketHandlers = socketEventHandlers;
+    let socketDidOpen = false;
 
     socket.addEventListener(
       'open',
       () => {
-        didOpen = true;
+        socketDidOpen = true;
         this.#isConnected = true;
         this.onRefused(null);
-        this.#keepaliveTimer = setInterval(() => this.#checkAlive(), KEEPALIVE_INTERVAL_MS);
+        this.#keepaliveTimer = setInterval(() => this.#pingAndReplaceSocketIfSilent(), KEEPALIVE_INTERVAL_MS);
         if (this.#watchedMonthKey) this.watch(this.#watchedMonthKey);
         this.onConnectionChange(true);
         if (this.#hasConnectedBefore) this.onReconnect();
         this.#hasConnectedBefore = true;
       },
-      { signal: handlers.signal },
+      { signal: socketEventHandlers.signal },
     );
 
     socket.addEventListener('message', (messageEvent: MessageEvent<string>) => this.#handleMessage(messageEvent.data), {
-      signal: handlers.signal,
+      signal: socketEventHandlers.signal,
     });
 
     socket.addEventListener(
@@ -97,16 +97,16 @@ export class LiveUpdateConnection {
       () => {
         this.#stopUsingSocket();
         // A connection that never opened was refused: ask the server why, and retry slowly.
-        void this.#explainRefusal(didOpen).then((wasRefused) => {
+        void this.#askServerWhyConnectionWasRefused(socketDidOpen).then((wasRefused) => {
           setTimeout(() => this.#connect(), wasRefused ? REFUSED_RETRY_DELAY_MS : RECONNECT_DELAY_MS);
         });
       },
-      { signal: handlers.signal },
+      { signal: socketEventHandlers.signal },
     );
   }
 
   /** Sends a ping; without any answer within PONG_TIMEOUT_MS, the socket is given up and replaced. */
-  #checkAlive(): void {
+  #pingAndReplaceSocketIfSilent(): void {
     const socket = this.#socket;
     if (!this.#isConnected || !socket || this.#pongDeadline) return;
     this.#pongDeadline = setTimeout(() => {
@@ -148,7 +148,7 @@ export class LiveUpdateConnection {
     if (rawMessage === KEEPALIVE_PONG) return;
     try {
       const { month, monthKeys, revision } = parseServerMessage(rawMessage);
-      this.onMonth({ month, monthKeys, revision });
+      this.onNewerSavedMonth({ month, monthKeys, revision });
     } catch (error) {
       if (!(error instanceof InvalidMessageError)) throw error;
       console.error('Ignored a message from the server:', error.message);
@@ -156,12 +156,12 @@ export class LiveUpdateConnection {
   }
 
   /** @returns true when the server refused us on purpose */
-  async #explainRefusal(didOpen: boolean): Promise<boolean> {
-    if (didOpen) return false;
+  async #askServerWhyConnectionWasRefused(socketDidOpen: boolean): Promise<boolean> {
+    if (socketDidOpen) return false;
     try {
       const response = await fetch(STATUS_PATH, { cache: 'no-store' });
       if (response.ok) return false; // signed in and a member: the drop was a network problem
-      this.onRefused((await response.json()) as Refusal);
+      this.onRefused((await response.json()) as ConnectionRefusal);
       return true;
     } catch {
       this.onUnreachable();

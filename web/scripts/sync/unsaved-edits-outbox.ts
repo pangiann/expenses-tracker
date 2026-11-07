@@ -19,7 +19,7 @@ export type UnsavedEditsOutboxState =
   | { kind: 'refused'; error: ApiError };
 
 // Unchanged since the first version, so edits saved in a browser before an update are still sent.
-const STORAGE_KEY = 'expenses.outbox';
+const UNSAVED_EDITS_STORAGE_KEY = 'expenses.outbox';
 const RETRY_DELAY_MS = 5_000;
 
 /**
@@ -34,10 +34,10 @@ const RETRY_DELAY_MS = 5_000;
  */
 export class UnsavedEditsOutbox {
   /** The server saved the oldest edit; the answer is the month after it. */
-  onSaved: (answer: MonthResponse) => void = () => {};
-  onStateChange: (state: UnsavedEditsOutboxState) => void = () => {};
+  onSaved: (monthResponse: MonthResponse) => void = () => {};
+  onStateChange: (outboxState: UnsavedEditsOutboxState) => void = () => {};
 
-  #edits: UnsavedEdit[] = loadEdits();
+  #edits: UnsavedEdit[] = loadUnsavedEditsFromBrowser();
   #isSending = false;
   #retryTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -54,7 +54,7 @@ export class UnsavedEditsOutbox {
   add<Name extends EndpointName>(name: Name, params: PathParamsOf<Name>, body: RequestBodyInputOf<Name>): boolean {
     if (!isValidBody(name, body)) return false;
     this.#edits.push({ name, params, body });
-    saveEdits(this.#edits);
+    saveUnsavedEditsToBrowser(this.#edits);
     void this.#sendUnsavedEdits();
     return true;
   }
@@ -83,9 +83,9 @@ export class UnsavedEditsOutbox {
       while ((edit = this.#edits[0])) {
         this.onStateChange({ kind: 'sending', waiting: this.#edits.length });
         try {
-          const answer = await callEndpoint(edit.name, edit.params as never, edit.body as never);
-          this.#dropFirst();
-          this.onSaved(answer as MonthResponse);
+          const monthResponse = await callEndpoint(edit.name, edit.params as never, edit.body as never);
+          this.#removeOldestUnsavedEdit();
+          this.onSaved(monthResponse as MonthResponse);
         } catch (error) {
           if (error instanceof OfflineError) {
             this.onStateChange({ kind: 'offline', waiting: this.#edits.length });
@@ -93,7 +93,7 @@ export class UnsavedEditsOutbox {
             return;
           }
           // Refused for good: sending it again won't help, so drop it and say so.
-          this.#dropFirst();
+          this.#removeOldestUnsavedEdit();
           if (!(error instanceof ApiError)) throw error;
           this.onStateChange({ kind: 'refused', error });
           continue;
@@ -105,25 +105,25 @@ export class UnsavedEditsOutbox {
     }
   }
 
-  #dropFirst(): void {
+  #removeOldestUnsavedEdit(): void {
     this.#edits.shift();
-    saveEdits(this.#edits);
+    saveUnsavedEditsToBrowser(this.#edits);
   }
 }
 
-function loadEdits(): UnsavedEdit[] {
+function loadUnsavedEditsFromBrowser(): UnsavedEdit[] {
   try {
-    const stored: unknown = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]');
-    return Array.isArray(stored) ? stored.filter(isUnsavedEdit) : [];
+    const storedUnsavedEdits: unknown = JSON.parse(localStorage.getItem(UNSAVED_EDITS_STORAGE_KEY) ?? '[]');
+    return Array.isArray(storedUnsavedEdits) ? storedUnsavedEdits.filter(isUnsavedEdit) : [];
   } catch {
     return []; // storage blocked or corrupt: start empty
   }
 }
 
-function saveEdits(edits: UnsavedEdit[]): void {
+function saveUnsavedEditsToBrowser(edits: UnsavedEdit[]): void {
   try {
-    if (edits.length === 0) localStorage.removeItem(STORAGE_KEY);
-    else localStorage.setItem(STORAGE_KEY, JSON.stringify(edits));
+    if (edits.length === 0) localStorage.removeItem(UNSAVED_EDITS_STORAGE_KEY);
+    else localStorage.setItem(UNSAVED_EDITS_STORAGE_KEY, JSON.stringify(edits));
   } catch {
     /* storage blocked (for example private browsing): edits live only in memory */
   }
