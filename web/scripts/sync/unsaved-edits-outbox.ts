@@ -1,8 +1,14 @@
 import type { BodyInputOf, EndpointName, MonthResponse, ParamsOf } from '../../../shared/api/endpoints.ts';
-import { ApiError, OfflineError, callEndpoint, isValidBody } from './endpoint-http-client.ts';
-import type { PendingEdit } from './month-with-pending-edits.ts';
+import { ApiError, OfflineError, callEndpoint, isValidBody } from '../api/endpoint-http-client.ts';
 
-export type PendingEditsOutboxState =
+/** An edit the server hasn't saved yet. */
+export interface UnsavedEdit {
+  name: EndpointName;
+  params: Record<string, string>;
+  body: unknown;
+}
+
+export type UnsavedEditsOutboxState =
   /** nothing waiting */
   | { kind: 'idle' }
   /** an edit is on its way */
@@ -12,26 +18,26 @@ export type PendingEditsOutboxState =
   /** the server refused the last edit (for example someone removed the category meanwhile) */
   | { kind: 'refused'; error: ApiError };
 
+// Unchanged since the first version, so edits saved in a browser before an update are still sent.
 const STORAGE_KEY = 'expenses.outbox';
 const RETRY_DELAY_MS = 5_000;
 
 /**
- * Sends the page's edits to the server one at a time, in the order they were made, so a
- * later edit never overtakes an earlier one. Every answer (the month after the edit) goes
- * to onAnswer, which shows it.
+ * Holds the edits the server hasn't saved yet and sends them one at a time, in the order
+ * they were made, so a later edit never overtakes an earlier one. Every answer (the month
+ * after the edit) goes to onSaved; an edit the server refuses goes to onStateChange.
  *
  * Without a connection, edits wait here and in localStorage, so they survive a closed tab,
  * and are sent when the connection is back. Sending an edit twice is harmless: new items
- * carry the id the page gave them. Until the server answers, the page shows pending edits
- * on top of the server's month (see month-with-pending-edits.ts).
+ * carry the id the page gave them. While edits wait, the page shows them on top of the saved
+ * month (optimistic-month.ts).
  */
-export class PendingEditsOutbox {
-  onAnswer: (answer: MonthResponse) => void = () => {};
-  onStateChange: (state: PendingEditsOutboxState) => void = () => {};
-  /** An edit was added or left the outbox: the month on screen should be drawn again. */
-  onEditsChange: () => void = () => {};
+export class UnsavedEditsOutbox {
+  /** The server saved the oldest edit; the answer is the month after it. */
+  onSaved: (answer: MonthResponse) => void = () => {};
+  onStateChange: (state: UnsavedEditsOutboxState) => void = () => {};
 
-  #edits: PendingEdit[] = loadEdits();
+  #edits: UnsavedEdit[] = loadEdits();
   #isSending = false;
   #retryTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -42,15 +48,14 @@ export class PendingEditsOutbox {
   }
 
   /**
-   * Queues an edit and starts sending.
-   * @returns false, and sends nothing, when the edit doesn't match its endpoint (for example an amount of 0)
+   * Keeps an edit and starts sending it.
+   * @returns false, and keeps nothing, when the edit doesn't match its endpoint (for example an amount of 0)
    */
-  send<Name extends EndpointName>(name: Name, params: ParamsOf<Name>, body: BodyInputOf<Name>): boolean {
+  add<Name extends EndpointName>(name: Name, params: ParamsOf<Name>, body: BodyInputOf<Name>): boolean {
     if (!isValidBody(name, body)) return false;
     this.#edits.push({ name, params, body });
     saveEdits(this.#edits);
-    this.onEditsChange();
-    void this.#sendPendingEdits();
+    void this.#sendUnsavedEdits();
     return true;
   }
 
@@ -58,29 +63,29 @@ export class PendingEditsOutbox {
   resume(): void {
     if (this.#retryTimer) clearTimeout(this.#retryTimer);
     this.#retryTimer = null;
-    void this.#sendPendingEdits();
+    void this.#sendUnsavedEdits();
   }
 
-  get pendingEditCount(): number {
+  get unsavedEditCount(): number {
     return this.#edits.length;
   }
 
-  /** The edits the server hasn't answered yet, oldest first. */
-  get pendingEdits(): readonly PendingEdit[] {
+  /** The edits the server hasn't saved yet, oldest first. */
+  get unsavedEdits(): readonly UnsavedEdit[] {
     return this.#edits;
   }
 
-  async #sendPendingEdits(): Promise<void> {
+  async #sendUnsavedEdits(): Promise<void> {
     if (this.#isSending) return;
     this.#isSending = true;
     try {
-      let edit: PendingEdit | undefined;
+      let edit: UnsavedEdit | undefined;
       while ((edit = this.#edits[0])) {
         this.onStateChange({ kind: 'sending', waiting: this.#edits.length });
         try {
           const answer = await callEndpoint(edit.name, edit.params as never, edit.body as never);
           this.#dropFirst();
-          this.onAnswer(answer as MonthResponse);
+          this.onSaved(answer as MonthResponse);
         } catch (error) {
           if (error instanceof OfflineError) {
             this.onStateChange({ kind: 'offline', waiting: this.#edits.length });
@@ -89,7 +94,6 @@ export class PendingEditsOutbox {
           }
           // Refused for good: sending it again won't help, so drop it and say so.
           this.#dropFirst();
-          this.onEditsChange();
           if (!(error instanceof ApiError)) throw error;
           this.onStateChange({ kind: 'refused', error });
           continue;
@@ -107,16 +111,16 @@ export class PendingEditsOutbox {
   }
 }
 
-function loadEdits(): PendingEdit[] {
+function loadEdits(): UnsavedEdit[] {
   try {
     const stored: unknown = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]');
-    return Array.isArray(stored) ? stored.filter(isWaitingEdit) : [];
+    return Array.isArray(stored) ? stored.filter(isUnsavedEdit) : [];
   } catch {
     return []; // storage blocked or corrupt: start empty
   }
 }
 
-function saveEdits(edits: PendingEdit[]): void {
+function saveEdits(edits: UnsavedEdit[]): void {
   try {
     if (edits.length === 0) localStorage.removeItem(STORAGE_KEY);
     else localStorage.setItem(STORAGE_KEY, JSON.stringify(edits));
@@ -125,7 +129,7 @@ function saveEdits(edits: PendingEdit[]): void {
   }
 }
 
-function isWaitingEdit(value: unknown): value is PendingEdit {
+function isUnsavedEdit(value: unknown): value is UnsavedEdit {
   return (
     typeof value === 'object' &&
     value !== null &&
@@ -137,4 +141,4 @@ function isWaitingEdit(value: unknown): value is PendingEdit {
 }
 
 /** The page's one outbox. */
-export const pendingEditsOutbox = new PendingEditsOutbox();
+export const unsavedEditsOutbox = new UnsavedEditsOutbox();

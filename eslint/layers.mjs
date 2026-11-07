@@ -2,7 +2,7 @@
  * An ESLint rule that keeps every file in its layer: it may import only from the layers
  * listed for it below, so the path of a click stays easy to follow (see ARCHITECTURE.md).
  *
- *   page:    main -> pages -> features -> api / components -> i18n / utils -> shared
+ *   page:    main -> pages -> features -> api / components -> sync -> http client -> i18n / utils -> shared
  *   Worker:  entry point -> household Durable Object -> API request router -> operations
  *            -> load-edit-save-and-broadcast -> operation context -> month repository / live update connections -> shared
  *            (the entry point also uses sign-in/)
@@ -20,19 +20,22 @@ const LAYERS = [
   { name: 'shared', files: /^shared\//, mayImport: [], packages: ['zod/mini'] },
 
   // ----- The page (web/scripts) -----
-  { name: 'main', files: /^web\/scripts\/main\.tsx?$/, mayImport: ['pages', 'i18n', 'utils'] },
+  { name: 'main', files: /^web\/scripts\/main\.tsx?$/, mayImport: ['pages', 'sync', 'i18n', 'utils'] },
   {
     name: 'pages',
     files: /^web\/scripts\/pages\//,
-    mayImport: ['features/*', 'api', 'components', 'i18n', 'utils', 'shared'],
+    mayImport: ['features/*', 'components', 'sync', 'i18n', 'utils', 'shared'],
   },
   {
     name: 'features/$1',
     files: /^web\/scripts\/features\/([^/]+)\//,
-    mayImport: ['api', 'components', 'i18n', 'utils', 'shared'],
+    mayImport: ['api', 'http client', 'components', 'i18n', 'utils', 'shared'],
   },
   { name: 'components', files: /^web\/scripts\/components\//, mayImport: ['i18n', 'utils', 'shared'] },
-  { name: 'api', files: /^web\/scripts\/api\//, mayImport: ['utils', 'shared'] },
+  // The HTTP client is matched before the rest of api/, because sync/ uses it and api/ uses sync/.
+  { name: 'http client', files: /^web\/scripts\/api\/endpoint-http-client\.ts$/, mayImport: ['shared'] },
+  { name: 'api', files: /^web\/scripts\/api\//, mayImport: ['sync', 'http client', 'utils', 'shared'] },
+  { name: 'sync', files: /^web\/scripts\/sync\//, mayImport: ['http client', 'i18n', 'utils', 'shared'] },
   { name: 'utils', files: /^web\/scripts\/utils\//, mayImport: ['i18n', 'shared'] },
   { name: 'i18n', files: /^web\/scripts\/i18n\//, mayImport: ['shared'] },
 

@@ -7,7 +7,7 @@ import { createRoot } from 'react-dom/client';
 
 import { t, translator } from './i18n/translator.ts';
 import { MonthPage } from './pages/month-page.tsx';
-import { monthPageStore } from './pages/month-page-store.ts';
+import { monthPageState } from './sync/month-page-state.ts';
 import { setMoneyLocale } from './utils/money.ts';
 
 // Translations load first, so every part of the page draws in the chosen language from the start.
@@ -22,4 +22,4 @@ createRoot(appElement).render(
     <MonthPage />
   </StrictMode>,
 );
-void monthPageStore.start();
+void monthPageState.start();

@@ -1,5 +1,5 @@
-import type { MonthRecord } from '../month/month-record.ts';
-import type { BodyOf, EndpointName, ParamsOf } from './endpoints.ts';
+import type { BodyOf, EndpointName, ParamsOf } from '../api/endpoints.ts';
+import type { MonthRecord } from './month-record.ts';
 
 /** The endpoints that edit a month: every one except reading, export and import. */
 export type MonthEditName = Exclude<EndpointName, 'getMonth' | 'exportMonths' | 'importMonths'>;
@@ -13,14 +13,15 @@ export interface MonthEditRequest<Name extends MonthEditName> {
 /**
  * What each editing endpoint does to the month, in one place, used by both sides:
  *
- *   - the Worker's operation runs it on the stored month and saves the result (worker/household-durable-object/operations/);
- *   - the page runs it on its copy of the month for edits still in the pendingEditsOutbox, so an edit
- *     shows at once, also without a connection.
+ *   - the Worker's operation runs it on the stored month and saves the result
+ *     (worker/household-durable-object/operations/);
+ *   - the page runs it on its copy of the month for edits the server hasn't saved yet, so an
+ *     edit shows at once, also offline (web/scripts/sync/optimistic-month.ts).
  *
  * Because both run the same function, the page's guess and the server's answer agree. Each
  * throws MonthRuleError when the edit breaks a rule of the month.
  */
-export const monthEditPerEndpoint: {
+export const editsByEndpoint: {
   [Name in MonthEditName]: (month: MonthRecord, request: MonthEditRequest<Name>) => void;
 } = {
   addExpense: (month, { body }) => month.addExpense(body),
@@ -46,16 +47,16 @@ export const monthEditPerEndpoint: {
 };
 
 export function isMonthEdit(name: EndpointName): name is MonthEditName {
-  return name in monthEditPerEndpoint;
+  return name in editsByEndpoint;
 }
 
 /** Applies one endpoint's edit to the month. @throws {MonthRuleError} */
-export function applyMonthEdit<Name extends MonthEditName>(
+export function applyEditToMonth<Name extends MonthEditName>(
   month: MonthRecord,
   name: Name,
   request: MonthEditRequest<Name>,
 ): void {
-  // TypeScript can't follow the mapped type above through a generic name; this is monthEditPerEndpoint[name] as declared.
-  const edit = monthEditPerEndpoint[name] as (month: MonthRecord, request: MonthEditRequest<Name>) => void;
+  // TypeScript can't follow the mapped type above through a generic name; this is editsByEndpoint[name] as declared.
+  const edit = editsByEndpoint[name] as (month: MonthRecord, request: MonthEditRequest<Name>) => void;
   edit(month, request);
 }

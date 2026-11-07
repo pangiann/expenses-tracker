@@ -18,7 +18,7 @@ export interface Refusal {
 
 /**
  * The WebSocket that brings other people's edits to this page. It carries no edits of its
- * own: edits are HTTP requests (see pending-edits-outbox.ts). The page says which month it shows, and
+ * own: edits are HTTP requests (see unsaved-edits-outbox.ts). The page says which month it shows, and
  * the household sends that month after every save by anyone.
  */
 export class LiveUpdateConnection {

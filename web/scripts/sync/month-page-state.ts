@@ -1,17 +1,16 @@
-import type { MonthResponse } from '../../../shared/api/endpoints.ts';
+import type { BodyInputOf, EndpointName, MonthResponse, ParamsOf } from '../../../shared/api/endpoints.ts';
 import type { MonthData, MonthRecord } from '../../../shared/month/month-record.ts';
-import { ApiError, OfflineError } from '../api/endpoint-http-client.ts';
-import { liveUpdateConnection, type Refusal } from '../api/live-update-connection.ts';
-import { monthWithPendingEdits } from '../api/month-with-pending-edits.ts';
-import * as monthsApi from '../api/months-api.ts';
-import { pendingEditsOutbox, type PendingEditsOutboxState } from '../api/pending-edits-outbox.ts';
+import { ApiError, OfflineError, callEndpoint } from '../api/endpoint-http-client.ts';
 import { t } from '../i18n/translator.ts';
 import { currentMonthKey } from '../utils/month-keys.ts';
 import { SaveStatus, type SaveStatusValue } from '../utils/save-status.ts';
+import { liveUpdateConnection, type Refusal } from './live-update-connection.ts';
+import { buildOptimisticMonth } from './optimistic-month.ts';
+import { unsavedEditsOutbox, type UnsavedEditsOutboxState } from './unsaved-edits-outbox.ts';
 
 /** Everything the month page shows. A new object every time something changes. */
-export interface MonthPageState {
-  /** The month on screen: the server's latest version with the pending edits on top; null while loading. */
+export interface MonthPageSnapshot {
+  /** The month on screen: the saved month with the unsaved edits on top; null while loading. */
   month: MonthRecord | null;
   /** Every saved month, oldest first. */
   savedMonthKeys: readonly string[];
@@ -30,26 +29,28 @@ const REFUSAL_STRING_IDS: Record<string, string> = {
 };
 
 /**
- * The month page's state, and how it changes. The page subscribes and draws whatever
- * getState() returns; nothing else on the page keeps month data.
+ * The month page's state, and every way it changes. The page subscribes and draws whatever
+ * getSnapshot() returns; nothing else on the page keeps month data.
  *
- * The month on screen is always computed the same way:
+ * Two months are involved:
  *
- *   the server's latest month   from GET /api/months/:month, an edit's answer, or a live update
- *   + pending edits             edits in the outbox not yet answered (api/month-with-pending-edits.ts)
+ *   saved month    what the server last answered: GET /api/months/:month, an edit's answer,
+ *                  or a live update from someone else
+ *   month shown    the saved month + the edits not saved yet (optimistic-month.ts)
  *
- * so an edit shows at once, also offline, and the server's version takes over when it answers.
+ * An edit is recorded with recordEdit(): it is kept in the outbox and the month shown is
+ * built again at once. When the server saves it, its answer becomes the saved month.
  */
-export class MonthPageStore {
-  #state: MonthPageState = { month: null, savedMonthKeys: [], saveStatus: null, errorText: null };
+export class MonthPageState {
+  #snapshot: MonthPageSnapshot = { month: null, savedMonthKeys: [], saveStatus: null, errorText: null };
   readonly #listeners = new Set<() => void>();
 
   /** The month being shown or loaded. */
   #shownMonthKey: string | null = null;
   /** The server's version of that month, and its revision; older answers are ignored (see MonthResponse). */
-  #serverMonth: MonthData | null = null;
-  #shownRevision = -1;
-  #outboxState: PendingEditsOutboxState = { kind: 'idle' };
+  #savedMonth: MonthData | null = null;
+  #savedRevision = -1;
+  #outboxState: UnsavedEditsOutboxState = { kind: 'idle' };
 
   /** Calls the listener after every change; returns a function that stops it. */
   subscribe = (listener: () => void): (() => void) => {
@@ -57,26 +58,37 @@ export class MonthPageStore {
     return () => this.#listeners.delete(listener);
   };
 
-  getState = (): MonthPageState => this.#state;
+  getSnapshot = (): MonthPageSnapshot => this.#snapshot;
+
+  /**
+   * Records an edit someone made on the page, in two steps:
+   *   1. keep it in the outbox, which sends it to the server;
+   *   2. show it at once, on top of the saved month (an optimistic update).
+   * @returns false, and changes nothing, when the edit doesn't match its endpoint (for example an amount of 0)
+   */
+  recordEdit<Name extends EndpointName>(name: Name, params: ParamsOf<Name>, body: BodyInputOf<Name>): boolean {
+    if (!unsavedEditsOutbox.add(name, params, body)) return false;
+    this.#showOptimisticMonth();
+    return true;
+  }
 
   /** Connects to the server and opens the current month, creating it if needed. */
   async start(): Promise<void> {
     if (location.protocol === 'file:') return this.#update({ errorText: t('error.openedAsFile') });
 
-    pendingEditsOutbox.onAnswer = (answer) => this.#show(answer);
-    pendingEditsOutbox.onEditsChange = () => this.#recomputeMonth();
-    pendingEditsOutbox.onStateChange = (state) => this.#handleOutboxState(state);
-    liveUpdateConnection.onMonth = (answer) => this.#show(answer);
+    unsavedEditsOutbox.onSaved = (answer) => this.#showSavedMonth(answer);
+    unsavedEditsOutbox.onStateChange = (state) => this.#handleOutboxState(state);
+    liveUpdateConnection.onMonth = (answer) => this.#showSavedMonth(answer);
     liveUpdateConnection.onReconnect = () => {
       void this.openMonth(this.#shownMonthKey); // catch up on edits missed while disconnected
-      pendingEditsOutbox.resume();
+      unsavedEditsOutbox.resume();
     };
     liveUpdateConnection.onConnectionChange = () => this.#updateSaveStatus();
     liveUpdateConnection.onRefused = (refusal) => this.#update({ errorText: refusal ? refusalMessage(refusal) : null });
     liveUpdateConnection.onUnreachable = () => this.#update({ errorText: t('error.cloudUnreachable') });
 
     liveUpdateConnection.start();
-    pendingEditsOutbox.start();
+    unsavedEditsOutbox.start();
     await this.openMonth(currentMonthKey());
   }
 
@@ -85,14 +97,14 @@ export class MonthPageStore {
     if (!monthKey) return;
     const previousMonthKey = this.#shownMonthKey;
     this.#shownMonthKey = monthKey;
-    if (monthKey !== previousMonthKey) this.#shownRevision = -1;
+    if (monthKey !== previousMonthKey) this.#savedRevision = -1;
     liveUpdateConnection.watch(monthKey);
     try {
-      this.#show(await monthsApi.getMonth(monthKey));
+      this.#showSavedMonth(await callEndpoint('getMonth', { month: monthKey }, undefined));
     } catch (error) {
       console.error(error);
       // Stay on the month already shown, if any; the live connection retries on its own.
-      if (this.#serverMonth && previousMonthKey) {
+      if (this.#savedMonth && previousMonthKey) {
         this.#shownMonthKey = previousMonthKey;
         liveUpdateConnection.watch(previousMonthKey);
       }
@@ -105,33 +117,32 @@ export class MonthPageStore {
 
   /** Loads the shown month again, for example after an import replaced it. */
   reloadShownMonth(): void {
-    this.#shownRevision = -1; // the import saved months without a newer answer for this one
+    this.#savedRevision = -1; // the import saved months without a newer answer for this one
     void this.openMonth(this.#shownMonthKey);
   }
 
-  /** A month from the server. Answers can arrive out of order, so only a newer revision is used. */
-  #show(answer: MonthResponse): void {
-    if (answer.month.month !== this.#shownMonthKey || answer.revision < this.#shownRevision) return;
-    this.#shownRevision = answer.revision;
-    this.#serverMonth = answer.month;
-    this.#update({
-      month: monthWithPendingEdits(answer.month, pendingEditsOutbox.pendingEdits),
-      savedMonthKeys: answer.monthKeys,
-      errorText: null,
-    });
+  /** A month the server saved. Answers can arrive out of order, so only a newer revision is used. */
+  #showSavedMonth(answer: MonthResponse): void {
+    if (answer.month.month !== this.#shownMonthKey || answer.revision < this.#savedRevision) return;
+    this.#savedRevision = answer.revision;
+    this.#savedMonth = answer.month;
+    this.#update({ savedMonthKeys: answer.monthKeys, errorText: null });
+    this.#showOptimisticMonth();
   }
 
-  /** An edit was added to or left the outbox: compute the month on screen again. */
-  #recomputeMonth(): void {
-    if (!this.#serverMonth) return;
-    this.#update({ month: monthWithPendingEdits(this.#serverMonth, pendingEditsOutbox.pendingEdits) });
+  /** Shows the saved month with the edits not saved yet on top. */
+  #showOptimisticMonth(): void {
+    if (!this.#savedMonth) return;
+    this.#update({ month: buildOptimisticMonth(this.#savedMonth, unsavedEditsOutbox.unsavedEdits) });
   }
 
-  #handleOutboxState(state: PendingEditsOutboxState): void {
+  #handleOutboxState(state: UnsavedEditsOutboxState): void {
     this.#outboxState = state;
     if (state.kind === 'refused') {
-      // For example someone removed the category meanwhile: show the month as it is now.
+      // For example someone removed the category meanwhile: stop showing the edit, then load
+      // the month as it is now.
       console.error('The server refused an edit:', state.error.message);
+      this.#showOptimisticMonth();
       void this.openMonth(this.#shownMonthKey);
     }
     this.#updateSaveStatus();
@@ -146,8 +157,8 @@ export class MonthPageStore {
     this.#update({ saveStatus });
   }
 
-  #update(changes: Partial<MonthPageState>): void {
-    this.#state = { ...this.#state, ...changes };
+  #update(changes: Partial<MonthPageSnapshot>): void {
+    this.#snapshot = { ...this.#snapshot, ...changes };
     for (const listener of this.#listeners) listener();
   }
 }
@@ -157,5 +168,5 @@ function refusalMessage({ problem, email, reason }: Refusal): string {
   return t(REFUSAL_STRING_IDS[problem] ?? 'error.refused', { email: email ?? '', reason: reason ?? '' });
 }
 
-/** The page's one store. */
-export const monthPageStore = new MonthPageStore();
+/** The page's one state. */
+export const monthPageState = new MonthPageState();

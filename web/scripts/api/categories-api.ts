@@ -1,28 +1,28 @@
-/** Edits to categories and budgets, sent through the outbox like expenses (see expenses-api.ts). */
+/** Edits to categories and budgets, recorded like expenses (see expenses-api.ts). */
 import { createUniqueId } from '../utils/ids.ts';
-import { pendingEditsOutbox } from './pending-edits-outbox.ts';
+import { monthPageState } from '../sync/month-page-state.ts';
 
 /** POST /api/months/:month/categories */
 export function addCategory(monthKey: string, { name, color }: { name: string; color: string }): boolean {
-  return pendingEditsOutbox.send('addCategory', { month: monthKey }, { id: createUniqueId(), name, color });
+  return monthPageState.recordEdit('addCategory', { month: monthKey }, { id: createUniqueId(), name, color });
 }
 
 /** PUT /api/months/:month/categories/:id/name */
 export function renameCategory(monthKey: string, categoryId: string, name: string): boolean {
-  return pendingEditsOutbox.send('renameCategory', { month: monthKey, id: categoryId }, { name });
+  return monthPageState.recordEdit('renameCategory', { month: monthKey, id: categoryId }, { name });
 }
 
 /** PUT /api/months/:month/categories/:id/position: just before another category, or last when null. */
 export function moveCategory(monthKey: string, categoryId: string, beforeCategoryId: string | null): boolean {
-  return pendingEditsOutbox.send('moveCategory', { month: monthKey, id: categoryId }, { beforeCategoryId });
+  return monthPageState.recordEdit('moveCategory', { month: monthKey, id: categoryId }, { beforeCategoryId });
 }
 
 /** PUT /api/months/:month/categories/:id/budget */
 export function changeBudget(monthKey: string, categoryId: string, amount: number): boolean {
-  return pendingEditsOutbox.send('changeBudget', { month: monthKey, id: categoryId }, { amount });
+  return monthPageState.recordEdit('changeBudget', { month: monthKey, id: categoryId }, { amount });
 }
 
 /** DELETE /api/months/:month/categories/:id */
 export function removeCategory(monthKey: string, categoryId: string): boolean {
-  return pendingEditsOutbox.send('removeCategory', { month: monthKey, id: categoryId }, undefined);
+  return monthPageState.recordEdit('removeCategory', { month: monthKey, id: categoryId }, undefined);
 }

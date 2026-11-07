@@ -1,10 +1,6 @@
-import type { ExportResponse, ImportResponse, MonthResponse } from '../../../shared/api/endpoints.ts';
+/** Reading every month for a backup, and importing one. (Opening a month is in sync/month-page-state.ts.) */
+import type { ExportResponse, ImportResponse } from '../../../shared/api/endpoints.ts';
 import { callEndpoint } from './endpoint-http-client.ts';
-
-/** GET /api/months/:month: the month, created on the server if it doesn't exist yet. */
-export function getMonth(monthKey: string): Promise<MonthResponse> {
-  return callEndpoint('getMonth', { month: monthKey }, undefined);
-}
 
 /** GET /api/export: every saved month, for a backup file. */
 export function exportMonths(): Promise<ExportResponse> {

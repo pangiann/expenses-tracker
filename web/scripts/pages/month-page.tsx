@@ -14,19 +14,19 @@ import { BudgetBars } from '../features/summary/budget-bars.tsx';
 import { SpendingDonut } from '../features/summary/spending-donut.tsx';
 import { SummaryCards } from '../features/summary/summary-cards.tsx';
 import { t } from '../i18n/translator.ts';
-import { monthPageStore } from './month-page-store.ts';
+import { monthPageState } from '../sync/month-page-state.ts';
 
-const openMonth = (monthKey: string) => void monthPageStore.openMonth(monthKey);
+const openMonth = (monthKey: string) => void monthPageState.openMonth(monthKey);
 
 /**
  * The month page: the only page of the app. Each part of the page is a feature
- * (features/) that draws the month from month-page-store.ts, handles its own clicks and
+ * (features/) that draws the month from sync/month-page-state.ts, handles its own clicks and
  * calls its API functions (api/*-api.ts). The page never handles an edit itself.
  */
 export function MonthPage() {
   const { month, savedMonthKeys, saveStatus, errorText } = useSyncExternalStore(
-    monthPageStore.subscribe,
-    monthPageStore.getState,
+    monthPageState.subscribe,
+    monthPageState.getSnapshot,
   );
   /** The month the "Add a month" dialog suggests; null while it is closed. */
   const [addMonthSuggestion, setAddMonthSuggestion] = useState<string | null>(null);
@@ -46,7 +46,7 @@ export function MonthPage() {
         <div className="top-bar-actions">
           <SaveStatusPill saveStatus={saveStatus} />
           <LanguagePicker />
-          <BackupButtons onImported={() => monthPageStore.reloadShownMonth()} />
+          <BackupButtons onImported={() => monthPageState.reloadShownMonth()} />
         </div>
       </header>
 

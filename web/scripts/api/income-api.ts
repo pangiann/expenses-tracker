@@ -1,6 +1,6 @@
-/** Edits to income, sent through the outbox like expenses (see expenses-api.ts). */
+/** Edits to income, recorded like expenses (see expenses-api.ts). */
 import { createUniqueId } from '../utils/ids.ts';
-import { pendingEditsOutbox } from './pending-edits-outbox.ts';
+import { monthPageState } from '../sync/month-page-state.ts';
 
 export interface NewIncome {
   amount: number;
@@ -11,20 +11,20 @@ export interface NewIncome {
 
 /** POST /api/months/:month/income */
 export function addIncome(monthKey: string, income: NewIncome): boolean {
-  return pendingEditsOutbox.send('addIncome', { month: monthKey }, { id: createUniqueId(), ...income });
+  return monthPageState.recordEdit('addIncome', { month: monthKey }, { id: createUniqueId(), ...income });
 }
 
 /** PUT /api/months/:month/income/:id/amount */
 export function changeIncomeAmount(monthKey: string, incomeId: string, amount: number): boolean {
-  return pendingEditsOutbox.send('changeIncomeAmount', { month: monthKey, id: incomeId }, { amount });
+  return monthPageState.recordEdit('changeIncomeAmount', { month: monthKey, id: incomeId }, { amount });
 }
 
 /** DELETE /api/months/:month/income/:id */
 export function removeIncome(monthKey: string, incomeId: string): boolean {
-  return pendingEditsOutbox.send('removeIncome', { month: monthKey, id: incomeId }, undefined);
+  return monthPageState.recordEdit('removeIncome', { month: monthKey, id: incomeId }, undefined);
 }
 
 /** PUT /api/months/:month/expected-income */
 export function changeExpectedIncome(monthKey: string, amount: number): boolean {
-  return pendingEditsOutbox.send('changeExpectedIncome', { month: monthKey }, { amount });
+  return monthPageState.recordEdit('changeExpectedIncome', { month: monthKey }, { amount });
 }
