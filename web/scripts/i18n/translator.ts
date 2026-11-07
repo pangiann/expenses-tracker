@@ -21,7 +21,7 @@ export const SUPPORTED_LANGUAGES = Object.freeze({
 });
 
 export type Language = keyof typeof SUPPORTED_LANGUAGES;
-type Strings = Record<string, string>;
+type TranslatedTextById = Record<string, string>;
 /** Values for {placeholders} in a text. */
 export type TextValues = Record<string, string | number>;
 
@@ -30,8 +30,8 @@ const LANGUAGE_STORAGE_KEY = 'expenses.language';
 
 class Translator {
   language: Language = SOURCE_LANGUAGE;
-  #strings: Strings = {};
-  #sourceStrings: Strings = {};
+  #textByIdInChosenLanguage: TranslatedTextById = {};
+  #textByIdInEnglish: TranslatedTextById = {};
 
   get locale(): string {
     return SUPPORTED_LANGUAGES[this.language].locale;
@@ -40,15 +40,17 @@ class Translator {
   /** Loads the saved language (or the browser's), plus English as the fallback. */
   async load(): Promise<void> {
     this.language = Translator.#preferredLanguage();
-    this.#sourceStrings = await Translator.#fetchStrings(SOURCE_LANGUAGE);
-    this.#strings =
-      this.language === SOURCE_LANGUAGE ? this.#sourceStrings : await Translator.#fetchStrings(this.language);
+    this.#textByIdInEnglish = await Translator.#fetchTranslatedTextById(SOURCE_LANGUAGE);
+    this.#textByIdInChosenLanguage =
+      this.language === SOURCE_LANGUAGE
+        ? this.#textByIdInEnglish
+        : await Translator.#fetchTranslatedTextById(this.language);
     document.documentElement.lang = this.language;
   }
 
   /** The text for a string id, with {placeholders} filled in. */
   translate(stringId: string, values: TextValues = {}): string {
-    const text = this.#strings[stringId] ?? this.#sourceStrings[stringId] ?? stringId;
+    const text = this.#textByIdInChosenLanguage[stringId] ?? this.#textByIdInEnglish[stringId] ?? stringId;
     return text.replace(/\{(\w+)\}/g, (placeholder, name: string) => String(values[name] ?? placeholder));
   }
 
@@ -74,11 +76,11 @@ class Translator {
     return isLanguage(browserLanguage) ? browserLanguage : SOURCE_LANGUAGE;
   }
 
-  static async #fetchStrings(language: Language): Promise<Strings> {
+  static async #fetchTranslatedTextById(language: Language): Promise<TranslatedTextById> {
     try {
       const response = await fetch(`i18n/${language}.json`, { cache: 'no-cache' });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      return (await response.json()) as Strings;
+      return (await response.json()) as TranslatedTextById;
     } catch (error) {
       console.error(`Could not load translations for "${language}"`, error);
       return {};

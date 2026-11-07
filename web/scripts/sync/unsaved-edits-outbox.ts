@@ -1,5 +1,5 @@
 import type { RequestBodyInputOf, EndpointName, MonthResponse, PathParamsOf } from '../../../shared/api/endpoints.ts';
-import { ApiError, OfflineError, callEndpoint, isValidBody } from '../api/endpoint-http-client.ts';
+import { ApiError, OfflineError, callEndpoint, isValidRequestBody } from '../api/endpoint-http-client.ts';
 
 /** An edit the server hasn't saved yet. */
 export interface UnsavedEdit {
@@ -52,7 +52,7 @@ export class UnsavedEditsOutbox {
    * @returns false, and keeps nothing, when the edit doesn't match its endpoint (for example an amount of 0)
    */
   add<Name extends EndpointName>(name: Name, params: PathParamsOf<Name>, body: RequestBodyInputOf<Name>): boolean {
-    if (!isValidBody(name, body)) return false;
+    if (!isValidRequestBody(name, body)) return false;
     this.#edits.push({ name, params, body });
     saveUnsavedEditsToBrowser(this.#edits);
     void this.#sendUnsavedEdits();

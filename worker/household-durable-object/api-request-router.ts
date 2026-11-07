@@ -28,32 +28,32 @@ export async function routeApiRequestToOperation(request: Request, context: Oper
   for (const name of Object.keys(endpoints) as EndpointName[]) {
     const endpoint = endpoints[name];
     if (endpoint.method !== request.method) continue;
-    const rawParams = readPathParamsIfPathMatches(endpoint.path, pathname);
-    if (rawParams) return runOperation(name, rawParams, request, context);
+    const unparsedPathParams = readPathParamsIfPathMatches(endpoint.path, pathname);
+    if (unparsedPathParams) return runOperation(name, unparsedPathParams, request, context);
   }
   return errorResponse(404, { error: 'Not found' });
 }
 
 async function runOperation(
   name: EndpointName,
-  rawParams: Record<string, string>,
+  unparsedPathParams: Record<string, string>,
   request: Request,
   context: OperationContext,
 ): Promise<Response> {
   const endpoint = endpoints[name];
-  const params = endpoint.params.safeParse(rawParams);
+  const params = endpoint.params.safeParse(unparsedPathParams);
   if (!params.success) return errorResponse(400, { error: `Invalid path: ${z.prettifyError(params.error)}` });
 
-  const rawBody = await readJsonBody(request);
-  if (rawBody instanceof Response) return rawBody;
-  const body = endpoint.body.safeParse(rawBody);
+  const unparsedBody = await readJsonBody(request);
+  if (unparsedBody instanceof Response) return unparsedBody;
+  const body = endpoint.body.safeParse(unparsedBody);
   if (!body.success) return errorResponse(400, { error: `Invalid request: ${z.prettifyError(body.error)}` });
 
   // Each endpoint's operation expects that endpoint's params and body, which were just checked.
   const operation = operationRegistry[name] as Operation<EndpointName>;
   try {
-    const result = await operation({ params: params.data, body: body.data }, context);
-    return jsonResponse(200, result);
+    const operationAnswer = await operation({ params: params.data, body: body.data }, context);
+    return jsonResponse(200, operationAnswer);
   } catch (error) {
     if (error instanceof MonthRuleError) return errorResponse(409, { error: error.message, rule: error.rule });
     if (error instanceof InvalidImportError) return errorResponse(400, { error: error.message });

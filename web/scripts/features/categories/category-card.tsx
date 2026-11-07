@@ -167,13 +167,13 @@ function AddExpenseForm({ month, categoryId }: { month: MonthRecord; categoryId:
       autoComplete="off"
       onSubmit={(submitEvent) => {
         submitEvent.preventDefault();
-        const isSent = expensesApi.addExpense(month.monthKey, {
+        const wasEditRecorded = expensesApi.addExpense(month.monthKey, {
           categoryId,
           amount: parseAmount(amount) ?? 0,
           description,
           date: defaultExpenseDate(month.monthKey),
         });
-        if (!isSent) return;
+        if (!wasEditRecorded) return;
         setDescription('');
         setAmount('');
       }}

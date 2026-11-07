@@ -32,13 +32,13 @@ export function QuickAdd({ month }: { month: MonthRecord }) {
         autoComplete="off"
         onSubmit={(submitEvent) => {
           submitEvent.preventDefault();
-          const isSent = expensesApi.addExpense(month.monthKey, {
+          const wasEditRecorded = expensesApi.addExpense(month.monthKey, {
             categoryId,
             amount: parseAmount(amount) ?? 0,
             description,
             date: date || defaultExpenseDate(month.monthKey),
           });
-          if (!isSent) return; // for example no amount: keep what was typed
+          if (!wasEditRecorded) return; // for example no amount: keep what was typed
           setAmount('');
           setDescription('');
           amountInput.current?.focus();

@@ -28,10 +28,10 @@ export class OfflineError extends Error {}
 export class InvalidRequestError extends Error {}
 
 /** Cloudflare answers these while the Worker is restarting or briefly overloaded. */
-const TEMPORARY_STATUSES = new Set([502, 503, 504]);
+const TEMPORARY_FAILURE_STATUS_CODES = new Set([502, 503, 504]);
 
 /** True when the body matches its endpoint, checked without sending it. */
-export function isValidBody<Name extends EndpointName>(name: Name, body: RequestBodyInputOf<Name>): boolean {
+export function isValidRequestBody<Name extends EndpointName>(name: Name, body: RequestBodyInputOf<Name>): boolean {
   return endpoints[name].body.safeParse(body).success;
 }
 
@@ -46,7 +46,7 @@ export async function callEndpoint<Name extends EndpointName>(
   params: PathParamsOf<Name>,
   body: RequestBodyInputOf<Name>,
 ): Promise<ResponseOf<Name>> {
-  if (!isValidBody(name, body)) throw new InvalidRequestError(`Invalid ${name} request`);
+  if (!isValidRequestBody(name, body)) throw new InvalidRequestError(`Invalid ${name} request`);
   const endpoint = endpoints[name];
   let response: Response;
   try {
@@ -60,7 +60,7 @@ export async function callEndpoint<Name extends EndpointName>(
     // No connection, or the sign-in expired and Cloudflare redirected the request to its login page.
     throw new OfflineError(`${name}: no answer`);
   }
-  if (TEMPORARY_STATUSES.has(response.status)) throw new OfflineError(`${name}: ${response.status}`);
+  if (TEMPORARY_FAILURE_STATUS_CODES.has(response.status)) throw new OfflineError(`${name}: ${response.status}`);
   if (!response.ok) {
     const error = (await response.json().catch(() => ({ error: response.statusText }))) as ErrorResponse;
     throw new ApiError(response.status, error.error, error.rule);

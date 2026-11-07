@@ -14,8 +14,8 @@ interface Slice {
   category: Category;
   amount: number;
   /** length of the slice along the ring, and where it starts */
-  length: number;
-  start: number;
+  lengthAlongRing: number;
+  startAlongRing: number;
 }
 
 /** "Where the money went": a donut chart of variable spending per category, with a legend. */
@@ -25,10 +25,13 @@ export function SpendingDonut({ month }: { month: MonthRecord }) {
     .filter(({ amount }) => amount > 0);
   const totalAmount = sumAmounts(spentPerCategory.map(({ amount }) => amount));
   // Each slice starts where the one before it ends.
-  const slices = spentPerCategory.reduce<Slice[]>((done, { category, amount }) => {
-    const previous = done.at(-1);
-    const start = previous ? previous.start + previous.length : 0;
-    return [...done, { category, amount, length: (amount / totalAmount) * RING_CIRCUMFERENCE, start }];
+  const slices = spentPerCategory.reduce<Slice[]>((slicesSoFar, { category, amount }) => {
+    const previousSlice = slicesSoFar.at(-1);
+    const startAlongRing = previousSlice ? previousSlice.startAlongRing + previousSlice.lengthAlongRing : 0;
+    return [
+      ...slicesSoFar,
+      { category, amount, lengthAlongRing: (amount / totalAmount) * RING_CIRCUMFERENCE, startAlongRing },
+    ];
   }, []);
 
   return (
@@ -42,8 +45,8 @@ export function SpendingDonut({ month }: { month: MonthRecord }) {
             <RingCircle
               key={slice.category.id}
               strokeColor={slice.category.color}
-              strokeDasharray={`${slice.length} ${RING_CIRCUMFERENCE - slice.length}`}
-              strokeDashoffset={-slice.start}
+              strokeDasharray={`${slice.lengthAlongRing} ${RING_CIRCUMFERENCE - slice.lengthAlongRing}`}
+              strokeDashoffset={-slice.startAlongRing}
             />
           ))}
           <text x={CHART_CENTER} y="60" textAnchor="middle" className="spending-donut-total">

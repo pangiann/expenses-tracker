@@ -39,12 +39,12 @@ export function IncomeCard({ month }: { month: MonthRecord }) {
         autoComplete="off"
         onSubmit={(submitEvent) => {
           submitEvent.preventDefault();
-          const isSent = incomeApi.addIncome(month.monthKey, {
+          const wasEditRecorded = incomeApi.addIncome(month.monthKey, {
             amount: parseAmount(amount) ?? 0,
             description,
             date: defaultExpenseDate(month.monthKey),
           });
-          if (!isSent) return;
+          if (!wasEditRecorded) return;
           setDescription('');
           setAmount('');
           amountInput.current?.focus();

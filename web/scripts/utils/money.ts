@@ -36,7 +36,7 @@ export function formatPercent(fraction: number): string {
  * and nothing else: "1e3", "-5" or "3.50abc" are null rather than 1000, -5 or 3.5.
  */
 export function parseAmount(text: string | number): number | null {
-  const typed = String(text).trim();
-  if (!/^\d+([.,]\d+)?$/.test(typed)) return null;
-  return Number(typed.replace(',', '.'));
+  const trimmedText = String(text).trim();
+  if (!/^\d+([.,]\d+)?$/.test(trimmedText)) return null;
+  return Number(trimmedText.replace(',', '.'));
 }
