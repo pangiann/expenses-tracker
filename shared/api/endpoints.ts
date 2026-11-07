@@ -15,7 +15,7 @@
 // zod/mini has the same checks as zod in a form bundlers can trim (see fields.ts).
 import * as z from 'zod/mini';
 
-import type { MonthData, MonthRule, StoredMonthData } from '../month/month-record.ts';
+import type { MonthData, MonthRule } from '../month/month-record.ts';
 import {
   NonNegativeAmountField,
   HexColorField,
@@ -178,7 +178,7 @@ export interface MonthResponse {
 }
 
 export interface ExportResponse {
-  months: StoredMonthData[];
+  months: MonthData[];
 }
 
 export interface ImportResponse {

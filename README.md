@@ -159,4 +159,4 @@ To add or change text, edit both files with the same id. `npm test` fails if the
 - On start, the app opens the current month and creates it if it doesn't exist.
 - A new month copies the budgets, expected income, fixed costs and subscriptions from the closest earlier month. If no month exists yet, it starts from zero.
 - Use **‹ ›** to move between saved months and **+** to add any month.
-- **Export** downloads every month as one JSON file; **Import** loads such a file and replaces the months it contains.
+- **Export** downloads every month as one JSON file; **Import** loads such a file and replaces the months it contains. Import accepts only the current format: backup files exported before November 7, 2026, can contain months in an older format and are refused.

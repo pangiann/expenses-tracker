@@ -1,4 +1,4 @@
-import { MonthRecord, type MonthData, type StoredMonthData } from '../../shared/month/month-record.ts';
+import { MonthRecord, type MonthData } from '../../shared/month/month-record.ts';
 import { closestSavedMonthKey } from '../../shared/month/month-validation.ts';
 
 /** The parts of Durable Object storage this repository uses, so tests can pass a Map-based fake. */
@@ -25,7 +25,7 @@ export class DurableObjectMonthRepository {
   constructor(private readonly storage: DurableObjectMonthStorage) {}
 
   async loadMonth(monthKey: string): Promise<MonthRecord | null> {
-    const monthData = await this.storage.get<StoredMonthData>(storageKey(monthKey));
+    const monthData = await this.storage.get<MonthData>(storageKey(monthKey));
     return monthData ? new MonthRecord(monthData) : null;
   }
 

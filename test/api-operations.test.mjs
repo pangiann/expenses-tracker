@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'vitest';
 
+import { MonthRecord } from '../shared/month/month-record.ts';
 import { routeApiRequestToOperation } from '../worker/household-durable-object/api-request-router.ts';
 import { DurableObjectMonthRepository } from '../worker/household-durable-object/durable-object-month-repository.ts';
 import { LiveUpdateConnectionManager } from '../worker/household-durable-object/live-update-connection-manager.ts';
@@ -176,8 +177,8 @@ test('a new month copies categories and budgets from the closest earlier month',
 test('a backup can be imported and exported', async () => {
   const { context } = fakeOperationContext();
   const months = [
-    { month: '2024-10', expenses: [], importedFrom: 'spreadsheet' },
-    { month: '2024-11', expenses: [] },
+    { ...MonthRecord.createEmptyMonth('2024-10').toJSON(), importedFrom: 'spreadsheet' },
+    MonthRecord.createEmptyMonth('2024-11').toJSON(),
   ];
   const imported = await call(context, 'POST', '/api/import', { months });
   assert.deepEqual(imported, { status: 200, answer: { count: 2 } });
@@ -191,4 +192,8 @@ test('a backup can be imported and exported', async () => {
 
   const notABackup = await call(context, 'POST', '/api/import', { months: [{ month: 'soon' }] });
   assert.equal(notABackup.status, 400);
+  const olderFormat = await call(context, 'POST', '/api/import', {
+    months: [{ month: '2024-12', income: { expected: 0, actual: 0 }, expenses: [] }],
+  });
+  assert.equal(olderFormat.status, 400, 'a backup in the older format is refused');
 });

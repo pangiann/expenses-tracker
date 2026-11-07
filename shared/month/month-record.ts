@@ -37,7 +37,8 @@ export interface RecurringCost {
 /** A month as saved: what toJSON() returns and what the Worker stores. */
 export interface MonthData {
   month: string;
-  income: { expected: number; actual: number; entries: IncomeEntry[] };
+  /** actual is the sum of the entries, written for files read by older versions; never read. */
+  income: { expected: number; actual?: number; entries: IncomeEntry[] };
   categories: Category[];
   budgets: Record<string, number>;
   expenses: Expense[];
@@ -46,23 +47,6 @@ export interface MonthData {
   /** Fields this version doesn't know about are kept as they are. */
   [extraField: string]: unknown;
 }
-
-/**
- * A month as it may arrive from an older file or an import: everything except the month key
- * is optional, income may be a single number, and fixed costs may lack ids.
- */
-export interface StoredMonthData {
-  month: string;
-  income?: { expected?: number; actual?: number; entries?: IncomeEntry[] };
-  categories?: Category[];
-  budgets?: Record<string, number>;
-  expenses?: Expense[];
-  fixed?: StoredRecurringCost[];
-  subscriptions?: StoredRecurringCost[];
-  [extraField: string]: unknown;
-}
-
-type StoredRecurringCost = Omit<RecurringCost, 'id'> & { id?: string };
 
 export interface MonthTotals {
   variableSpending: number;
@@ -118,7 +102,7 @@ const KNOWN_FIELDS = new Set(['month', 'income', 'categories', 'budgets', 'expen
  *     "subscriptions": [ { "id": "...", "name": "Music", "amount": 10 } ]
  *   }
  *
- * "actual" is the sum of the entries. It is still written so older files stay readable.
+ * "actual" is the sum of the entries. It is still written so older versions of the app can read the file.
  * The order of "categories" is the order on screen.
  *
  * Every item (expense, income entry, fixed cost) has an id, and every method finds items by
@@ -141,19 +125,16 @@ export class MonthRecord {
   private readonly fieldsThisCodeDoesNotKnow: Record<string, unknown>;
 
   /** @param monthData  the parsed contents of a month file */
-  constructor(monthData: StoredMonthData) {
+  constructor(monthData: MonthData) {
     this.monthKey = monthData.month;
-    this.expectedIncome = monthData.income?.expected ?? 0;
-    this.incomes = MonthRecord.#readIncomeEntries(monthData);
-    this.categories = MonthRecord.#readCategories(monthData);
+    this.expectedIncome = monthData.income.expected;
+    this.incomes = monthData.income.entries.map((entry) => ({ ...entry }));
+    this.categories = monthData.categories.map((category) => ({ ...category }));
     this.budgets = { ...MonthRecord.#zeroBudgetForEachCategory(this.categories), ...monthData.budgets };
-    this.expenses = (monthData.expenses ?? []).map((expense) => ({ ...expense }));
+    this.expenses = monthData.expenses.map((expense) => ({ ...expense }));
     this.recurringCosts = {
-      [RecurringCostList.FIXED_COSTS]: MonthRecord.#readRecurringCosts(monthData.fixed, RecurringCostList.FIXED_COSTS),
-      [RecurringCostList.SUBSCRIPTIONS]: MonthRecord.#readRecurringCosts(
-        monthData.subscriptions,
-        RecurringCostList.SUBSCRIPTIONS,
-      ),
+      [RecurringCostList.FIXED_COSTS]: monthData.fixed.map((cost) => ({ ...cost })),
+      [RecurringCostList.SUBSCRIPTIONS]: monthData.subscriptions.map((cost) => ({ ...cost })),
     };
     this.fieldsThisCodeDoesNotKnow = MonthRecord.#readFieldsThisCodeDoesNotKnow(monthData);
   }
@@ -162,7 +143,16 @@ export class MonthRecord {
   static createEmptyMonth(monthKey: string): MonthRecord {
     return new MonthRecord({
       month: monthKey,
-      fixed: DEFAULT_FIXED_COST_NAMES.map((name) => ({ name, amount: 0 })),
+      income: { expected: 0, entries: [] },
+      categories: DEFAULT_CATEGORIES.map((category) => ({ ...category })),
+      budgets: {},
+      expenses: [],
+      fixed: DEFAULT_FIXED_COST_NAMES.map((name, position) => ({
+        id: `${RecurringCostList.FIXED_COSTS}-${position + 1}`,
+        name,
+        amount: 0,
+      })),
+      subscriptions: [],
     });
   }
 
@@ -174,6 +164,7 @@ export class MonthRecord {
       income: { expected: templateMonthData.income.expected, entries: [] },
       categories: templateMonthData.categories,
       budgets: templateMonthData.budgets,
+      expenses: [],
       fixed: templateMonthData.fixed,
       subscriptions: templateMonthData.subscriptions,
     });
@@ -476,48 +467,17 @@ export class MonthRecord {
     return trimmedName;
   }
 
-  // ----- Reading older files -----
-
-  /**
-   * Older files have one number, income.actual, instead of a list of entries. It becomes one
-   * entry. Its id is derived from the month, so the browser and the server turn the same file
-   * into the same entry and can both find it later.
-   */
-  static #readIncomeEntries(monthData: StoredMonthData): IncomeEntry[] {
-    const income = monthData.income ?? {};
-    if (Array.isArray(income.entries)) return income.entries.map((entry) => ({ ...entry }));
-    if (income.actual !== undefined && income.actual > 0) {
-      return [{ id: `income-${monthData.month}-1`, date: null, description: '', amount: income.actual }];
-    }
-    return [];
-  }
-
-  /**
-   * Older files have fixed costs without ids. Each gets an id from its list and position,
-   * for example "fixed-1": the same on every device, and saved with the month from then on.
-   */
-  static #readRecurringCosts(
-    costs: StoredRecurringCost[] | undefined,
-    listName: RecurringCostListName,
-  ): RecurringCost[] {
-    return (costs ?? []).map((cost, position) => ({ ...cost, id: cost.id ?? `${listName}-${position + 1}` }));
-  }
+  // ----- Helpers -----
 
   static #sortNewestFirst<Item extends { date?: string | null }>(items: Item[]): Item[] {
     return [...items].sort((first, second) => (second.date ?? '').localeCompare(first.date ?? ''));
-  }
-
-  /** Older files have no category list: they used the default categories. */
-  static #readCategories(monthData: StoredMonthData): Category[] {
-    const categories = Array.isArray(monthData.categories) ? monthData.categories : DEFAULT_CATEGORIES;
-    return categories.map((category) => ({ ...category }));
   }
 
   static #zeroBudgetForEachCategory(categories: Category[]): Record<string, number> {
     return Object.fromEntries(categories.map((category) => [category.id, 0]));
   }
 
-  static #readFieldsThisCodeDoesNotKnow(monthData: StoredMonthData): Record<string, unknown> {
+  static #readFieldsThisCodeDoesNotKnow(monthData: MonthData): Record<string, unknown> {
     return Object.fromEntries(Object.entries(monthData).filter(([fieldName]) => !KNOWN_FIELDS.has(fieldName)));
   }
 }

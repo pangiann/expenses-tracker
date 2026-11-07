@@ -1,21 +1,36 @@
 import assert from 'node:assert/strict';
 import { test } from 'vitest';
 
+import { DEFAULT_CATEGORIES } from '../shared/month/categories.ts';
 import { MonthRecord, MonthRuleError } from '../shared/month/month-record.ts';
 import { closestSavedMonthKey, isMonthData } from '../shared/month/month-validation.ts';
 
+/** A month file in the current format: every part present, with these fields on top. */
+const monthData = (fields) => ({
+  month: fields.month,
+  income: { expected: 0, entries: [] },
+  categories: DEFAULT_CATEGORIES.map((category) => ({ ...category })),
+  budgets: {},
+  expenses: [],
+  fixed: [],
+  subscriptions: [],
+  ...fields,
+});
+
 const novemberWithRent = () =>
-  new MonthRecord({
-    month: '2026-11',
-    income: { expected: 4000, entries: [] },
-    budgets: { dinner: 130 },
-    expenses: [],
-    fixed: [
-      { id: 'rent', name: 'Rent', amount: 1000 },
-      { id: 'internet', name: 'Internet', amount: 30 },
-    ],
-    subscriptions: [],
-  });
+  new MonthRecord(
+    monthData({
+      month: '2026-11',
+      income: { expected: 4000, entries: [] },
+      budgets: { dinner: 130 },
+      expenses: [],
+      fixed: [
+        { id: 'rent', name: 'Rent', amount: 1000 },
+        { id: 'internet', name: 'Internet', amount: 30 },
+      ],
+      subscriptions: [],
+    }),
+  );
 
 const november = () => MonthRecord.createEmptyMonth('2026-11');
 const coffee = { id: 'e1', categoryId: 'lunch', amount: 3.5, description: 'coffee', date: '2026-11-03' };
@@ -63,16 +78,6 @@ test('income is a list of entries, and Earned is their total', () => {
   assert.equal(month.toJSON().income.actual, 45);
 });
 
-test('an older file with one income number becomes one entry, the same on every device', () => {
-  const oldFile = { month: '2026-08', income: { expected: 4000, actual: 3500 }, expenses: [] };
-  const onPhone = new MonthRecord(oldFile);
-  const onServer = new MonthRecord(oldFile);
-  assert.equal(onPhone.totalIncome, 3500);
-  assert.deepEqual(onPhone.incomes, onServer.incomes);
-  onServer.updateIncomeAmount(onPhone.incomes[0].id, 3950);
-  assert.equal(onServer.totalIncome, 3950);
-});
-
 test('budgets and expected income can be set', () => {
   const month = novemberWithRent();
   month.setBudget('travel', 200);
@@ -101,22 +106,6 @@ test('adding the same fixed cost twice keeps one row', () => {
   assert.equal(month.recurringCostsIn('subscriptions').length, 1);
 });
 
-test('older fixed costs without ids get the same ids on every device', () => {
-  const oldFile = {
-    month: '2026-08',
-    expenses: [],
-    fixed: [
-      { name: 'Rent', amount: 880 },
-      { name: 'Internet', amount: 30 },
-    ],
-  };
-  assert.deepEqual(
-    new MonthRecord(oldFile).recurringCostsIn('fixed').map((cost) => cost.id),
-    ['fixed-1', 'fixed-2'],
-  );
-  assert.deepEqual(new MonthRecord(oldFile).toJSON().fixed[1], { name: 'Internet', amount: 30, id: 'fixed-2' });
-});
-
 // ----- New months and month files -----
 
 test('a new month copies budgets, expected income and fixed costs, not expenses or income entries', () => {
@@ -137,31 +126,32 @@ test('closestSavedMonthKey prefers the latest earlier month', () => {
   assert.equal(closestSavedMonthKey([], '2026-01'), null);
 });
 
-test('isMonthData accepts month files and rejects anything else', () => {
+test('isMonthData accepts month files in the current format and refuses older ones', () => {
   assert.equal(isMonthData(novemberWithRent().toJSON()), true);
-  assert.equal(isMonthData({ month: '2026-13', expenses: [] }), false);
-  assert.equal(isMonthData({ month: '2026-11' }), false);
+  assert.equal(isMonthData(MonthRecord.createEmptyMonth('2026-11').toJSON()), true);
+  assert.equal(isMonthData(monthData({ month: '2026-13' })), false);
+  assert.equal(isMonthData({ month: '2026-11', expenses: [] }), false);
   assert.equal(isMonthData(null), false);
-});
-
-test('an older file without a category list gets the 11 default categories', () => {
-  const month = new MonthRecord({ month: '2026-08', expenses: [], budgets: { dinner: 130 } });
-  assert.equal(month.categories.length, 11);
-  assert.equal(month.categories[0].id, 'dinner');
-  assert.equal(month.budgetFor('dinner'), 130);
-  assert.equal(month.toJSON().categories.length, 11);
+  // The older format: one income number, no category list, fixed costs without ids.
+  const withoutCategories = monthData({ month: '2026-08' });
+  delete withoutCategories.categories;
+  assert.equal(isMonthData(withoutCategories), false);
+  assert.equal(isMonthData(monthData({ month: '2026-08', income: { expected: 4000, actual: 3500 } })), false);
+  assert.equal(isMonthData(monthData({ month: '2026-08', fixed: [{ name: 'Rent', amount: 880 }] })), false);
 });
 
 test('a month keeps its own category list, and a new month copies it', () => {
-  const october = new MonthRecord({
-    month: '2026-10',
-    expenses: [],
-    categories: [
-      { id: 'kids', name: 'Kids', color: '#f59e0b' },
-      { id: 'other', nameId: 'category.other', color: '#8a92a6' },
-    ],
-    budgets: { kids: 100, other: 20 },
-  });
+  const october = new MonthRecord(
+    monthData({
+      month: '2026-10',
+      expenses: [],
+      categories: [
+        { id: 'kids', name: 'Kids', color: '#f59e0b' },
+        { id: 'other', nameId: 'category.other', color: '#8a92a6' },
+      ],
+      budgets: { kids: 100, other: 20 },
+    }),
+  );
   const nextMonth = MonthRecord.createFromTemplateMonth(october, '2026-11');
   assert.deepEqual(
     nextMonth.categories.map((category) => category.id),
@@ -186,11 +176,13 @@ test('the month refuses edits that break its rules, and names the rule', () => {
 });
 
 test('expenses and budgets are refused for a category the month does not have', () => {
-  const month = new MonthRecord({
-    month: '2026-10',
-    expenses: [],
-    categories: [{ id: 'kids', name: 'Kids', color: '#f59e0b' }],
-  });
+  const month = new MonthRecord(
+    monthData({
+      month: '2026-10',
+      expenses: [],
+      categories: [{ id: 'kids', name: 'Kids', color: '#f59e0b' }],
+    }),
+  );
   const groceries = { id: 'e9', categoryId: 'supermarket', amount: 20, description: '', date: '2026-10-02' };
   assertBreaks('unknown-category', () => month.addExpense(groceries));
   assertBreaks('unknown-category', () => month.setBudget('supermarket', 5));
@@ -248,7 +240,7 @@ test('a month holds at most 40 categories', () => {
 });
 
 test('renaming a category keeps its id, expenses and budget', () => {
-  const month = new MonthRecord({ month: '2026-11', expenses: [], budgets: { dinner: 130 } });
+  const month = new MonthRecord(monthData({ month: '2026-11', expenses: [], budgets: { dinner: 130 } }));
   month.addExpense({ id: 'e-d', categoryId: 'dinner', amount: 30, description: 'pizza', date: '2026-11-02' });
   month.renameCategory('dinner', ' Eating out ');
   // no nameId any more: the typed name shows in every language
@@ -272,7 +264,7 @@ test('renaming follows the name rules, but a category may keep its own name in o
 });
 
 test('an empty category can be removed, with its budget; removing it again does nothing', () => {
-  const month = new MonthRecord({ month: '2026-11', expenses: [], budgets: { gifts: 60 } });
+  const month = new MonthRecord(monthData({ month: '2026-11', expenses: [], budgets: { gifts: 60 } }));
   month.removeCategory('gifts');
   month.removeCategory('gifts'); // resent
   assert.equal(month.findCategory('gifts'), undefined);
@@ -288,11 +280,13 @@ test('a category with expenses, or the last category, cannot be removed', () => 
   assertBreaks('category-has-expenses', () => month.removeCategory('lunch'));
   assert.ok(month.findCategory('lunch'));
 
-  const onlyOne = new MonthRecord({
-    month: '2026-11',
-    expenses: [],
-    categories: [{ id: 'kids', name: 'Kids', color: '#f59e0b' }],
-  });
+  const onlyOne = new MonthRecord(
+    monthData({
+      month: '2026-11',
+      expenses: [],
+      categories: [{ id: 'kids', name: 'Kids', color: '#f59e0b' }],
+    }),
+  );
   assert.equal(onlyOne.categoryRemovalBlocker('kids'), 'last-category');
   assertBreaks('last-category', () => onlyOne.removeCategory('kids'));
 });

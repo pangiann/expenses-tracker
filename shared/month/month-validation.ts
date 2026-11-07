@@ -1,4 +1,4 @@
-import type { StoredMonthData } from './month-record.ts';
+import type { MonthData } from './month-record.ts';
 
 /**
  * Checks for whole months arriving from outside (imports, stored files).
@@ -12,18 +12,32 @@ export function isValidMonthKey(monthKey: unknown): monthKey is string {
 }
 
 /**
- * True when the data has the basic shape of a month file: a month key and a list of expenses.
- * MonthRecord reads the rest, filling in what older files lack.
+ * True when the data has every part of a month file in the current format: a month key, income
+ * with a list of entries, a category list, budgets, expenses, and fixed costs and subscriptions
+ * that all have ids. Files in an older format (one income number, no category list, fixed
+ * costs without ids) are refused.
  */
-export function isMonthData(monthData: unknown): monthData is StoredMonthData {
+export function isMonthData(monthData: unknown): monthData is MonthData {
+  if (!isPlainObject(monthData) || !isValidMonthKey(monthData.month)) return false;
+  const { income, categories, budgets, expenses, fixed, subscriptions } = monthData;
   return (
-    monthData !== null &&
-    typeof monthData === 'object' &&
-    'month' in monthData &&
-    isValidMonthKey(monthData.month) &&
-    'expenses' in monthData &&
-    Array.isArray(monthData.expenses)
+    isPlainObject(income) &&
+    typeof income.expected === 'number' &&
+    Array.isArray(income.entries) &&
+    Array.isArray(categories) &&
+    isPlainObject(budgets) &&
+    Array.isArray(expenses) &&
+    isListOfItemsWithIds(fixed) &&
+    isListOfItemsWithIds(subscriptions)
   );
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function isListOfItemsWithIds(value: unknown): boolean {
+  return Array.isArray(value) && value.every((item) => isPlainObject(item) && typeof item.id === 'string');
 }
 
 /**
