@@ -83,13 +83,13 @@ Listing 3-1. The quick add bar sends the expense. Excerpt from `web/scripts/feat
 ```tsx
 onSubmit={(submitEvent) => {
   submitEvent.preventDefault();
-  const isSent = expensesApi.addExpense(month.monthKey, {
+  const wasEditRecorded = expensesApi.addExpense(month.monthKey, {
     categoryId,
     amount: parseAmount(amount) ?? 0,
     description,
     date: date || defaultExpenseDate(month.monthKey),
   });
-  if (!isSent) return; // for example no amount: keep what was typed
+  if (!wasEditRecorded) return; // for example no amount: keep what was typed
   setAmount('');
   setDescription('');
   amountInput.current?.focus();
@@ -112,12 +112,16 @@ The function gives the expense its id here, on the device. Chapter 6 explains wh
 
 **Step 3. The page's state records the edit.** `monthPageState` in `sync/month-page-state.ts` keeps everything the page shows. Every edit enters through its `recordEdit()`, which does two things in order.
 
-Listing 3-3. Recording an edit. Excerpt from `web/scripts/sync/month-page-state.ts`, lines 79–84.
+Listing 3-3. Recording an edit. Excerpt from `web/scripts/sync/month-page-state.ts`, lines 79–88.
 
 ```ts
-recordEdit<Name extends EndpointName>(name: Name, params: ParamsOf<Name>, body: BodyInputOf<Name>): boolean {
+recordEdit<Name extends EndpointName>(
+  name: Name,
+  params: PathParamsOf<Name>,
+  body: RequestBodyInputOf<Name>,
+): boolean {
   if (!unsavedEditsOutbox.add(name, params, body)) return false;
-  if (this.#snapshot.refusedEditText) this.#update({ refusedEditText: null });
+  if (this.#snapshot.refusedEditText) this.#updateSnapshotAndNotifyListeners({ refusedEditText: null });
   this.#showOptimisticMonth();
   return true;
 }
@@ -128,39 +132,36 @@ First, the edit goes into the outbox in `sync/unsaved-edits-outbox.ts`. `add()` 
 Listing 3-4. The outbox accepts an edit. Excerpt from `web/scripts/sync/unsaved-edits-outbox.ts`, lines 54–60.
 
 ```ts
-add<Name extends EndpointName>(name: Name, params: ParamsOf<Name>, body: BodyInputOf<Name>): boolean {
-  if (!isValidBody(name, body)) return false;
+add<Name extends EndpointName>(name: Name, params: PathParamsOf<Name>, body: RequestBodyInputOf<Name>): boolean {
+  if (!isValidRequestBody(name, body)) return false;
   this.#edits.push({ name, params, body });
-  saveEdits(this.#edits);
+  saveUnsavedEditsToBrowser(this.#edits);
   void this.#sendUnsavedEdits();
   return true;
 }
 ```
 
-`isValidBody` uses the same zod schema the Worker uses, so an amount of 0 is refused here, before any request, and the month on screen doesn't change. `#sendUnsavedEdits` sends the unsaved edits one at a time, oldest first, through `callEndpoint` in `api/endpoint-http-client.ts`, which makes the HTTP request: `POST /api/months/2026-11/expenses` with the expense as JSON.
+`isValidRequestBody` uses the same zod schema the Worker uses, so an amount of 0 is refused here, before any request, and the month on screen doesn't change. `#sendUnsavedEdits` sends the unsaved edits one at a time, oldest first, through `callEndpoint` in `api/endpoint-http-client.ts`, which makes the HTTP request: `POST /api/months/2026-11/expenses` with the expense as JSON.
 
 **Step 4. The page draws the edit before the server answers.** This is an **optimistic update**: the page shows the edit as if the server had already saved it. The page never changes its copy of the month directly. It keeps the **saved month**, the server's last answer, and always draws that month with the outbox's unsaved edits applied on top.
 
-Listing 3-5. The month to show. Excerpt from `web/scripts/sync/optimistic-month.ts`, lines 20–33.
+Listing 3-5. The month to show. Excerpt from `web/scripts/sync/optimistic-month.ts`, lines 20–30.
 
 ```ts
 export function buildOptimisticMonth(savedMonth: MonthData, unsavedEdits: readonly UnsavedEdit[]): MonthRecord {
   const month = new MonthRecord(savedMonth);
   for (const edit of unsavedEdits) {
-    if (edit.params.month !== month.monthKey || !isMonthEdit(edit.name)) continue;
-    const request = checkedRequest(edit.name, edit);
+    if (edit.params.month !== month.monthKey || !isEndpointThatEditsAMonth(edit.name)) continue;
+    const request = checkUnsavedEditAgainstEndpoint(edit.name, edit);
     if (!request) continue;
     try {
-      applyEditToMonth(month, edit.name, request);
+      applyEndpointEditToMonth(month, edit.name, request);
     } catch (error) {
       if (!(error instanceof MonthRuleError)) throw error;
     }
-  }
-  return month;
-}
 ```
 
-The function starts from a fresh copy of the saved month, then applies each unsaved edit for that month in order. `applyEditToMonth` runs the same edit table the Worker runs (Chapter 4, step 4), so the page's early version matches what the server will answer. An edit that breaks a rule, for example because someone else removed its category, is skipped here; the server refuses it too.
+The function starts from a fresh copy of the saved month, then applies each unsaved edit for that month in order. `applyEndpointEditToMonth` runs the same edit table the Worker runs (Chapter 4, step 4), so the page's early version matches what the server will answer. An edit that breaks a rule, for example because someone else removed its category, is skipped here; the server refuses it too.
 
 ### Chapter 4. In the Worker
 
@@ -230,44 +231,52 @@ export async function routeApiRequestToOperation(request: Request, context: Oper
   for (const name of Object.keys(endpoints) as EndpointName[]) {
     const endpoint = endpoints[name];
     if (endpoint.method !== request.method) continue;
-    const rawParams = matchPath(endpoint.path, pathname);
-    if (rawParams) return runOperation(name, rawParams, request, context);
+    const unparsedPathParams = readPathParamsIfPathMatches(endpoint.path, pathname);
+    if (unparsedPathParams) return runOperation(name, unparsedPathParams, request, context);
   }
   return errorResponse(404, { error: 'Not found' });
 }
 
 // in runOperation:
-const params = endpoint.params.safeParse(rawParams); // 400 when the path is wrong
-const body = endpoint.body.safeParse(rawBody); // 400 when the body is wrong
+const params = endpoint.params.safeParse(unparsedPathParams); // 400 when the path is wrong
+const body = endpoint.body.safeParse(unparsedBody); // 400 when the body is wrong
 const operation = operationRegistry[name] as Operation<EndpointName>;
-const result = await operation({ params: params.data, body: body.data }, context);
-return jsonResponse(200, result);
+const operationAnswer = await operation({ params: params.data, body: body.data }, context);
+return jsonResponse(200, operationAnswer);
 // MonthRuleError -> 409 with the rule that was broken
 ```
 
 The router walks the same endpoint table the page used. Our request matches `addExpense`, whose entry is in Listing 4-4. The router checks the path parameters and the body against the entry's zod schemas, then looks up the operation with the same name in `operations/operation-registry.ts`. The operation receives typed values in range and never checks shapes itself.
 
-Listing 4-4. The addExpense entry in the endpoint table. Excerpt from `shared/api/endpoints.ts`, lines 66–71.
+Listing 4-4. The addExpense entry in the endpoint table. Excerpt from `shared/api/endpoints.ts`, lines 66–77.
 
 ```ts
 addExpense: endpoint(
   'POST',
   '/api/months/:month/expenses',
-  InMonth,
-  z.object({ id: Id, categoryId: Id, amount: PositiveAmount, description: OptionalText, date: IsoDate }),
+  MonthPathParams,
+  z.object({
+    id: ItemIdField,
+    categoryId: ItemIdField,
+    amount: PositiveAmountField,
+    description: OptionalTextField,
+    date: IsoDateField,
+  }),
 ),
 ```
 
-`InMonth` says the path has one parameter, `month`, in the form `YYYY-MM`. The field shapes (`Id`, `PositiveAmount` and so on) live in `shared/api/fields.ts`, so every endpoint uses the same limits: ids up to 64 characters, amounts up to 10 million, text up to 200 characters.
+`MonthPathParams` says the path has one parameter, `month`, in the form `YYYY-MM`. The field shapes (`ItemIdField`, `PositiveAmountField` and so on) live in `shared/api/fields.ts`, so every endpoint uses the same limits: ids up to 64 characters, amounts up to 10 million, text up to 200 characters.
 
 **Step 4. The operation runs the edit.** Each endpoint has one function in `operations/`, named after it and grouped with similar ones: `add-operations.ts`, `change-operations.ts`, `remove-operations.ts`, `read-operations.ts` and `backup-operations.ts`.
 
-Listing 4-5. The addExpense operation. Excerpt from `worker/household-durable-object/operations/add-operations.ts`, lines 12–14.
+Listing 4-5. The addExpense operation. Excerpt from `worker/household-durable-object/operations/add-operations.ts`, lines 12–16.
 
 ```ts
 /** POST /api/months/:month/expenses: adds an expense. */
 export const addExpenseOperation: Operation<'addExpense'> = (request, context) =>
-  loadEditSaveAndBroadcastMonth(context, request.params.month, (month) => editsByEndpoint.addExpense(month, request));
+  loadEditSaveAndBroadcastMonth(context, request.params.month, (month) =>
+    monthEditFunctionByEndpointName.addExpense(month, request),
+  );
 ```
 
 Every editing operation looks like this. `loadEditSaveAndBroadcastMonth` holds the four steps every edit follows.
@@ -297,8 +306,8 @@ export async function loadEditSaveAndBroadcastMonth(
 Listing 4-7. What each edit does to the month. Excerpt from `shared/month/apply-edit-to-month.ts`, lines 24–29.
 
 ```ts
-export const editsByEndpoint: {
-  [Name in MonthEditName]: (month: MonthRecord, request: MonthEditRequest<Name>) => void;
+export const monthEditFunctionByEndpointName: {
+  [Name in MonthEditingEndpointName]: (month: MonthRecord, request: CheckedMonthEditRequest<Name>) => void;
 } = {
   addExpense: (month, { body }) => month.addExpense(body),
   changeExpenseAmount: (month, { params, body }) => month.updateExpenseAmount(params.id, body.amount),
@@ -306,7 +315,7 @@ export const editsByEndpoint: {
   // ... one line per editing endpoint
 ```
 
-This table is the one place that says what each endpoint does to a month. The Worker's operations run it on the stored month; the page runs it, through `applyEditToMonth`, on its copy for unsaved edits (Listing 3-5).
+This table is the one place that says what each endpoint does to a month. The Worker's operations run it on the stored month; the page runs it, through `applyEndpointEditToMonth`, on its copy for unsaved edits (Listing 3-5).
 
 **Step 5. The model enforces the month's rules.** `MonthRecord` in `shared/month/month-record.ts` is the only code that changes month data.
 
@@ -329,26 +338,20 @@ The zod schemas check what can be checked without the month: types, lengths, for
 
 The operation's answer travels back to the outbox, and the outbox gives it to the page's state.
 
-Listing 5-1. The page's state keeps a month from the server. Excerpt from `web/scripts/sync/month-page-state.ts`, lines 135–148.
+Listing 5-1. The page's state keeps a month from the server. Excerpt from `web/scripts/sync/month-page-state.ts`, lines 145–152.
 
 ```ts
 /** A month the server saved. Answers can arrive out of order, so only a newer revision is used. */
-#showSavedMonth(answer: MonthResponse): void {
-  if (answer.month.month !== this.#shownMonthKey || answer.revision < this.#savedRevision) return;
-  this.#savedRevision = answer.revision;
-  this.#savedMonth = answer.month;
-  this.#update({ savedMonthKeys: answer.monthKeys, errorText: null });
+#showSavedMonth(monthResponse: MonthResponse): void {
+  if (monthResponse.month.month !== this.#shownMonthKey || monthResponse.revision < this.#savedRevision) return;
+  this.#savedRevision = monthResponse.revision;
+  this.#savedMonth = monthResponse.month;
+  this.#updateSnapshotAndNotifyListeners({ savedMonthKeys: monthResponse.monthKeys, errorText: null });
   this.#showOptimisticMonth();
-}
-
-/** Shows the saved month with the edits not saved yet on top. */
-#showOptimisticMonth(): void {
-  if (!this.#savedMonth) return;
-  this.#update({ month: buildOptimisticMonth(this.#savedMonth, unsavedEditsOutbox.unsavedEdits) });
 }
 ```
 
-The outbox has already dropped the answered edit, so the month on screen is now the saved month with only the edits still unsaved. `#update` makes a new snapshot and tells every subscriber. The month page subscribes with React's `useSyncExternalStore`, so React draws it again (Listing 5-2). On screen nothing moves: the expense was already shown, and now it is the server's copy.
+The outbox has already dropped the answered edit, so the month on screen is now the saved month with only the edits still unsaved. `#updateSnapshotAndNotifyListeners` makes a new snapshot and tells every subscriber. The month page subscribes with React's `useSyncExternalStore`, so React draws it again (Listing 5-2). On screen nothing moves: the expense was already shown, and now it is the server's copy.
 
 Listing 5-2. The month page reads the page's state. Excerpt from `web/scripts/pages/month-page.tsx`, lines 26–30.
 
@@ -368,7 +371,7 @@ The other devices get the month through their WebSocket. Each page tells its hou
 
 > **Sidebar: the WebSocket costs almost nothing.** Cloudflare answers the keepalive ping without waking the Durable Object, and messages sent to a device are free. The socket stays open while the Durable Object sleeps between requests.
 
-> **Sidebar: a socket that died quietly.** After a laptop sleeps or a phone changes networks, the browser can report a socket as open for a minute or more while nothing gets through. So the page doesn't trust the socket's state. Every 50 seconds, and whenever the page becomes visible again or the browser reports it is back online, `#checkAlive()` sends a ping. Without any message back within 10 seconds, the page closes that socket, connects again, and loads the month again to catch up.
+> **Sidebar: a socket that died quietly.** After a laptop sleeps or a phone changes networks, the browser can report a socket as open for a minute or more while nothing gets through. So the page doesn't trust the socket's state. Every 50 seconds, and whenever the page becomes visible again or the browser reports it is back online, `#pingAndReplaceSocketIfSilent()` sends a ping. Without any message back within 10 seconds, the page closes that socket, connects again, and loads the month again to catch up.
 
 ---
 
@@ -415,8 +418,8 @@ For local testing, `ACCESS_TEST_BYPASS_EMAIL` in `.dev.vars` replaces the sign-i
 Suppose you want to rename an expense. Each step below is in a different layer, and TypeScript or the tests point out a missing step.
 
 1. **Model.** Add `renameExpense(expenseId, newName)` to `MonthRecord` in `shared/month/month-record.ts`. Throw `MonthRuleError` for a broken month rule, and add the rule's name to `MonthRule`. A new rule also needs its message in `sync/refused-edit-message.ts` and both translation files; TypeScript fails until it has one.
-2. **Endpoint.** Add `renameExpense` to `endpoints` in `shared/api/endpoints.ts`, for example `PUT /api/months/:month/expenses/:id/description` with `ItemInMonth` and a body of `z.object({ description: Text })`.
-3. **Edit.** Add one line to `editsByEndpoint` in `shared/month/apply-edit-to-month.ts`. TypeScript fails until you do, because the table must cover every editing endpoint.
+2. **Endpoint.** Add `renameExpense` to `endpoints` in `shared/api/endpoints.ts`, for example `PUT /api/months/:month/expenses/:id/description` with `MonthItemPathParams` and a body of `z.object({ description: RequiredTextField })`.
+3. **Edit.** Add one line to `monthEditFunctionByEndpointName` in `shared/month/apply-edit-to-month.ts`. TypeScript fails until you do, because the table must cover every editing endpoint.
 4. **Operation.** Add `renameExpenseOperation` to `operations/change-operations.ts`, written like the others there, then add it to `operations/operation-registry.ts`. TypeScript fails until the registry has it.
 5. **API function.** Add `renameExpense()` to `web/scripts/api/expenses-api.ts`; it calls `monthPageState.recordEdit('renameExpense', ...)`.
 6. **Feature.** Call it from the feature that shows the expense, for example `features/categories/category-card.tsx`.
@@ -449,7 +452,7 @@ An endpoint that only reads (like `getMonth`) skips steps 1 and 3: its operation
 | `shared/month/amounts.ts`                                               | shared                   | rounding to cents, sums                                                                                            |
 | `shared/api/endpoints.ts`                                               | shared                   | every endpoint: method, path, params, body; response types                                                         |
 | `shared/api/fields.ts`                                                  | shared                   | shapes of ids, amounts, text, dates                                                                                |
-| `shared/month/apply-edit-to-month.ts`                                   | shared                   | `editsByEndpoint`: what each editing endpoint does to a month; `applyEditToMonth`                                  |
+| `shared/month/apply-edit-to-month.ts`                                   | shared                   | `monthEditFunctionByEndpointName`: what each editing endpoint does to a month; `applyEndpointEditToMonth`          |
 | `shared/live-update-messages.ts`                                        | shared                   | the two WebSocket messages: `watchMonth` and `month`                                                               |
 | `web/scripts/main.tsx`                                                  | entry                    | loads translations, draws the month page, connects to the server                                                   |
 | `web/scripts/pages/month-page.tsx`                                      | page                     | lays out every feature with the page's state                                                                       |
