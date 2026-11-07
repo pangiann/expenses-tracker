@@ -4,7 +4,7 @@
   "type": "module",
   "description": "Personal expenses tracker: a website on Cloudflare, shared live within a household.",
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "scripts": {
     "build": "esbuild web/scripts/main.tsx --bundle --format=esm --target=es2022 --jsx=automatic --define:process.env.NODE_ENV=\\\"production\\\" --minify --sourcemap --outfile=web/dist/main.js",
