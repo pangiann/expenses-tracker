@@ -121,6 +121,16 @@ h3 {
   color: var(--color-negative);
 }
 
+/*
+ * A ring around whatever the keyboard has reached: buttons, menus and the cards' drag handles.
+ * :focus-visible shows it for Tab, not for mouse clicks or taps. Text fields keep their own
+ * focus styles.
+ */
+:where(button, select, a, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
 /* Any value you can click to edit in place. */
 .click-to-edit {
   cursor: text;
