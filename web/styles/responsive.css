@@ -142,4 +142,22 @@
   .category-remove-button {
     opacity: 1;
   }
+
+  /*
+   * Fingers need about 44 x 44 px to hit a button. The ✕ buttons and the click-to-edit values
+   * are smaller, so an invisible area around each one takes the taps; the layout stays the same.
+   */
+  .delete-button {
+    position: relative; /* the ✕ on a card is already absolute, which anchors its area too */
+  }
+  .delete-button::after,
+  .category-remove-button::after {
+    content: '';
+    position: absolute;
+    inset: -10px -14px;
+  }
+  .click-to-edit {
+    padding: 4px 6px;
+    margin: -4px -6px;
+  }
 }
