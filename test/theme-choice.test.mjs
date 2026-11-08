@@ -19,18 +19,18 @@ beforeEach(() => {
 
 afterEach(() => vi.unstubAllGlobals());
 
-test('the theme is auto until someone chooses, and a choice is saved and announced', () => {
-  assert.equal(currentThemeChoice(), 'auto');
+test('the theme is light until someone chooses, and a choice is saved and announced', () => {
+  assert.equal(currentThemeChoice(), 'light');
   chooseTheme('dark');
   assert.equal(currentThemeChoice(), 'dark');
   assert.equal(storedItems.get('expenses.theme'), 'dark'); // the key web/theme-before-paint.js reads
   chooseTheme('auto');
   assert.equal(currentThemeChoice(), 'auto');
-  assert.equal(storedItems.has('expenses.theme'), false);
+  assert.equal(storedItems.get('expenses.theme'), 'auto');
   assert.deepEqual(eventsFired, ['expenses:theme-chosen', 'expenses:theme-chosen']);
 });
 
-test('a saved value that is not a choice counts as auto', () => {
+test('a saved value that is not a choice counts as the default, light', () => {
   storedItems.set('expenses.theme', 'purple');
-  assert.equal(currentThemeChoice(), 'auto');
+  assert.equal(currentThemeChoice(), 'light');
 });

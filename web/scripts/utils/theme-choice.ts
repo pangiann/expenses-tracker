@@ -1,10 +1,14 @@
 /**
- * Light or dark: "auto" follows the device. web/theme-before-paint.js applies the choice
- * before the page is drawn and whenever it changes; this file only reads and saves it.
+ * Light or dark: "auto" follows the device. Light is the default, until someone chooses.
+ * web/theme-before-paint.js applies the choice before the page is drawn and whenever it changes;
+ * this file only reads and saves it.
  */
 
 export const THEME_CHOICES = ['auto', 'light', 'dark'] as const;
 export type ThemeChoice = (typeof THEME_CHOICES)[number];
+
+/** The theme when nobody chose one (the same as in web/theme-before-paint.js). */
+const DEFAULT_THEME_CHOICE: ThemeChoice = 'light';
 
 const THEME_STORAGE_KEY = 'expenses.theme'; // the same key as in web/theme-before-paint.js
 
@@ -12,23 +16,22 @@ export function isThemeChoice(value: unknown): value is ThemeChoice {
   return THEME_CHOICES.includes(value as ThemeChoice);
 }
 
-/** The saved choice, or "auto" when none is saved. */
+/** The saved choice, or the default when none is saved. */
 export function currentThemeChoice(): ThemeChoice {
   try {
     const choice = localStorage.getItem(THEME_STORAGE_KEY);
-    return isThemeChoice(choice) ? choice : 'auto';
+    return isThemeChoice(choice) ? choice : DEFAULT_THEME_CHOICE;
   } catch {
-    return 'auto'; // storage blocked
+    return DEFAULT_THEME_CHOICE; // storage blocked
   }
 }
 
 /** Saves the choice; the page switches at once, without a reload. */
 export function chooseTheme(choice: ThemeChoice): void {
   try {
-    if (choice === 'auto') localStorage.removeItem(THEME_STORAGE_KEY);
-    else localStorage.setItem(THEME_STORAGE_KEY, choice);
+    localStorage.setItem(THEME_STORAGE_KEY, choice); // "auto" too, since it isn't the default
   } catch {
-    /* storage blocked, for example private browsing: the page stays on auto */
+    /* storage blocked, for example private browsing: the page stays on the default */
   }
   dispatchEvent(new Event('expenses:theme-chosen'));
 }
