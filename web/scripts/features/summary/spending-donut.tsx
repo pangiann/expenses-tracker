@@ -66,9 +66,8 @@ export function SpendingDonut({ month }: { month: MonthRecord }) {
                 <li key={slice.category.id}>
                   <span className="color-dot" style={{ background: slice.category.color }}></span>
                   <span className="spending-donut-legend-name">{categoryName(slice.category)}</span>
-                  {/* Only the share: the amount is in "Budget vs actual" and on the category's card. */}
                   <span className="spending-donut-legend-value">
-                    {`${((slice.amount / totalAmount) * 100).toFixed(0)}%`}
+                    {`${((slice.amount / totalAmount) * 100).toFixed(0)}% · ${formatEuros(slice.amount)}`}
                   </span>
                 </li>
               ))

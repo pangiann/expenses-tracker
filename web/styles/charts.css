@@ -49,14 +49,19 @@
   font-weight: 600;
 }
 
+/*
+ * The legend needs about 280 px for a name, a share and a large amount, so the donut takes
+ * what is left of the card (cqi: 1% of the card's width), between 110 and 180 px.
+ */
 .spending-donut {
+  container-type: inline-size;
   display: flex;
   align-items: center;
   gap: 20px;
 }
 .spending-donut-chart {
-  width: 180px;
-  height: 180px;
+  width: clamp(110px, calc(100cqi - 280px), 180px);
+  aspect-ratio: 1;
   flex-shrink: 0;
 }
 .spending-donut-total {

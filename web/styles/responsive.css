@@ -13,6 +13,10 @@
     flex-basis: 100%;
     justify-content: center;
   }
+  /* Both charts get the same width, so the donut's legend has room for names and amounts. */
+  .charts {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
 }
 
 /* Narrow windows: stack the sections in one column. */
@@ -172,10 +176,6 @@
 
   .spending-donut {
     gap: 14px;
-  }
-  .spending-donut-chart {
-    width: 120px;
-    height: 120px;
   }
   .spending-donut-legend {
     font-size: 12px;
