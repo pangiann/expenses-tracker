@@ -5,3 +5,6 @@ package-lock.json
 # Personal data and local state
 data/
 .wrangler/
+tests/ui/.state/
+tests/ui/test-results/
+tests/ui/playwright-report/

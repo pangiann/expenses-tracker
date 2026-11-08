@@ -7,7 +7,8 @@
     "node": ">=22"
   },
   "workspaces": [
-    "tests/integration"
+    "tests/integration",
+    "tests/ui"
   ],
   "scripts": {
     "build": "esbuild web/scripts/main.tsx --bundle --format=esm --target=es2022 --jsx=automatic --define:process.env.NODE_ENV=\\\"production\\\" --minify --sourcemap --outfile=web/dist/main.js",
@@ -22,8 +23,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:integration": "npm run test --workspace tests/integration",
+    "test:ui": "npm run test --workspace tests/ui",
     "deploy": "wrangler deploy",
-    "check": "npm run types && prettier --check . && eslint . && tsc -p shared && tsc -p web && tsc -p worker && tsc -p test && tsc -p tests/integration && vitest run"
+    "check": "npm run types && prettier --check . && eslint . && tsc -p shared && tsc -p web && tsc -p worker && tsc -p test && tsc -p tests/integration && tsc -p tests/ui && vitest run"
   },
   "dependencies": {
     "@dnd-kit/core": "6.3.1",

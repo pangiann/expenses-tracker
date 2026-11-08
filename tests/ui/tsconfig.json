@@ -1,0 +1,10 @@
+{
+  // UI tests run in Node.js and drive browsers through Playwright; the page's own code they
+  // import (shared/) needs no DOM.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["es2023", "dom"],
+    "types": []
+  },
+  "include": ["**/*.ts"]
+}
