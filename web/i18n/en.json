@@ -125,5 +125,26 @@
 
   "undo.expenseRemoved": "Expense removed ({amount})",
   "undo.recurringCostRemoved": "{name} removed",
-  "undo.undo": "Undo"
+  "undo.undo": "Undo",
+
+  "pages.label": "Pages",
+  "pages.month": "Month",
+  "pages.reports": "Reports",
+  "nav.previousYear": "Previous year",
+  "nav.nextYear": "Next year",
+  "reports.loadFailed": "Could not load the report. Reload the page to try again.",
+  "reports.noMonths": "No saved months in {year}.",
+  "reports.monthsCounted": "In {count} saved months",
+  "reports.fixedIncluded": "Expenses, fixed costs and subscriptions",
+  "reports.earnedMinusSpent": "Earned minus spent",
+  "reports.dailyAverage": "Daily average",
+  "reports.dailyAverageDetail": "Variable spending over {days} days",
+  "reports.trendTitle": "By month",
+  "reports.trendDescription": "What came in and what went out, month by month.",
+  "reports.largestBar": "Tallest bar {amount}",
+  "reports.categoriesTitle": "By category",
+  "reports.categoriesDescription": "Each category’s variable spending this year.",
+  "reports.monthsTitle": "Months",
+  "reports.monthsDescription": "Every saved month of the year. Click one to open it.",
+  "reports.columnMonth": "Month"
 }

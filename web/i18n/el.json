@@ -125,5 +125,26 @@
 
   "undo.expenseRemoved": "Το έξοδο διαγράφηκε ({amount})",
   "undo.recurringCostRemoved": "Το «{name}» διαγράφηκε",
-  "undo.undo": "Αναίρεση"
+  "undo.undo": "Αναίρεση",
+
+  "pages.label": "Σελίδες",
+  "pages.month": "Μήνας",
+  "pages.reports": "Αναφορές",
+  "nav.previousYear": "Προηγούμενο έτος",
+  "nav.nextYear": "Επόμενο έτος",
+  "reports.loadFailed": "Δεν ήταν δυνατή η φόρτωση της αναφοράς. Ανανεώστε τη σελίδα για να ξαναδοκιμάσετε.",
+  "reports.noMonths": "Δεν υπάρχουν αποθηκευμένοι μήνες το {year}.",
+  "reports.monthsCounted": "Σε {count} αποθηκευμένους μήνες",
+  "reports.fixedIncluded": "Έξοδα, πάγια και συνδρομές",
+  "reports.earnedMinusSpent": "Έσοδα μείον έξοδα",
+  "reports.dailyAverage": "Ημερήσιος μέσος όρος",
+  "reports.dailyAverageDetail": "Μεταβλητά έξοδα σε {days} ημέρες",
+  "reports.trendTitle": "Ανά μήνα",
+  "reports.trendDescription": "Τι μπήκε και τι βγήκε, μήνα με τον μήνα.",
+  "reports.largestBar": "Ψηλότερη μπάρα {amount}",
+  "reports.categoriesTitle": "Ανά κατηγορία",
+  "reports.categoriesDescription": "Τα μεταβλητά έξοδα κάθε κατηγορίας φέτος.",
+  "reports.monthsTitle": "Μήνες",
+  "reports.monthsDescription": "Κάθε αποθηκευμένος μήνας του έτους. Πατήστε έναν για να τον ανοίξετε.",
+  "reports.columnMonth": "Μήνας"
 }

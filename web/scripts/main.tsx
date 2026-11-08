@@ -1,12 +1,12 @@
 /**
  * The page's entry point (bundled into web/dist/main.js by `npm run build`): loads the
- * translations, draws the month page with React, then connects to the server.
+ * translations, draws the page with React (the month, or the reports), then connects to the server.
  */
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { t, translator } from './i18n/translator.ts';
-import { MonthPage } from './pages/month-page.tsx';
+import { App } from './pages/app.tsx';
 import { monthPageState } from './sync/month-page-state.ts';
 import { setMoneyLocale } from './utils/money.ts';
 
@@ -19,7 +19,7 @@ const appElement = document.getElementById('app');
 if (!appElement) throw new Error('index.html has no #app element');
 createRoot(appElement).render(
   <StrictMode>
-    <MonthPage />
+    <App />
   </StrictMode>,
 );
 void monthPageState.start();

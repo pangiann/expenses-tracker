@@ -73,6 +73,20 @@ const ICON_SHAPES = {
       <path d="M21 13v1a4 4 0 0 1-4 4H3" />
     </>
   ),
+  calendar: (
+    <>
+      <path d="M8 2v3" />
+      <path d="M16 2v3" />
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <path d="M3 9h18" />
+    </>
+  ),
+  trendingUp: (
+    <>
+      <path d="M16 7h6v6" />
+      <path d="m22 7-8.5 8.5-5-5L2 17" />
+    </>
+  ),
 } satisfies Record<string, ReactNode>;
 
 export type IconName = keyof typeof ICON_SHAPES;

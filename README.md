@@ -67,6 +67,7 @@ shared/                   code that runs in the page and in the Worker (no DOM, 
     amounts.ts            rounding and sums
     month-record.ts       one month's data and the rules for changing it
     month-validation.ts   month keys, month shape, which month a new one copies
+    year-summary.ts       a year in totals, for the reports page (GET /api/years/:year/summary)
     apply-edit-to-month.ts  what each editing endpoint does to the month; run by the Worker, and by the page for unsaved edits
 web/                      the page (HTML, CSS and TypeScript; bundled into web/dist/ by `npm run build`)
   index.html
@@ -75,7 +76,10 @@ web/                      the page (HTML, CSS and TypeScript; bundled into web/d
   scripts/
     main.tsx              entry point: loads the translations, draws the month page with React, connects to the server
     pages/
+      app.tsx             which page the address asks for: the month page, or the reports at #reports
       month-page.tsx      the month page: lays out every feature with the page's state
+      reports-page.tsx    the reports page: a year in totals
+      top-bar.tsx         the top bar both pages share
     features/             one folder per part of the page, each a React component that calls its API functions
       categories/         the category cards (category-card.tsx), the grid that drags them (category-cards-grid.tsx, @dnd-kit), "New category"
       quick-add/          the "Add expense" bar
@@ -88,6 +92,7 @@ web/                      the page (HTML, CSS and TypeScript; bundled into web/d
       theme/              the Auto / Light / Dark menu (web/theme-before-paint.js applies it before the page is drawn)
       status/             the save status and the error banner
       undo/               "Expense removed · Undo" for a few seconds after removing an expense
+      reports/            the year's totals, spending by month and by category, and a table of months
     components/           pieces several features use: entry rows, editable amounts and texts
     api/                  one function per endpoint, grouped by what they edit; each edit calls monthPageState.recordEdit()
       months-api.ts, expenses-api.ts, income-api.ts, categories-api.ts, recurring-costs-api.ts

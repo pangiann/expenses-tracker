@@ -1,0 +1,141 @@
+/* "Month | Reports" tabs, and the reports page (features/reports/). */
+
+/* A segmented control: the current page is a white (dark: lighter) pill in a gray track. */
+.page-tabs {
+  display: inline-flex;
+  justify-self: start;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 10px;
+  background: var(--color-track);
+}
+.page-tab {
+  padding: 6px 16px;
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-decoration: none;
+}
+.page-tab:hover {
+  color: var(--color-text);
+}
+.page-tab.is-current {
+  background: var(--color-card-background);
+  color: var(--color-text);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+.year-navigation {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.year-navigation h2 {
+  margin: 0;
+  font-size: 22px;
+  min-width: 64px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.reports-message {
+  color: var(--color-text-muted);
+  margin: 8px 0;
+}
+
+/* "By month": bars in the SVG's own units, scaled to the card's width. */
+.spending-trend-chart {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.spending-trend-grid {
+  stroke: var(--color-border);
+  stroke-width: 1;
+}
+.spending-trend-earned {
+  fill: var(--color-text-faint);
+}
+.spending-trend-spent {
+  fill: var(--color-accent);
+}
+.spending-trend-spent.is-over {
+  fill: var(--color-negative);
+}
+.spending-trend-labels {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+.spending-trend-legend {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+.spending-trend-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.spending-trend-earned-dot {
+  background: var(--color-text-faint);
+}
+.spending-trend-spent-dot {
+  background: var(--color-accent);
+}
+.spending-trend-largest {
+  margin-left: auto;
+}
+
+/* Every saved month, one row each. */
+.month-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.month-table th {
+  text-align: right;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  padding: 0 0 8px;
+}
+.month-table td {
+  text-align: right;
+  padding: 10px 0;
+  border-top: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+.month-table th:first-child,
+.month-table td:first-child {
+  text-align: left;
+}
+.month-table th + th,
+.month-table td + td {
+  padding-left: 12px;
+}
+.month-table-link {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+.month-table-link:hover {
+  text-decoration: underline;
+}
+
+/* Phones: the table keeps Month, Spent and Saved; the rest is in the cards above it. */
+@media (max-width: 600px) {
+  .month-table th:nth-child(2),
+  .month-table td:nth-child(2),
+  .month-table th:nth-child(5),
+  .month-table td:nth-child(5) {
+    display: none;
+  }
+}
