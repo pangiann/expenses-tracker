@@ -36,7 +36,7 @@ export function removeExpense(monthKey: string, expenseId: string): boolean {
   const expense = monthPageState.getSnapshot().month?.findExpense(expenseId);
   const wasEditRecorded = monthPageState.recordEdit('removeExpense', { month: monthKey, id: expenseId }, undefined);
   if (wasEditRecorded && expense?.date)
-    monthPageState.offerUndoForRemovedExpense({ monthKey, expense: { ...expense } });
+    monthPageState.offerUndo({ kind: 'expense', monthKey, expense: { ...expense } });
   return wasEditRecorded;
 }
 

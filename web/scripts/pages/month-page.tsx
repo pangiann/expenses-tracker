@@ -28,7 +28,7 @@ const openMonth = (monthKey: string) => void monthPageState.openMonth(monthKey);
 const dismissUndo = () => monthPageState.dismissUndo();
 
 export function MonthPage() {
-  const { month, savedMonthKeys, saveStatus, errorText, refusedEditText, removedExpense } = useSyncExternalStore(
+  const { month, savedMonthKeys, saveStatus, errorText, refusedEditText, removedItem } = useSyncExternalStore(
     monthPageState.subscribe,
     monthPageState.getSnapshot,
   );
@@ -84,7 +84,7 @@ export function MonthPage() {
         onClose={() => setAddMonthSuggestion(null)}
       />
 
-      <UndoToast removedExpense={removedExpense} onDismiss={dismissUndo} />
+      <UndoToast removedItem={removedItem} onDismiss={dismissUndo} />
     </>
   );
 }

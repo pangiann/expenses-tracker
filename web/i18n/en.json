@@ -116,5 +116,6 @@
   "month.12": "December",
 
   "undo.expenseRemoved": "Expense removed ({amount})",
+  "undo.recurringCostRemoved": "{name} removed",
   "undo.undo": "Undo"
 }

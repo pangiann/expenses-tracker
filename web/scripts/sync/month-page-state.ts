@@ -1,5 +1,6 @@
 import type { RequestBodyInputOf, EndpointName, MonthResponse, PathParamsOf } from '../../../shared/api/endpoints.ts';
-import type { Expense, MonthData, MonthRecord } from '../../../shared/month/month-record.ts';
+import type { RecurringCostListName } from '../../../shared/month/categories.ts';
+import type { Expense, MonthData, MonthRecord, RecurringCost } from '../../../shared/month/month-record.ts';
 import { ApiError, OfflineError, callEndpoint } from '../api/endpoint-http-client.ts';
 import { t } from '../i18n/translator.ts';
 import { currentMonthKey } from '../utils/month-keys.ts';
@@ -22,15 +23,14 @@ export interface MonthPageSnapshot {
   errorText: string | null;
   /** Why the server didn't save an edit, shown in the same banner until the next edit; null when none. */
   refusedEditText: string | null;
-  /** The expense just removed, offered for undo for a few seconds; null when there is none. */
-  removedExpense: RemovedExpense | null;
+  /** The item just removed, offered for undo for a few seconds; null when there is none. */
+  removedItem: RemovedItem | null;
 }
 
-/** An expense someone removed, kept whole so that undo can add it back with the same id. */
-export interface RemovedExpense {
-  monthKey: string;
-  expense: Expense;
-}
+/** An item someone removed, kept whole so that undo can add it back with the same id. */
+export type RemovedItem =
+  | { kind: 'expense'; monthKey: string; expense: Expense }
+  | { kind: 'recurringCost'; monthKey: string; list: RecurringCostListName; cost: RecurringCost };
 
 /** String id of the message shown when the server explains why it refused the connection. */
 const REFUSAL_STRING_IDS: Record<string, string> = {
@@ -60,7 +60,7 @@ export class MonthPageState {
     saveStatus: null,
     errorText: null,
     refusedEditText: null,
-    removedExpense: null,
+    removedItem: null,
   };
   readonly #listeners = new Set<() => void>();
 
@@ -96,14 +96,14 @@ export class MonthPageState {
     return true;
   }
 
-  /** Offers to undo the removal of this expense (see features/undo/undo-toast.tsx). */
-  offerUndoForRemovedExpense(removedExpense: RemovedExpense): void {
-    this.#updateSnapshotAndNotifyListeners({ removedExpense });
+  /** Offers to undo the removal of this item (see features/undo/undo-toast.tsx). */
+  offerUndo(removedItem: RemovedItem): void {
+    this.#updateSnapshotAndNotifyListeners({ removedItem });
   }
 
   /** Stops offering the undo: it was used, or its time ran out. */
   dismissUndo(): void {
-    if (this.#snapshot.removedExpense) this.#updateSnapshotAndNotifyListeners({ removedExpense: null });
+    if (this.#snapshot.removedItem) this.#updateSnapshotAndNotifyListeners({ removedItem: null });
   }
 
   /** Connects to the server and opens the current month, creating it if needed. */

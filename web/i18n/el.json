@@ -116,5 +116,6 @@
   "month.12": "Δεκέμβριος",
 
   "undo.expenseRemoved": "Το έξοδο διαγράφηκε ({amount})",
+  "undo.recurringCostRemoved": "Το «{name}» διαγράφηκε",
   "undo.undo": "Αναίρεση"
 }

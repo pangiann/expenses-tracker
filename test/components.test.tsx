@@ -5,6 +5,7 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { MonthRecord } from '../shared/month/month-record.ts';
 import * as categoriesApi from '../web/scripts/api/categories-api.ts';
 import * as expensesApi from '../web/scripts/api/expenses-api.ts';
+import * as recurringCostsApi from '../web/scripts/api/recurring-costs-api.ts';
 import { AmountInput } from '../web/scripts/components/amount-input.tsx';
 import { EditableAmount } from '../web/scripts/components/editable-amount.tsx';
 import { CategoryCardsGrid } from '../web/scripts/features/categories/category-cards-grid.tsx';
@@ -17,6 +18,9 @@ vi.mock('../web/scripts/api/expenses-api.ts', () => ({
   changeExpenseAmount: vi.fn(() => true),
   removeExpense: vi.fn(() => true),
   restoreExpense: vi.fn(() => true),
+}));
+vi.mock('../web/scripts/api/recurring-costs-api.ts', () => ({
+  restoreRecurringCost: vi.fn(() => true),
 }));
 vi.mock('../web/scripts/api/categories-api.ts', () => ({
   addCategory: vi.fn(() => true),
@@ -108,13 +112,24 @@ test('the undo toast adds the removed expense back, and goes away after a few se
   vi.useFakeTimers();
   const expense = { id: 'e1', category: 'lunch', amount: 3.5, description: 'coffee', date: '2026-11-03' };
   const onDismiss = vi.fn();
-  const { rerender } = render(<UndoToast removedExpense={{ monthKey: '2026-11', expense }} onDismiss={onDismiss} />);
+  const { rerender } = render(
+    <UndoToast removedItem={{ kind: 'expense', monthKey: '2026-11', expense }} onDismiss={onDismiss} />,
+  );
   fireEvent.click(screen.getByText('undo.undo'));
   expect(expensesApi.restoreExpense).toHaveBeenCalledWith('2026-11', expense);
 
   vi.advanceTimersByTime(UNDO_TIME_MS);
   expect(onDismiss).toHaveBeenCalledTimes(1);
-  rerender(<UndoToast removedExpense={null} onDismiss={onDismiss} />);
+  rerender(<UndoToast removedItem={null} onDismiss={onDismiss} />);
   expect(screen.queryByText('undo.undo')).toBeNull();
   vi.useRealTimers();
+});
+
+test('the undo toast adds a removed fixed cost back', () => {
+  const cost = { id: 'fixed-1', name: 'Rent', amount: 900 };
+  render(
+    <UndoToast removedItem={{ kind: 'recurringCost', monthKey: '2026-11', list: 'fixed', cost }} onDismiss={vi.fn()} />,
+  );
+  fireEvent.click(screen.getByText('undo.undo'));
+  expect(recurringCostsApi.restoreRecurringCost).toHaveBeenCalledWith('2026-11', 'fixed', cost);
 });
