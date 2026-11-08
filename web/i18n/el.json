@@ -7,6 +7,10 @@
   "nav.addMonth": "Προσθήκη μήνα",
 
   "language.label": "Γλώσσα",
+  "theme.label": "Φωτεινό ή σκοτεινό",
+  "theme.auto": "Αυτόματο",
+  "theme.light": "Φωτεινό",
+  "theme.dark": "Σκοτεινό",
 
   "backup.export": "Εξαγωγή",
   "backup.exportHint": "Λήψη όλων των μηνών σε ένα αρχείο αντιγράφου ασφαλείας",

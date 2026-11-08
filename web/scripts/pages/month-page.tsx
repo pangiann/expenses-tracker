@@ -14,6 +14,7 @@ import { UndoToast } from '../features/undo/undo-toast.tsx';
 import { BudgetBars } from '../features/summary/budget-bars.tsx';
 import { SpendingDonut } from '../features/summary/spending-donut.tsx';
 import { SummaryCards } from '../features/summary/summary-cards.tsx';
+import { ThemePicker } from '../features/theme/theme-picker.tsx';
 import { t } from '../i18n/translator.ts';
 import { monthPageState } from '../sync/month-page-state.ts';
 
@@ -49,6 +50,7 @@ export function MonthPage() {
         />
         <div className="top-bar-actions">
           <SaveStatusPill saveStatus={saveStatus} />
+          <ThemePicker />
           <LanguagePicker />
           <BackupButtons onImported={() => monthPageState.reloadShownMonth()} />
         </div>

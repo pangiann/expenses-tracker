@@ -85,6 +85,7 @@ web/                      the page (HTML, CSS and TypeScript; bundled into web/d
       month-navigation/   the month title, ‹ › and the "Add a month" dialog
       backup/             Export and Import
       language/           the EN / ΕΛ picker
+      theme/              the Auto / Light / Dark menu (web/theme-before-paint.js applies it before the page is drawn)
       status/             the save status and the error banner
       undo/               "Expense removed · Undo" for a few seconds after removing an expense
     components/           pieces several features use: entry rows, editable amounts and texts

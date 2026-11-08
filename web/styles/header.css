@@ -75,7 +75,17 @@
   cursor: pointer;
 }
 
+.theme-picker {
+  position: relative;
+  display: inline-flex;
+}
+/* Shown on phones only, under the invisible menu (responsive.css). */
+.theme-picker-symbol {
+  display: none;
+}
+
 .save-status {
+  white-space: nowrap;
   font-size: 12px;
   color: var(--color-text-muted);
   min-width: 90px;

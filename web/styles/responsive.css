@@ -24,13 +24,55 @@
 
 /* Phones. */
 @media (max-width: 600px) {
-  /* Top bar: brand and buttons on the first row, month navigation on the second. */
+  /*
+   * Top bar: brand and buttons on the first row, month navigation on the second, and the save
+   * status under the month: the first row has no room for "Αποθηκεύτηκε ✓" or "Offline…".
+   * The buttons' box steps aside (display: contents), so each button gets its own cell.
+   */
   .top-bar {
     display: grid;
-    grid-template-columns: auto 1fr;
-    grid-template-areas: 'brand actions' 'months months';
+    grid-template-columns: 1fr auto auto auto auto;
+    grid-template-areas:
+      'brand theme language export import'
+      'months months months months months'
+      'status status status status status';
+    column-gap: 6px;
     row-gap: 10px;
-    padding: 10px 14px 12px;
+    padding: 10px 14px 8px;
+  }
+  .top-bar-actions {
+    display: contents;
+  }
+  .theme-picker {
+    grid-area: theme;
+  }
+  /* Only the chosen symbol shows; the menu lies invisible on top of it and opens on tap. */
+  .theme-picker-symbol {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 28px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: var(--color-card-background);
+    color: var(--color-text-muted);
+    font-size: 14px;
+  }
+  .theme-picker .theme-select {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    opacity: 0;
+  }
+  .top-bar-actions > .language-select {
+    grid-area: language;
+  }
+  .top-bar-actions > .secondary-button:nth-of-type(1) {
+    grid-area: export;
+  }
+  .top-bar-actions > .secondary-button:nth-of-type(2) {
+    grid-area: import;
   }
   .brand {
     grid-area: brand;
@@ -39,11 +81,6 @@
   .brand-icon {
     width: 22px;
     height: 22px;
-  }
-  .top-bar-actions {
-    grid-area: actions;
-    justify-content: flex-end;
-    gap: 6px;
   }
   .top-bar-actions .secondary-button {
     padding: 5px 9px;
@@ -54,7 +91,11 @@
     font-size: 13px !important;
   }
   .save-status {
+    grid-area: status;
     min-width: 0;
+    min-height: 13px; /* keeps its row while empty, so the bar doesn't jump at the first save */
+    margin-top: -6px;
+    text-align: center;
     font-size: 11px;
   }
   .month-navigation {

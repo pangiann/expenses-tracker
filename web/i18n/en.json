@@ -7,6 +7,10 @@
   "nav.addMonth": "Add a month",
 
   "language.label": "Language",
+  "theme.label": "Light or dark",
+  "theme.auto": "Auto",
+  "theme.light": "Light",
+  "theme.dark": "Dark",
 
   "backup.export": "Export",
   "backup.exportHint": "Download every month as one backup file",

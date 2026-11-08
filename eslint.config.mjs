@@ -29,7 +29,7 @@ export default tseslint.config(
   { files: ['web/scripts/**/*.tsx', 'test/**/*.tsx'], ...reactHooks.configs.flat['recommended-latest'] },
 
   // Which built-in globals each part of the project may use.
-  { files: ['web/scripts/**'], languageOptions: { globals: globals.browser } },
+  { files: ['web/scripts/**', 'web/*.js'], languageOptions: { globals: globals.browser } },
   {
     files: ['worker/**'],
     languageOptions: {
