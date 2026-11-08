@@ -18,7 +18,6 @@ import * as z from 'zod/mini';
 import type { MonthData, MonthRule } from '../month/month-record.ts';
 import {
   NonNegativeAmountField,
-  HexColorField,
   ItemIdField,
   IsoDateField,
   MonthKeyField,
@@ -109,7 +108,7 @@ export const endpoints = {
     'POST',
     '/api/months/:month/categories',
     MonthPathParams,
-    z.object({ id: ItemIdField, name: RequiredTextField, color: HexColorField }),
+    z.object({ id: ItemIdField, name: RequiredTextField }),
   ),
   renameCategory: endpoint(
     'PUT',

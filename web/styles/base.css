@@ -26,6 +26,19 @@
   --color-error-text: #991b1b;
   --color-error-background: #fef2f2;
   --color-error-border: #fecaca;
+  /* Muted chart colors (utils/chart-colors.ts). */
+  --chart-1: #e76f51;
+  --chart-2: #f4a261;
+  --chart-3: #2a9d8f;
+  --chart-4: #457b9d;
+  --chart-5: #8ecae6;
+  --chart-6: #6d597a;
+  --chart-7: #8ab17d;
+  --chart-8: #264653;
+  --chart-9: #e9c46a;
+  --chart-10: #b5838d;
+  --chart-11: #a1a1aa;
+  --chart-12: #9d4edd;
   /* Form controls without their own colors (menus, the date picker) follow the theme. */
   color-scheme: light;
 }
@@ -57,6 +70,18 @@
   --color-error-text: #fca5a5;
   --color-error-background: #2a1215;
   --color-error-border: #4c1d1d;
+  --chart-1: #f28b6e;
+  --chart-2: #f6b47a;
+  --chart-3: #3fbfb0;
+  --chart-4: #6aa3c8;
+  --chart-5: #a6d8ee;
+  --chart-6: #a48bb6;
+  --chart-7: #a3c996;
+  --chart-8: #5f9ea8;
+  --chart-9: #f0d48a;
+  --chart-10: #d4a5ae;
+  --chart-11: #71717a;
+  --chart-12: #b983ec;
 }
 
 * {

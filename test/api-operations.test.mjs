@@ -108,7 +108,7 @@ test('every kind of edit goes through its own endpoint', async () => {
   await call(context, 'PUT', `${month}/expenses/e1/amount`, { amount: 4 });
   await call(context, 'POST', `${month}/income`, { id: 'i1', amount: 40, date: '2026-11-04' });
   await call(context, 'PUT', `${month}/expected-income`, { amount: 3000 });
-  await call(context, 'POST', `${month}/categories`, { id: 'kids', name: 'Kids', color: '#123456' });
+  await call(context, 'POST', `${month}/categories`, { id: 'kids', name: 'Kids' });
   await call(context, 'PUT', `${month}/categories/kids/name`, { name: 'Children' });
   await call(context, 'PUT', `${month}/categories/kids/position`, { beforeCategoryId: 'dinner' });
   await call(context, 'PUT', `${month}/categories/kids/budget`, { amount: 120 });
@@ -122,7 +122,7 @@ test('every kind of edit goes through its own endpoint', async () => {
   assert.equal(answer.month.expenses[0].amount, 4);
   assert.equal(answer.month.income.actual, 40);
   assert.equal(answer.month.income.expected, 3000);
-  assert.deepEqual(answer.month.categories[0], { id: 'kids', name: 'Children', color: '#123456' });
+  assert.deepEqual(answer.month.categories[0], { id: 'kids', name: 'Children' });
   assert.equal(answer.month.budgets.kids, 120);
   assert.deepEqual(answer.month.subscriptions, [{ id: 's1', name: 'Radio', amount: 11 }]);
 
@@ -166,7 +166,7 @@ test('requests that do not match an endpoint, or break a rule, are refused and c
 
 test('a new month copies categories and budgets from the closest earlier month', async () => {
   const { context } = fakeOperationContext();
-  await call(context, 'POST', '/api/months/2026-10/categories', { id: 'kids', name: 'Kids', color: '#123456' });
+  await call(context, 'POST', '/api/months/2026-10/categories', { id: 'kids', name: 'Kids' });
   await call(context, 'PUT', '/api/months/2026-10/categories/kids/budget', { amount: 50 });
   const { answer } = await call(context, 'GET', '/api/months/2026-11');
   assert.ok(answer.month.categories.some((category) => category.id === 'kids'));

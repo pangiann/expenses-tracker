@@ -63,7 +63,7 @@ shared/                   code that runs in the page and in the Worker (no DOM, 
     endpoints.ts          every HTTP endpoint: method, path, request body; shared by page and Worker
     fields.ts             the shapes of ids, amounts, text and dates in requests
   month/
-    categories.ts         default categories, colours and limits
+    categories.ts         default categories and limits
     amounts.ts            rounding and sums
     month-record.ts       one month's data and the rules for changing it
     month-validation.ts   month keys, month shape, which month a new one copies

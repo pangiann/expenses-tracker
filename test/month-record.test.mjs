@@ -47,8 +47,8 @@ test('the same edit twice changes the month once (safe to resend)', () => {
   const month = november();
   month.addExpense(coffee);
   month.addExpense(coffee);
-  month.addCategory({ id: 'kids', name: 'Kids', color: '#000000' });
-  month.addCategory({ id: 'kids', name: 'Kids', color: '#000000' });
+  month.addCategory({ id: 'kids', name: 'Kids' });
+  month.addCategory({ id: 'kids', name: 'Kids' });
   assert.equal(month.expenses.length, 1);
   assert.equal(month.spentInCategory('lunch'), 3.5);
   assert.equal(month.categories.filter((category) => category.id === 'kids').length, 1);
@@ -146,8 +146,8 @@ test('a month keeps its own category list, and a new month copies it', () => {
       month: '2026-10',
       expenses: [],
       categories: [
-        { id: 'kids', name: 'Kids', color: '#f59e0b' },
-        { id: 'other', nameId: 'category.other', color: '#8a92a6' },
+        { id: 'kids', name: 'Kids' },
+        { id: 'other', nameId: 'category.other' },
       ],
       budgets: { kids: 100, other: 20 },
     }),
@@ -169,8 +169,8 @@ test('the month refuses edits that break its rules, and names the rule', () => {
   assertBreaks('date-outside-month', () => month.addExpense({ ...coffee, date: '2026-12-01' }));
   assertBreaks('date-outside-month', () => month.addIncome({ ...lesson, date: '2026-10-31' }));
   assertBreaks('unknown-category', () => month.setBudget('casino', 10));
-  assertBreaks('category-name-empty', () => month.addCategory({ id: 'c1', name: '   ', color: '#000000' }));
-  assertBreaks('category-name-too-long', () => month.addCategory({ id: 'c1', name: 'x'.repeat(21), color: '#000000' }));
+  assertBreaks('category-name-empty', () => month.addCategory({ id: 'c1', name: '   ' }));
+  assertBreaks('category-name-too-long', () => month.addCategory({ id: 'c1', name: 'x'.repeat(21) }));
   assert.equal(month.expenses.length, 0);
   assert.equal(month.categories.length, 11);
 });
@@ -180,7 +180,7 @@ test('expenses and budgets are refused for a category the month does not have', 
     monthData({
       month: '2026-10',
       expenses: [],
-      categories: [{ id: 'kids', name: 'Kids', color: '#f59e0b' }],
+      categories: [{ id: 'kids', name: 'Kids' }],
     }),
   );
   const groceries = { id: 'e9', categoryId: 'supermarket', amount: 20, description: '', date: '2026-10-02' };
@@ -194,33 +194,18 @@ test('expenses and budgets are refused for a category the month does not have', 
 
 test('adding a category puts it at the end with a budget of 0', () => {
   const month = november();
-  month.addCategory({ id: 'kids', name: ' Kids ', color: '#f59e0b' });
+  month.addCategory({ id: 'kids', name: ' Kids ' });
   assert.equal(month.categories.length, 12);
-  assert.deepEqual(month.categories[11], { id: 'kids', name: 'Kids', color: '#f59e0b' });
+  assert.deepEqual(month.categories[11], { id: 'kids', name: 'Kids' });
   assert.equal(month.budgetFor('kids'), 0);
   month.addExpense({ id: 'e-k', categoryId: 'kids', amount: 15, description: 'toys', date: '2026-11-05' });
   assert.equal(month.spentInCategory('kids'), 15);
   assert.equal(MonthRecord.createFromTemplateMonth(month, '2026-12').findCategory('kids').name, 'Kids');
 });
 
-test('a new category gets a colour no other category in the month uses', () => {
-  const month = november();
-  const firstColor = month.pickCategoryColor();
-  month.addCategory({ id: 'a', name: 'A', color: firstColor });
-  assert.notEqual(month.pickCategoryColor(), firstColor);
-});
-
-test('two categories added at the same moment with the same colour end up with different colours', () => {
-  const month = november();
-  const sameColor = month.pickCategoryColor();
-  month.addCategory({ id: 'kids', name: 'Kids', color: sameColor });
-  month.addCategory({ id: 'pets', name: 'Pets', color: sameColor });
-  assert.notEqual(month.findCategory('kids').color, month.findCategory('pets').color);
-});
-
 test('category names must be unique (ignoring capitals and spaces) and at most 20 characters', () => {
   const month = november();
-  const add = (id, name) => month.addCategory({ id, name, color: '#f59e0b' });
+  const add = (id, name) => month.addCategory({ id, name });
   add('kids', 'Kids');
   assertBreaks('category-name-taken', () => add('kids-2', '  KIDS '));
   assertBreaks('category-name-too-long', () => add('long', 'x'.repeat(21)));
@@ -234,9 +219,16 @@ test('category names must be unique (ignoring capitals and spaces) and at most 2
 test('a month holds at most 40 categories', () => {
   const month = november();
   for (let number = month.categories.length; number < 40; number++) {
-    month.addCategory({ id: `c${number}`, name: `Category ${number}`, color: '#000000' });
+    month.addCategory({ id: `c${number}`, name: `Category ${number}` });
   }
-  assertBreaks('too-many-categories', () => month.addCategory({ id: 'c41', name: 'One more', color: '#000000' }));
+  assertBreaks('too-many-categories', () => month.addCategory({ id: 'c41', name: 'One more' }));
+});
+
+test('a color stored by an older version is dropped when the month is read', () => {
+  const month = new MonthRecord(
+    monthData({ month: '2026-11', categories: [{ id: 'kids', name: 'Kids', color: '#f59e0b' }] }),
+  );
+  assert.deepEqual(month.toJSON().categories, [{ id: 'kids', name: 'Kids' }]);
 });
 
 test('renaming a category keeps its id, expenses and budget', () => {
@@ -244,15 +236,15 @@ test('renaming a category keeps its id, expenses and budget', () => {
   month.addExpense({ id: 'e-d', categoryId: 'dinner', amount: 30, description: 'pizza', date: '2026-11-02' });
   month.renameCategory('dinner', ' Eating out ');
   // no nameId any more: the typed name shows in every language
-  assert.deepEqual(month.findCategory('dinner'), { id: 'dinner', name: 'Eating out', color: '#e8618c' });
+  assert.deepEqual(month.findCategory('dinner'), { id: 'dinner', name: 'Eating out' });
   assert.equal(month.spentInCategory('dinner'), 30);
   assert.equal(month.budgetFor('dinner'), 130);
 });
 
 test('renaming follows the name rules, but a category may keep its own name in other capitals', () => {
   const month = november();
-  month.addCategory({ id: 'kids', name: 'kids', color: '#f59e0b' });
-  month.addCategory({ id: 'pets', name: 'Pets', color: '#ef4444' });
+  month.addCategory({ id: 'kids', name: 'kids' });
+  month.addCategory({ id: 'pets', name: 'Pets' });
   month.renameCategory('kids', 'Kids');
   assert.equal(month.findCategory('kids').name, 'Kids');
   assertBreaks('category-name-taken', () => month.renameCategory('kids', 'PETS'));
@@ -284,7 +276,7 @@ test('a category with expenses, or the last category, cannot be removed', () => 
     monthData({
       month: '2026-11',
       expenses: [],
-      categories: [{ id: 'kids', name: 'Kids', color: '#f59e0b' }],
+      categories: [{ id: 'kids', name: 'Kids' }],
     }),
   );
   assert.equal(onlyOne.categoryRemovalBlocker('kids'), 'last-category');

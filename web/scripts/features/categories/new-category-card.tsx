@@ -19,7 +19,7 @@ export function NewCategoryCard({ month }: { month: MonthRecord }) {
         const trimmedName = name.trim();
         if (!trimmedName) return;
         if (isNameShown(month, trimmedName)) return setErrorText(t('categories.duplicateName'));
-        categoriesApi.addCategory(month.monthKey, { name: trimmedName, color: month.pickCategoryColor() });
+        categoriesApi.addCategory(month.monthKey, { name: trimmedName });
         setName('');
         setErrorText('');
       }}

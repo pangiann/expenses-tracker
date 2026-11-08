@@ -44,9 +44,7 @@ test('malformed edits are refused by their endpoint', () => {
     ['addExpense', { ...coffee, id: '' }],
     ['addIncome', { id: 'i1', amount: 0, date: '2026-11-04' }],
     ['changeBudget', { amount: Number.NaN }],
-    ['addCategory', { id: 'x', name: '  ', color: '#f59e0b' }],
-    ['addCategory', { id: 'x', name: 'X', color: 'red' }],
-    ['addCategory', { id: 'x', name: 'X', color: '#f59e0b"><script>' }],
+    ['addCategory', { id: 'x', name: '  ' }],
     ['moveCategory', {}],
     ['addRecurringCost', { id: 'x', name: '   ' }],
   ];

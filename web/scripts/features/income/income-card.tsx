@@ -7,6 +7,7 @@ import { t } from '../../i18n/translator.ts';
 import { formatEuros, parseAmount } from '../../utils/money.ts';
 import { defaultExpenseDate } from '../../utils/month-keys.ts';
 import { AmountInput } from '../../components/amount-input.tsx';
+import { Icon } from '../../components/icons.tsx';
 
 /**
  * The Income card: every amount earned this month (salary, each private lesson, ...), with
@@ -22,7 +23,10 @@ export function IncomeCard({ month }: { month: MonthRecord }) {
     <section className="card category-card income-card">
       <div className="category-card-header income-card-header">
         <div className="category-card-title">
-          <h2>{t('income.title')}</h2>
+          <h2 className="income-card-heading">
+            <Icon name="banknote" className="card-title-icon" />
+            {t('income.title')}
+          </h2>
           <span className="category-card-spent">{formatEuros(month.totalIncome)}</span>
         </div>
       </div>

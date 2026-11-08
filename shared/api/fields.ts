@@ -28,7 +28,6 @@ export const OptionalTextField = z.pipe(
   z.transform((text) => text ?? ''),
 );
 export const IsoDateField = z.string().check(z.regex(/^\d{4}-\d{2}-\d{2}$/));
-export const HexColorField = z.string().check(z.regex(/^#[0-9a-f]{6}$/i));
 export const RecurringCostListNameField = z.enum([RecurringCostList.FIXED_COSTS, RecurringCostList.SUBSCRIPTIONS]);
 
 /** "YYYY-MM" */

@@ -96,7 +96,7 @@ function CategoryCard({
 
   return (
     <div ref={cardRef} style={cardStyle} className={`card category-card ${extraClassName}`.trim()}>
-      <div className="category-card-header" style={{ borderTopColor: category.color }} {...dragHandleProps}>
+      <div className="category-card-header" {...dragHandleProps}>
         <div className="category-card-title">
           <EditableText
             as="h2"
@@ -139,7 +139,7 @@ function CategoryCard({
             className="category-card-progress-fill"
             style={{
               width: `${progressPercentage}%`,
-              background: isOverBudget ? 'var(--color-negative)' : category.color,
+              background: isOverBudget ? 'var(--color-negative)' : 'var(--color-accent)',
             }}
           ></div>
         </div>

@@ -4,6 +4,7 @@ import type { MonthRecord } from '../../../../shared/month/month-record.ts';
 import { categoryName, t } from '../../i18n/translator.ts';
 import { formatEuros } from '../../utils/money.ts';
 import { CardTitle } from '../../components/card-title.tsx';
+import { chartColorForPosition } from '../../utils/chart-colors.ts';
 
 // Chart geometry inside the SVG's 120 x 120 viewBox.
 const CHART_CENTER = 60;
@@ -14,6 +15,8 @@ const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 interface Slice {
   category: Category;
   amount: number;
+  /** the category's chart color (utils/chart-colors.ts), from its position in the month */
+  color: string;
   /** length of the slice along the ring, and where it starts */
   lengthAlongRing: number;
   startAlongRing: number;
@@ -22,16 +25,20 @@ interface Slice {
 /** "Where the money went": a donut chart of variable spending per category, with a legend. */
 export function SpendingDonut({ month }: { month: MonthRecord }) {
   const spentPerCategory = month.categories
-    .map((category) => ({ category, amount: month.spentInCategory(category.id) }))
+    .map((category, position) => ({
+      category,
+      amount: month.spentInCategory(category.id),
+      color: chartColorForPosition(position),
+    }))
     .filter(({ amount }) => amount > 0);
   const totalAmount = sumAmounts(spentPerCategory.map(({ amount }) => amount));
   // Each slice starts where the one before it ends.
-  const slices = spentPerCategory.reduce<Slice[]>((slicesSoFar, { category, amount }) => {
+  const slices = spentPerCategory.reduce<Slice[]>((slicesSoFar, { category, amount, color }) => {
     const previousSlice = slicesSoFar.at(-1);
     const startAlongRing = previousSlice ? previousSlice.startAlongRing + previousSlice.lengthAlongRing : 0;
     return [
       ...slicesSoFar,
-      { category, amount, lengthAlongRing: (amount / totalAmount) * RING_CIRCUMFERENCE, startAlongRing },
+      { category, amount, color, lengthAlongRing: (amount / totalAmount) * RING_CIRCUMFERENCE, startAlongRing },
     ];
   }, []);
 
@@ -49,7 +56,7 @@ export function SpendingDonut({ month }: { month: MonthRecord }) {
           {slices.map((slice) => (
             <RingCircle
               key={slice.category.id}
-              strokeColor={slice.category.color}
+              strokeColor={slice.color}
               strokeDasharray={`${slice.lengthAlongRing} ${RING_CIRCUMFERENCE - slice.lengthAlongRing}`}
               strokeDashoffset={-slice.startAlongRing}
             />
@@ -69,7 +76,7 @@ export function SpendingDonut({ month }: { month: MonthRecord }) {
               .sort((first, second) => second.amount - first.amount)
               .map((slice) => (
                 <li key={slice.category.id}>
-                  <span className="color-dot" style={{ background: slice.category.color }}></span>
+                  <span className="color-dot" style={{ background: slice.color }}></span>
                   <span className="spending-donut-legend-name">{categoryName(slice.category)}</span>
                   <span className="spending-donut-legend-value">
                     {`${((slice.amount / totalAmount) * 100).toFixed(0)}% · ${formatEuros(slice.amount)}`}

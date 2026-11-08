@@ -33,7 +33,10 @@ function BudgetBar({ category, month }: { category: Category; month: MonthRecord
       <div className="budget-bar-track">
         <div
           className="budget-bar-fill"
-          style={{ width: `${fillPercentage}%`, background: isOverBudget ? 'var(--color-negative)' : category.color }}
+          style={{
+            width: `${fillPercentage}%`,
+            background: isOverBudget ? 'var(--color-negative)' : 'var(--color-accent)',
+          }}
         ></div>
       </div>
       <span className={`budget-bar-amount ${isOverBudget ? 'is-negative' : ''}`}>

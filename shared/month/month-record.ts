@@ -1,5 +1,4 @@
 import {
-  CATEGORY_COLOR_PALETTE,
   DEFAULT_CATEGORIES,
   DEFAULT_FIXED_COST_NAMES,
   MAX_CATEGORIES_PER_MONTH,
@@ -93,8 +92,8 @@ const KNOWN_FIELDS = new Set(['month', 'income', 'categories', 'budgets', 'expen
  *     "month": "2026-09",
  *     "income": { "expected": 4000, "actual": 3500,
  *                 "entries": [ { "id": "...", "date": "2026-09-01", "description": "salary", "amount": 3500 } ] },
- *     "categories": [ { "id": "dinner", "nameId": "category.dinner", "color": "#e8618c" },
- *                     { "id": "...", "name": "Kids", "color": "#f59e0b" }, ... ],
+ *     "categories": [ { "id": "dinner", "nameId": "category.dinner" },
+ *                     { "id": "...", "name": "Kids" }, ... ],
  *     "budgets": { "dinner": 100, "lunch": 50, ... },
  *     "expenses": [ { "id": "...", "date": "2026-09-14", "category": "lunch",
  *                     "description": "coffee", "amount": 5.5 } ],
@@ -129,7 +128,13 @@ export class MonthRecord {
     this.monthKey = monthData.month;
     this.expectedIncome = monthData.income.expected;
     this.incomes = monthData.income.entries.map((entry) => ({ ...entry }));
-    this.categories = monthData.categories.map((category) => ({ ...category }));
+    // Only the fields a category has: months saved before categories lost their colors still
+    // store a "color", which is dropped the next time the month is saved.
+    this.categories = monthData.categories.map(({ id, name, nameId }) => ({
+      id,
+      ...(nameId === undefined ? {} : { nameId }),
+      ...(name === undefined ? {} : { name }),
+    }));
     this.budgets = { ...MonthRecord.#zeroBudgetForEachCategory(this.categories), ...monthData.budgets };
     this.expenses = monthData.expenses.map((expense) => ({ ...expense }));
     this.recurringCosts = {
@@ -302,15 +307,12 @@ export class MonthRecord {
   /**
    * Adds a category at the end of the list, with a budget of 0. Adding an id that already
    * exists does nothing, so a resent change can't add two categories.
-   * If two people add a category at the same moment, both may pick the same colour; the
-   * second one then gets the next free colour instead.
    */
-  addCategory({ id, name, color }: { id: string; name: string; color: string }): void {
+  addCategory({ id, name }: { id: string; name: string }): void {
     if (this.findCategory(id)) return; // already added (the same edit sent twice)
     if (this.categories.length >= MAX_CATEGORIES_PER_MONTH) throw new MonthRuleError('too-many-categories');
     const uniqueCategoryName = this.#requireFreeCategoryName(name);
-    const isColorTaken = this.categories.some((category) => category.color.toLowerCase() === color.toLowerCase());
-    this.categories.push({ id, name: uniqueCategoryName, color: isColorTaken ? this.pickCategoryColor() : color });
+    this.categories.push({ id, name: uniqueCategoryName });
     this.budgets[id] ??= 0;
   }
 
@@ -346,16 +348,6 @@ export class MonthRecord {
     const targetPosition = remainingCategories.findIndex((category) => category.id === beforeCategoryId);
     remainingCategories.splice(targetPosition < 0 ? remainingCategories.length : targetPosition, 0, movedCategory);
     this.categories = remainingCategories;
-  }
-
-  /** The colour for a new category: the first palette colour this month doesn't use yet. */
-  pickCategoryColor(): string {
-    const usedColors = new Set(this.categories.map((category) => category.color.toLowerCase()));
-    return (
-      CATEGORY_COLOR_PALETTE.find((color) => !usedColors.has(color)) ??
-      // The palette is never empty, so this index always exists.
-      CATEGORY_COLOR_PALETTE[this.categories.length % CATEGORY_COLOR_PALETTE.length]!
-    );
   }
 
   budgetFor(categoryId: string): number {

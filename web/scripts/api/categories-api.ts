@@ -3,8 +3,8 @@ import { createUniqueId } from '../utils/ids.ts';
 import { monthPageState } from '../sync/month-page-state.ts';
 
 /** POST /api/months/:month/categories */
-export function addCategory(monthKey: string, { name, color }: { name: string; color: string }): boolean {
-  return monthPageState.recordEdit('addCategory', { month: monthKey }, { id: createUniqueId(), name, color });
+export function addCategory(monthKey: string, { name }: { name: string }): boolean {
+  return monthPageState.recordEdit('addCategory', { month: monthKey }, { id: createUniqueId(), name });
 }
 
 /** PUT /api/months/:month/categories/:id/name */
