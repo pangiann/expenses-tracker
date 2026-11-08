@@ -9,12 +9,14 @@ import { AmountInput } from '../web/scripts/components/amount-input.tsx';
 import { EditableAmount } from '../web/scripts/components/editable-amount.tsx';
 import { CategoryCardsGrid } from '../web/scripts/features/categories/category-cards-grid.tsx';
 import { QuickAdd } from '../web/scripts/features/quick-add/quick-add.tsx';
+import { UNDO_TIME_MS, UndoToast } from '../web/scripts/features/undo/undo-toast.tsx';
 
 // The API functions send requests; the tests only check that the screen calls the right one.
 vi.mock('../web/scripts/api/expenses-api.ts', () => ({
   addExpense: vi.fn(() => true),
   changeExpenseAmount: vi.fn(() => true),
   removeExpense: vi.fn(() => true),
+  restoreExpense: vi.fn(() => true),
 }));
 vi.mock('../web/scripts/api/categories-api.ts', () => ({
   addCategory: vi.fn(() => true),
@@ -100,4 +102,19 @@ test('amount fields ignore the keys browsers allow in numbers but amounts never 
   for (const key of ['1', '.', ',', 'Enter']) expect(fireEvent.keyDown(input, { key })).toBe(true);
   expect(onKeyDown).toHaveBeenCalledTimes(4); // only the allowed keys reach the field's own handler
   expect(input.inputMode).toBe('decimal'); // phones show the number pad
+});
+
+test('the undo toast adds the removed expense back, and goes away after a few seconds', () => {
+  vi.useFakeTimers();
+  const expense = { id: 'e1', category: 'lunch', amount: 3.5, description: 'coffee', date: '2026-11-03' };
+  const onDismiss = vi.fn();
+  const { rerender } = render(<UndoToast removedExpense={{ monthKey: '2026-11', expense }} onDismiss={onDismiss} />);
+  fireEvent.click(screen.getByText('undo.undo'));
+  expect(expensesApi.restoreExpense).toHaveBeenCalledWith('2026-11', expense);
+
+  vi.advanceTimersByTime(UNDO_TIME_MS);
+  expect(onDismiss).toHaveBeenCalledTimes(1);
+  rerender(<UndoToast removedExpense={null} onDismiss={onDismiss} />);
+  expect(screen.queryByText('undo.undo')).toBeNull();
+  vi.useRealTimers();
 });

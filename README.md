@@ -86,6 +86,7 @@ web/                      the page (HTML, CSS and TypeScript; bundled into web/d
       backup/             Export and Import
       language/           the EN / ΕΛ picker
       status/             the save status and the error banner
+      undo/               "Expense removed · Undo" for a few seconds after removing an expense
     components/           pieces several features use: entry rows, editable amounts and texts
     api/                  one function per endpoint, grouped by what they edit; each edit calls monthPageState.recordEdit()
       months-api.ts, expenses-api.ts, income-api.ts, categories-api.ts, recurring-costs-api.ts

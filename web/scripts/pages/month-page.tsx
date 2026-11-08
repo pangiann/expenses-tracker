@@ -10,6 +10,7 @@ import { QuickAdd } from '../features/quick-add/quick-add.tsx';
 import { RecurringCostsPanel } from '../features/recurring-costs/recurring-costs-panel.tsx';
 import { ErrorBanner } from '../features/status/error-banner.tsx';
 import { SaveStatusPill } from '../features/status/save-status.tsx';
+import { UndoToast } from '../features/undo/undo-toast.tsx';
 import { BudgetBars } from '../features/summary/budget-bars.tsx';
 import { SpendingDonut } from '../features/summary/spending-donut.tsx';
 import { SummaryCards } from '../features/summary/summary-cards.tsx';
@@ -23,8 +24,11 @@ const openMonth = (monthKey: string) => void monthPageState.openMonth(monthKey);
  * (features/) that draws the month from sync/month-page-state.ts, handles its own clicks and
  * calls its API functions (api/*-api.ts). The page never handles an edit itself.
  */
+/** The same function every time, so the undo toast's timer isn't restarted by each redraw. */
+const dismissUndo = () => monthPageState.dismissUndo();
+
 export function MonthPage() {
-  const { month, savedMonthKeys, saveStatus, errorText, refusedEditText } = useSyncExternalStore(
+  const { month, savedMonthKeys, saveStatus, errorText, refusedEditText, removedExpense } = useSyncExternalStore(
     monthPageState.subscribe,
     monthPageState.getSnapshot,
   );
@@ -79,6 +83,8 @@ export function MonthPage() {
         onOpenMonth={openMonth}
         onClose={() => setAddMonthSuggestion(null)}
       />
+
+      <UndoToast removedExpense={removedExpense} onDismiss={dismissUndo} />
     </>
   );
 }
