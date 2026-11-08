@@ -140,6 +140,16 @@ test('isMonthData accepts month files in the current format and refuses older on
   assert.equal(isMonthData(monthData({ month: '2026-08', fixed: [{ name: 'Rent', amount: 880 }] })), false);
 });
 
+test('isMonthData refuses amounts the totals cannot add', () => {
+  const expense = (amount) => ({ id: 'e1', category: 'food', description: '', amount });
+  assert.equal(isMonthData(monthData({ month: '2026-11', expenses: [expense(12.5)] })), true);
+  assert.equal(isMonthData(monthData({ month: '2026-11', expenses: [expense('12.5')] })), false);
+  assert.equal(isMonthData(monthData({ month: '2026-11', expenses: [expense(-1)] })), false);
+  assert.equal(isMonthData(monthData({ month: '2026-11', expenses: [expense(Infinity)] })), false);
+  assert.equal(isMonthData(monthData({ month: '2026-11', budgets: { food: 'lots' } })), false);
+  assert.equal(isMonthData(monthData({ month: '2026-11', income: { expected: 0, entries: [{ id: 'i1' }] } })), false);
+});
+
 test('a month keeps its own category list, and a new month copies it', () => {
   const october = new MonthRecord(
     monthData({

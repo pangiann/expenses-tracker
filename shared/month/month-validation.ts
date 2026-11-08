@@ -14,21 +14,22 @@ export function isValidMonthKey(monthKey: unknown): monthKey is string {
 /**
  * True when the data has every part of a month file in the current format: a month key, income
  * with a list of entries, a category list, budgets, expenses, and fixed costs and subscriptions
- * that all have ids. Files in an older format (one income number, no category list, fixed
- * costs without ids) are refused.
+ * that all have ids and amounts. Files in an older format (one income number, no category list,
+ * fixed costs without ids) are refused.
  */
 export function isMonthData(monthData: unknown): monthData is MonthData {
   if (!isPlainObject(monthData) || !isValidMonthKey(monthData.month)) return false;
   const { income, categories, budgets, expenses, fixed, subscriptions } = monthData;
   return (
     isPlainObject(income) &&
-    typeof income.expected === 'number' &&
-    Array.isArray(income.entries) &&
+    isAmount(income.expected) &&
+    isListOfItemsWithAmounts(income.entries) &&
     Array.isArray(categories) &&
     isPlainObject(budgets) &&
-    Array.isArray(expenses) &&
-    isListOfItemsWithIds(fixed) &&
-    isListOfItemsWithIds(subscriptions)
+    Object.values(budgets).every(isAmount) &&
+    isListOfItemsWithAmounts(expenses) &&
+    isListOfItemsWithAmounts(fixed) &&
+    isListOfItemsWithAmounts(subscriptions)
   );
 }
 
@@ -36,8 +37,16 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
-function isListOfItemsWithIds(value: unknown): boolean {
-  return Array.isArray(value) && value.every((item) => isPlainObject(item) && typeof item.id === 'string');
+/** A number the totals can add: finite and not negative. */
+function isAmount(value: unknown): boolean {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0;
+}
+
+function isListOfItemsWithAmounts(value: unknown): boolean {
+  return (
+    Array.isArray(value) &&
+    value.every((item) => isPlainObject(item) && typeof item.id === 'string' && isAmount(item.amount))
+  );
 }
 
 /**
