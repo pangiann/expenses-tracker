@@ -101,7 +101,7 @@
   padding: 2px 4px;
   font-size: 12px;
   line-height: 1;
-  color: #c0c4d0;
+  color: var(--color-icon-faint);
   cursor: pointer;
   opacity: 0; /* transparent, not hidden, so the keyboard can reach it */
 }
@@ -113,11 +113,11 @@
   color: var(--color-negative);
 }
 .category-remove-button.is-blocked {
-  color: #dfe2ea;
+  color: var(--color-icon-disabled);
   cursor: not-allowed;
 }
 .category-remove-button.is-blocked:hover {
-  color: #dfe2ea;
+  color: var(--color-icon-disabled);
 }
 .category-card-budget-line {
   font-size: 12px;
@@ -239,7 +239,7 @@
   gap: 6px;
   padding: 10px 18px 14px;
   border-top: 1px solid var(--color-border);
-  background: #fafbfd;
+  background: var(--color-field-background);
 }
 .category-add-form input {
   border: 1px solid var(--color-border);

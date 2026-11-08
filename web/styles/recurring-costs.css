@@ -35,7 +35,7 @@
 .recurring-cost-name:focus {
   outline: none;
   border-color: var(--color-accent);
-  background: #fff;
+  background: var(--color-field-background-focused);
 }
 
 /* The € and the number share one box so the symbol stays next to the amount. */
@@ -54,7 +54,7 @@
 }
 .recurring-cost-amount:focus-within {
   border-color: var(--color-accent);
-  background: #fff;
+  background: var(--color-field-background-focused);
 }
 .recurring-cost-amount input {
   border: 0;

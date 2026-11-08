@@ -17,7 +17,7 @@
   padding: 10px 12px;
   font-size: 14px;
   font-family: inherit;
-  background: #fafbfd;
+  background: var(--color-field-background);
   color: var(--color-text);
 }
 
@@ -25,5 +25,5 @@
 .quick-add-form select:focus {
   outline: 2px solid var(--color-accent);
   outline-offset: -1px;
-  background: #fff;
+  background: var(--color-field-background-focused);
 }
