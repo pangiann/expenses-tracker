@@ -1,6 +1,57 @@
-# Expenses tracker
+<p align="center">
+  <img src="web/assets/app-icon.svg" alt="Expenses tracker icon" width="96" height="96">
+</p>
 
-An expenses tracker where you log expenses by category, set monthly budgets and fixed costs, and move between months. It is a website on Cloudflare, protected by a login, where everyone in a household sees the same months and every change appears live on the others' screens.
+<h1 align="center">Expenses tracker</h1>
+
+<p align="center">
+  <strong>A shared household budget that updates live on every screen.</strong>
+</p>
+
+<p align="center">
+  Log what you spend by category, set monthly budgets and fixed costs, and see where the
+  money went. Everyone in a household sees the same months, and every change appears on
+  the others' screens at once, also after editing offline. It runs on Cloudflare's free
+  plan, behind a login, in English and Greek, on desktop and as a home-screen app on phones.
+</p>
+
+<p align="center">
+  <a href="https://github.com/pangiann/expenses-tracker/actions/workflows/check.yml"><img src="https://github.com/pangiann/expenses-tracker/actions/workflows/check.yml/badge.svg" alt="Checks"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-656d76?style=flat-square" alt="MIT license"></a>
+  <img src="https://img.shields.io/badge/Cloudflare-Workers%20%2B%20Durable%20Objects-f38020?style=flat-square" alt="Cloudflare Workers and Durable Objects">
+  <img src="https://img.shields.io/badge/React-TypeScript-2f6feb?style=flat-square" alt="React and TypeScript">
+</p>
+
+<p align="center">
+  <a href="#features">Features</a> ·
+  <a href="#try-changes-locally">Run locally</a> ·
+  <a href="#checks">Checks</a> ·
+  <a href="#deploy-to-cloudflare">Deploy</a> ·
+  <a href="#project-layout">Project layout</a> ·
+  <a href="#how-data-flows">How data flows</a>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/month-light.png" alt="The month page: quick add, totals, budget against spending, and where the money went">
+</p>
+
+## Features
+
+- **Quick add.** Log an expense with an amount, a description, a category and a date.
+- **Budgets per category.** Each category card shows what is left; the bars compare spending to budget.
+- **Totals at a glance.** Earned, spent, saved and the savings rate for the month.
+- **Fixed costs and subscriptions.** Each new month copies them, with the budgets and expected income.
+- **Reports.** A year in totals: spending by month, by category, and a table of months.
+- **Shared and live.** A household shares its months, and edits reach every open screen over a WebSocket.
+- **Works offline.** Edits wait in the browser and go out in order when the connection is back.
+- **Undo, export and import.** Undo a removal for a few seconds; back up every month as one JSON file.
+- **Light and dark, English and Greek.** On desktop, and full-screen on a phone's home screen.
+
+| Reports                                                                                                            | Dark                                                                          | Phone                                                                                    |
+| ------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| <img src="docs/screenshots/reports-light.png" alt="The reports page: the year's totals, by month and by category"> | <img src="docs/screenshots/month-dark.png" alt="The month page in dark mode"> | <img src="docs/screenshots/month-phone.png" alt="The month page on a phone" width="240"> |
+
+The screenshots show made-up data from `npm run seed`.
 
 ## Try changes locally
 
