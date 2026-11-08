@@ -5,7 +5,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 14px 28px;
-  background: var(--color-card-background);
+  /* The page's own background: only the thin line below sets the bar apart. */
+  background: var(--color-page-background);
   border-bottom: 1px solid var(--color-border);
   position: sticky;
   top: 0;
@@ -22,6 +23,11 @@
 .brand-icon {
   width: 26px;
   height: 26px;
+}
+/* The icon's tile is near-black, like the dark page: a thin ring keeps its shape visible. */
+:root[data-theme='dark'] .brand-icon {
+  border-radius: 22%;
+  box-shadow: 0 0 0 1px var(--color-border);
 }
 
 .month-navigation {

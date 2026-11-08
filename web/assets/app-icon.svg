@@ -1,34 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
-  <!-- The home-screen icon: icon.svg's tile, filling the whole square. Phones round the corners
-       themselves, and Android may crop it to a circle, so the donut stays inside the middle 80%.
+  <!-- The home-screen icon: icon.svg's mark on a full square. Phones round the corners
+       themselves, and Android may crop it to a circle, so the receipt stays inside the middle 80%.
        The PNGs next to it are rendered from this file: see README "Home-screen app". -->
-  <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#5b7cfa"/>
-      <stop offset="1" stop-color="#3a3fc4"/>
-    </linearGradient>
-    <linearGradient id="shine" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#fff" stop-opacity=".16"/>
-      <stop offset=".55" stop-color="#fff" stop-opacity="0"/>
-    </linearGradient>
-  </defs>
-
-  <rect width="1024" height="1024" fill="url(#bg)"/>
-  <rect width="1024" height="1024" fill="url(#shine)"/>
-
-  <!-- Donut chart: circumference of r=230 is 1445.1; segments match the app's category colors -->
-  <g transform="rotate(-90 512 512)" fill="none" stroke-width="92">
-    <circle cx="512" cy="512" r="230" stroke="#ffffff" opacity=".18"/>
-    <circle cx="512" cy="512" r="230" stroke="#22c08a" stroke-dasharray="404 1041.1" stroke-dashoffset="0"/>
-    <circle cx="512" cy="512" r="230" stroke="#ff6f9c" stroke-dasharray="289 1156.1" stroke-dashoffset="-412"/>
-    <circle cx="512" cy="512" r="230" stroke="#ffb547" stroke-dasharray="246 1199.1" stroke-dashoffset="-709"/>
-    <circle cx="512" cy="512" r="230" stroke="#3fd0e6" stroke-dasharray="217 1228.1" stroke-dashoffset="-963"/>
-    <circle cx="512" cy="512" r="230" stroke="#b98cff" stroke-dasharray="249 1196.1" stroke-dashoffset="-1188"/>
+  <rect width="1024" height="1024" fill="#18181b"/>
+  <path d="M322 214 H702 V790 L639 744 L576 790 L512 744 L448 790 L385 744 L322 790 Z"
+        fill="none" stroke="#fafafa" stroke-width="48" stroke-linejoin="round"/>
+  <g fill="none" stroke="#fafafa" stroke-linecap="round" stroke-width="40">
+    <path d="M580 372 A86 86 0 1 0 580 508"/>
+    <path d="M426 414 H540 M426 466 H530"/>
   </g>
-
-  <!-- Euro sign -->
-  <g fill="none" stroke="#fff" stroke-linecap="round" stroke-width="40">
-    <path d="M590 438 A100 100 0 1 0 590 586"/>
-    <path d="M410 485 H540 M410 539 H530"/>
-  </g>
+  <path d="M410 610 H614" stroke="#22c55e" stroke-width="40" stroke-linecap="round"/>
 </svg>
