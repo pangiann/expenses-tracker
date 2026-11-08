@@ -20,3 +20,5 @@ jobs:
       - run: npm ci
       - run: npm run check
       - run: npm run test:integration
+      - run: npx --workspace tests/ui playwright install --with-deps chromium webkit
+      - run: npm run test:ui
