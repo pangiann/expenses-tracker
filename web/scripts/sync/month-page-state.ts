@@ -1,6 +1,12 @@
 import type { RequestBodyInputOf, EndpointName, MonthResponse, PathParamsOf } from '../../../shared/api/endpoints.ts';
 import type { RecurringCostListName } from '../../../shared/month/categories.ts';
-import type { Expense, MonthData, MonthRecord, RecurringCost } from '../../../shared/month/month-record.ts';
+import type {
+  Expense,
+  IncomeEntry,
+  MonthData,
+  MonthRecord,
+  RecurringCost,
+} from '../../../shared/month/month-record.ts';
 import { ApiError, OfflineError, callEndpoint } from '../api/endpoint-http-client.ts';
 import { t } from '../i18n/translator.ts';
 import { currentMonthKey } from '../utils/month-keys.ts';
@@ -30,6 +36,7 @@ export interface MonthPageSnapshot {
 /** An item someone removed, kept whole so that undo can add it back with the same id. */
 export type RemovedItem =
   | { kind: 'expense'; monthKey: string; expense: Expense }
+  | { kind: 'income'; monthKey: string; income: IncomeEntry }
   | { kind: 'recurringCost'; monthKey: string; list: RecurringCostListName; cost: RecurringCost };
 
 /** String id of the message shown when the server explains why it refused the connection. */

@@ -5,6 +5,7 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { MonthRecord } from '../shared/month/month-record.ts';
 import * as categoriesApi from '../web/scripts/api/categories-api.ts';
 import * as expensesApi from '../web/scripts/api/expenses-api.ts';
+import * as incomeApi from '../web/scripts/api/income-api.ts';
 import * as recurringCostsApi from '../web/scripts/api/recurring-costs-api.ts';
 import { AmountInput } from '../web/scripts/components/amount-input.tsx';
 import { EditableAmount } from '../web/scripts/components/editable-amount.tsx';
@@ -18,6 +19,9 @@ vi.mock('../web/scripts/api/expenses-api.ts', () => ({
   changeExpenseAmount: vi.fn(() => true),
   removeExpense: vi.fn(() => true),
   restoreExpense: vi.fn(() => true),
+}));
+vi.mock('../web/scripts/api/income-api.ts', () => ({
+  restoreIncome: vi.fn(() => true),
 }));
 vi.mock('../web/scripts/api/recurring-costs-api.ts', () => ({
   restoreRecurringCost: vi.fn(() => true),
@@ -132,4 +136,12 @@ test('the undo toast adds a removed fixed cost back', () => {
   );
   fireEvent.click(screen.getByText('undo.undo'));
   expect(recurringCostsApi.restoreRecurringCost).toHaveBeenCalledWith('2026-11', 'fixed', cost);
+});
+
+test('the undo toast adds a removed income entry back', () => {
+  const income = { id: 'salary', amount: 3200, description: 'salary', date: '2026-11-01' };
+  render(<UndoToast removedItem={{ kind: 'income', monthKey: '2026-11', income }} onDismiss={vi.fn()} />);
+  expect(screen.getByText('undo.incomeRemoved')).toBeTruthy();
+  fireEvent.click(screen.getByText('undo.undo'));
+  expect(incomeApi.restoreIncome).toHaveBeenCalledWith('2026-11', income);
 });
