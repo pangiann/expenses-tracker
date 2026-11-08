@@ -25,20 +25,20 @@
 /* Phones. */
 @media (max-width: 600px) {
   /*
-   * Top bar: brand and buttons on the first row, month navigation on the second, and the save
-   * status under the month: the first row has no room for "Αποθηκεύτηκε ✓" or "Offline…".
-   * The buttons' box steps aside (display: contents), so each button gets its own cell.
+   * Top bar: the name, the save status's symbol and the buttons on the first row, month
+   * navigation on the second. The first row has no room for "Αποθηκεύτηκε ✓" or "Offline…", so
+   * phones show only ✓, … or !. The buttons' box steps aside (display: contents), so each
+   * button gets its own cell.
    */
   .top-bar {
     display: grid;
-    grid-template-columns: 1fr auto auto auto auto;
+    grid-template-columns: auto auto 1fr auto auto auto auto;
     grid-template-areas:
-      'brand theme language export import'
-      'months months months months months'
-      'status status status status status';
+      'brand status . theme language export import'
+      'months months months months months months months';
     column-gap: 6px;
     row-gap: 10px;
-    padding: 10px 14px 8px;
+    padding: 10px 14px 12px;
   }
   .top-bar-actions {
     display: contents;
@@ -93,10 +93,20 @@
   .save-status {
     grid-area: status;
     min-width: 0;
-    min-height: 13px; /* keeps its row while empty, so the bar doesn't jump at the first save */
-    margin-top: -6px;
-    text-align: center;
-    font-size: 11px;
+    font-size: 15px;
+    font-weight: 600;
+  }
+  /* The text stays for screen readers, out of sight. */
+  .save-status-text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .save-status-symbol {
+    display: inline;
   }
   .month-navigation {
     grid-area: months;
