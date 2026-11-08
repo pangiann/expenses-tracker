@@ -32,3 +32,5 @@ export const RecurringCostListNameField = z.enum([RecurringCostList.FIXED_COSTS,
 
 /** "YYYY-MM" */
 export const MonthKeyField = z.string().check(z.regex(MONTH_KEY_PATTERN));
+/** "YYYY", as it appears in a path */
+export const YearField = z.string().check(z.regex(/^\d{4}$/));

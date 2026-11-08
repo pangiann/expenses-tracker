@@ -16,6 +16,7 @@
 import * as z from 'zod/mini';
 
 import type { MonthData, MonthRule } from '../month/month-record.ts';
+import type { YearSummary } from '../month/year-summary.ts';
 import {
   NonNegativeAmountField,
   ItemIdField,
@@ -25,6 +26,7 @@ import {
   PositiveAmountField,
   RecurringCostListNameField,
   RequiredTextField,
+  YearField,
 } from './fields.ts';
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE';
@@ -60,6 +62,8 @@ export const endpoints = {
   exportMonths: endpoint('GET', '/api/export', {}),
   /** Replaces the months in a backup file. Each month is checked by the operation. */
   importMonths: endpoint('POST', '/api/import', {}, z.object({ months: z.array(z.unknown()) })),
+  /** A year in totals, for the reports page: each saved month's earnings and spending per category. */
+  getYearSummary: endpoint('GET', '/api/years/:year/summary', { year: YearField }),
 
   // ----- Expenses -----
   addExpense: endpoint(
@@ -189,7 +193,9 @@ export type ResponseOf<Name extends EndpointName> = Name extends 'exportMonths'
   ? ExportResponse
   : Name extends 'importMonths'
     ? ImportResponse
-    : MonthResponse;
+    : Name extends 'getYearSummary'
+      ? YearSummary
+      : MonthResponse;
 
 /**
  * The answer when a request fails, with HTTP status:

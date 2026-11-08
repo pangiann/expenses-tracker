@@ -2,7 +2,10 @@ import type { CheckedRequestBodyOf, EndpointName, PathParamsOf } from '../api/en
 import type { MonthRecord } from './month-record.ts';
 
 /** The endpoints that edit a month: every one except reading, export and import. */
-export type MonthEditingEndpointName = Exclude<EndpointName, 'getMonth' | 'exportMonths' | 'importMonths'>;
+export type MonthEditingEndpointName = Exclude<
+  EndpointName,
+  'getMonth' | 'getYearSummary' | 'exportMonths' | 'importMonths'
+>;
 
 /** A checked edit request: the path parameters and body of one endpoint. */
 export interface CheckedMonthEditRequest<Name extends MonthEditingEndpointName> {

@@ -16,7 +16,7 @@ import {
   renameRecurringCostOperation,
   changeRecurringCostAmountOperation,
 } from './change-operations.ts';
-import { getMonthOperation } from './read-operations.ts';
+import { getMonthOperation, getYearSummaryOperation } from './read-operations.ts';
 import {
   removeExpenseOperation,
   removeIncomeOperation,
@@ -31,6 +31,7 @@ import type { Operation } from './operation.ts';
  */
 export const operationRegistry: { [Name in EndpointName]: Operation<Name> } = {
   getMonth: getMonthOperation,
+  getYearSummary: getYearSummaryOperation,
   exportMonths: exportMonthsOperation,
   importMonths: importMonthsOperation,
   addExpense: addExpenseOperation,

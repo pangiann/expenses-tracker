@@ -4,7 +4,7 @@ import { test } from 'vitest';
 import { endpoints, readPathParamsIfPathMatches, buildRequestPath } from '../shared/api/endpoints.ts';
 
 /** A sample value for each path parameter. */
-const SAMPLE_PARAMS = { month: '2026-11', id: 'item-1', list: 'fixed' };
+const SAMPLE_PARAMS = { month: '2026-11', id: 'item-1', list: 'fixed', year: '2026' };
 
 test('every endpoint matches only its own requests', () => {
   for (const [name, endpoint] of Object.entries(endpoints)) {

@@ -29,7 +29,7 @@ export { HouseholdDurableObject as HouseholdRoom };
 const LIVE_UPDATE_PATH = '/api/live';
 const SIGN_IN_STATUS_PATH = '/api/status';
 const API_ENDPOINT_PATHS = ['/api/export', '/api/import'];
-const API_ENDPOINT_PATH_PREFIX = '/api/months/';
+const API_ENDPOINT_PATH_PREFIXES = ['/api/months/', '/api/years/'];
 
 /** The Worker context; context.access identifies the signed-in user (see sign-in/signed-in-user-resolver.ts). */
 type WorkerContext = ExecutionContext & CloudflareAccessContext;
@@ -39,7 +39,10 @@ export default {
     const { pathname } = new URL(request.url);
     if (pathname === LIVE_UPDATE_PATH) return openLiveUpdateConnection(request, env, context);
     if (pathname === SIGN_IN_STATUS_PATH) return explainSignInStatus(request, env, context);
-    if (pathname.startsWith(API_ENDPOINT_PATH_PREFIX) || API_ENDPOINT_PATHS.includes(pathname)) {
+    if (
+      API_ENDPOINT_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix)) ||
+      API_ENDPOINT_PATHS.includes(pathname)
+    ) {
       return handleApiEndpointRequest(request, env, context);
     }
     if (pathname.startsWith('/api/')) return textResponse('Not found', 404);

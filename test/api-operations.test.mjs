@@ -197,3 +197,31 @@ test('a backup can be imported and exported', async () => {
   });
   assert.equal(olderFormat.status, 400, 'a backup in the older format is refused');
 });
+
+test('a year summary sums each saved month of the year and creates nothing', async () => {
+  const { context, storage } = fakeOperationContext();
+  await call(context, 'POST', '/api/months/2026-10/expenses', { ...coffee, date: '2026-10-03' });
+  await call(context, 'POST', '/api/months/2026-11/expenses', coffee);
+  await call(context, 'POST', '/api/months/2026-11/expenses', { ...coffee, id: 'e2', amount: 6.5 });
+  await call(context, 'POST', '/api/months/2027-01/expenses', { ...coffee, date: '2027-01-03' });
+  const storedKeys = [...storage.entries.keys()].sort();
+
+  const { status, answer } = await call(context, 'GET', '/api/years/2026/summary');
+  assert.equal(status, 200);
+  assert.equal(answer.year, 2026);
+  assert.deepEqual(
+    answer.months.map((month) => month.month),
+    ['2026-10', '2026-11'],
+  );
+  assert.deepEqual(answer.months[1].spentPerCategory, { lunch: 10 });
+  assert.equal(answer.months[1].variableSpending, 10);
+  assert.deepEqual(answer.savedYears, [2026, 2027]);
+  assert.ok(answer.categories.some((category) => category.id === 'lunch'));
+
+  const emptyYear = await call(context, 'GET', '/api/years/2030/summary');
+  assert.deepEqual(emptyYear.answer.months, []);
+  assert.deepEqual([...storage.entries.keys()].sort(), storedKeys, 'reading a summary saves nothing');
+
+  const badYear = await call(context, 'GET', '/api/years/26/summary');
+  assert.equal(badYear.status, 400);
+});
