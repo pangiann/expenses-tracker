@@ -140,6 +140,16 @@ curl http://localhost:8787/api/months/2026-11
 curl -X POST -H "Origin: http://localhost:8787" -d '{"id":"x1","categoryId":"lunch","amount":4,"date":"2026-11-03"}' http://localhost:8787/api/months/2026-11/expenses
 ```
 
+## Home-screen app
+
+On a phone, open the site and choose **Add to Home Screen** (Safari: Share button; Chrome: ⋮ menu). The tracker then opens full-screen with its own icon. `web/manifest.webmanifest` describes the app, and its icons are PNGs rendered from `web/assets/app-icon.svg`. After changing the SVG, render them again:
+
+```
+cd web/assets && for size in 180 192 512; do rsvg-convert -w $size -h $size app-icon.svg -o app-icon-$size.png; done
+```
+
+`rsvg-convert` comes with `brew install librsvg`.
+
 ## Languages
 
 The page is in English and Greek; the EN / ΕΛ picker in the top bar switches between them and the choice is remembered. The code contains no display text, only string ids such as `summary.earned`. Each language has one file, `web/i18n/en.json` and `web/i18n/el.json`, that maps every id to its text. Components get their text with `t('summary.earned')`. English is the fallback for a missing translation.

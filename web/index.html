@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Expenses</title>
     <link rel="icon" type="image/svg+xml" href="assets/icon.svg" />
+    <!-- Add to Home Screen: the app opens full-screen with its own icon. The manifest is fetched
+         with the sign-in cookie, because Cloudflare Access protects every file of the site. -->
+    <link rel="manifest" href="manifest.webmanifest" crossorigin="use-credentials" />
+    <link rel="apple-touch-icon" href="assets/app-icon-180.png" />
+    <meta name="theme-color" content="#ffffff" />
     <link rel="stylesheet" href="styles/base.css" />
     <link rel="stylesheet" href="styles/header.css" />
     <link rel="stylesheet" href="styles/quick-add.css" />
