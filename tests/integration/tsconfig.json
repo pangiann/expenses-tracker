@@ -1,0 +1,10 @@
+{
+  // Integration tests run in workerd, like the Worker: Cloudflare's runtime types, plus the
+  // cloudflare:test and cloudflare:workers modules from the Vitest plugin.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["es2023"],
+    "types": ["@cloudflare/vitest-plugin/types"]
+  },
+  "include": ["**/*.ts", "../../worker/worker-configuration.d.ts", "../../worker/worker-secrets.d.ts"]
+}

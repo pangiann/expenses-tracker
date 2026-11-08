@@ -20,6 +20,8 @@ Run `npm run check` before you push. It runs every check below; each one also ha
 - `npm run typecheck` checks the TypeScript code. The page and the Worker each have a `tsconfig.json`, because one runs in a browser and the other on Cloudflare. Existing `.js` files aren't checked until they become `.ts`.
 - `npm test` runs the unit tests with vitest, including the React components in `test/components.test.tsx` (React Testing Library, in a simulated browser). `npm run test:watch` reruns them on every save.
 
+- `npm run test:integration` runs the integration tests in `tests/integration/`, their own npm workspace. They start the real Worker and Durable Object in workerd, Cloudflare's runtime, from `wrangler.jsonc`, call every endpoint and the live-update WebSocket, and check what the household stored: each edit's month and revision, refused edits storing nothing, import, export, the year summary, and who is refused. They need no server and take a few seconds; each test starts from an empty household. Local only for now; not part of `npm run check`.
+
 The Worker's Cloudflare types are generated into `worker/worker-configuration.d.ts`, which is git-ignored. `npm run check` and `npm run typecheck` regenerate it first; after a fresh clone or a change to `wrangler.jsonc`, run `npm run types` once so your editor sees them too.
 
 ## Build
@@ -123,6 +125,7 @@ worker/                   Cloudflare Worker
     live-update-connection-manager.ts      which device shows which month, and sending it updates
 scripts/seed-dev-data.mjs made-up months for the local test site: npm run seed
 test/                     unit and component tests: npm test
+tests/integration/        integration tests, an npm workspace: npm run test:integration
 ```
 
 ## How data flows
