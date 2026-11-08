@@ -1,7 +1,7 @@
 {
   "name": "@expenses-tracker/ui-tests",
   "private": true,
-  "description": "The app in real browsers (Chromium and WebKit), driven by Playwright against a local wrangler dev on port 8788 with its own empty storage. Local only: npm run test:ui in the repo root.",
+  "description": "The app in real browsers (Chromium and WebKit), driven by Playwright against a local wrangler dev on port 8788 with its own empty storage. Run with npm run test:ui in the repo root; CI runs them too.",
   "type": "module",
   "scripts": {
     "test": "playwright test",

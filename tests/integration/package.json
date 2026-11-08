@@ -1,7 +1,7 @@
 {
   "name": "@expenses-tracker/integration-tests",
   "private": true,
-  "description": "The real Worker and Durable Object in Cloudflare's runtime (workerd), called through its HTTP endpoints and WebSocket; each test checks what was stored. Local only: npm run test:integration in the repo root.",
+  "description": "The real Worker and Durable Object in Cloudflare's runtime (workerd), called through its HTTP endpoints and WebSocket; each test checks what was stored. Run with npm run test:integration in the repo root; CI runs them too.",
   "type": "module",
   "scripts": {
     "test": "vitest run",
