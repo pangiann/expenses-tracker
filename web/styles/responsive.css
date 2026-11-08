@@ -1,3 +1,20 @@
+/*
+ * Medium windows (tablets, a narrow browser window): the top bar has no room for the name, the
+ * month and every button on one row, especially in Greek, so the month gets a second row.
+ * Phones (600 px and less, below) arrange the bar their own way.
+ */
+@media (max-width: 1100px) {
+  .top-bar {
+    flex-wrap: wrap;
+    row-gap: 10px;
+  }
+  .month-navigation {
+    order: 3; /* after the buttons, so it starts the second row */
+    flex-basis: 100%;
+    justify-content: center;
+  }
+}
+
 /* Narrow windows: stack the sections in one column. */
 
 @media (max-width: 960px) {
