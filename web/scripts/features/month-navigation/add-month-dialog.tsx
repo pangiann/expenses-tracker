@@ -64,6 +64,7 @@ function AddMonthForm({
         </select>
         <input
           type="number"
+          inputMode="numeric"
           min={EARLIEST_YEAR}
           max={LATEST_YEAR}
           value={year}

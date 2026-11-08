@@ -12,12 +12,14 @@ export function ignoreNonDigitKeys(keyEvent: KeyboardEvent<HTMLInputElement>, al
 
 /**
  * The field for an amount in euros: digits and one decimal separator, 0 or more, in cents.
- * It takes every prop of an <input>; onKeyDown still runs after the key filter.
+ * It takes every prop of an <input>; onKeyDown still runs after the key filter. Phones show
+ * the number pad with a decimal key (inputMode "decimal").
  */
 export function AmountInput({ onKeyDown, ...inputProps }: ComponentProps<'input'>) {
   return (
     <input
       type="number"
+      inputMode="decimal"
       step="0.01"
       min="0"
       {...inputProps}

@@ -99,4 +99,5 @@ test('amount fields ignore the keys browsers allow in numbers but amounts never 
   for (const key of ['e', 'E', '+', '-']) expect(fireEvent.keyDown(input, { key })).toBe(false); // the key did nothing
   for (const key of ['1', '.', ',', 'Enter']) expect(fireEvent.keyDown(input, { key })).toBe(true);
   expect(onKeyDown).toHaveBeenCalledTimes(4); // only the allowed keys reach the field's own handler
+  expect(input.inputMode).toBe('decimal'); // phones show the number pad
 });
