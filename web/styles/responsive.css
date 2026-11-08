@@ -164,9 +164,9 @@
     font-size: 20px;
   }
 
-  .budget-bar-row {
-    grid-template-columns: 92px minmax(0, 1fr) 124px;
-    gap: 8px;
+  .budget-bars {
+    grid-template-columns: 92px minmax(28px, 1fr) auto;
+    gap: 10px 8px;
     font-size: 12px;
   }
 

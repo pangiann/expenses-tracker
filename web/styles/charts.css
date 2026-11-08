@@ -6,17 +6,21 @@
   gap: 20px;
 }
 
+/*
+ * One grid for all the rows, so every bar starts and ends at the same place. The amounts'
+ * column is as wide as the widest amount; the bars take what is left, but never less than
+ * 40 px, so large amounts shorten the bars instead of running out of the card.
+ */
 .budget-bars {
   display: grid;
-  gap: 12px;
-}
-.budget-bar-row {
-  display: grid;
-  grid-template-columns: 120px 1fr 150px;
+  grid-template-columns: 120px minmax(40px, 1fr) auto;
   align-items: center;
   gap: 12px;
   font-size: 13px;
   white-space: nowrap;
+}
+.budget-bar-row {
+  display: contents; /* its three parts sit directly in the grid above */
 }
 /* Long category names end with "…" instead of running into the bar. */
 .budget-bar-row > span:first-child {
