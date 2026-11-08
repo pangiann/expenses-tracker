@@ -258,7 +258,7 @@
 .category-add-form button {
   border: 0;
   background: var(--color-accent);
-  color: #fff;
+  color: var(--color-accent-text);
   border-radius: 6px;
   padding: 0 10px;
   cursor: pointer;

@@ -3,6 +3,7 @@ import type { Category } from '../../../../shared/month/categories.ts';
 import type { MonthRecord } from '../../../../shared/month/month-record.ts';
 import { categoryName, t } from '../../i18n/translator.ts';
 import { formatEuros } from '../../utils/money.ts';
+import { CardTitle } from '../../components/card-title.tsx';
 
 // Chart geometry inside the SVG's 120 x 120 viewBox.
 const CHART_CENTER = 60;
@@ -36,7 +37,11 @@ export function SpendingDonut({ month }: { month: MonthRecord }) {
 
   return (
     <div className="card">
-      <h2>{t('charts.whereMoneyWent')}</h2>
+      <CardTitle
+        icon="chartPie"
+        titleStringId="charts.whereMoneyWent"
+        descriptionStringId="charts.whereMoneyWentDescription"
+      />
       <div className="spending-donut">
         <svg viewBox="0 0 120 120" className="spending-donut-chart">
           <RingCircle strokeColor="var(--color-track)" />

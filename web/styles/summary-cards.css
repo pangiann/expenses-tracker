@@ -7,6 +7,9 @@
 }
 
 .summary-card-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   color: var(--color-text-muted);
   font-size: 13px;
 }
@@ -25,4 +28,22 @@
 .summary-card-detail {
   color: var(--color-text-muted);
   font-size: 12px;
+}
+
+/* Each card's icon has its own color, the same in both themes. */
+.summary-card-icon {
+  width: 16px;
+  height: 16px;
+}
+.summary-card-icon.is-wallet {
+  color: #22c55e;
+}
+.summary-card-icon.is-shoppingBag {
+  color: #f97316;
+}
+.summary-card-icon.is-piggyBank {
+  color: #3b82f6;
+}
+.summary-card-icon.is-percent {
+  color: #a855f7;
 }

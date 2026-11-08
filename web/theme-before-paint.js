@@ -7,7 +7,7 @@
 // chooseTheme() in web/scripts/utils/theme-choice.ts, which fires the event below.
 (() => {
   const STORAGE_KEY = 'expenses.theme'; // the same key as in theme-choice.ts
-  const BAR_COLORS = { light: '#ffffff', dark: '#181c2e' }; // the top bar's background
+  const BAR_COLORS = { light: '#ffffff', dark: '#111113' }; // the top bar's background
   const deviceIsDark = matchMedia('(prefers-color-scheme: dark)');
 
   function savedChoice() {

@@ -33,6 +33,7 @@
   "common.nothingYet": "Τίποτα ακόμα",
 
   "quickAdd.title": "Νέο έξοδο",
+  "quickAdd.description": "Καταγράψτε ό,τι μόλις ξοδέψατε.",
 
   "summary.earned": "Έσοδα",
   "summary.expected": "Αναμενόμενα",
@@ -43,7 +44,9 @@
   "summary.variableSpending": "Μεταβλητά έξοδα",
 
   "charts.budgetVsActual": "Προϋπολογισμός και πραγματικά",
+  "charts.budgetVsActualDescription": "Τι ξόδεψε κάθε κατηγορία, σε σχέση με τον προϋπολογισμό της.",
   "charts.whereMoneyWent": "Πού πήγαν τα χρήματα",
+  "charts.whereMoneyWentDescription": "Το μερίδιο κάθε κατηγορίας στα μεταβλητά έξοδα του μήνα.",
   "charts.variableSpendingCaption": "μεταβλητά έξοδα",
   "charts.noExpensesYet": "Δεν υπάρχουν έξοδα ακόμα",
 
@@ -76,6 +79,7 @@
   "income.descriptionPlaceholder": "Περιγραφή (π.χ. μάθημα)",
 
   "recurring.fixedCosts": "Πάγια έξοδα",
+  "recurring.description": "Έξοδα που επαναλαμβάνονται κάθε μήνα.",
   "recurring.subscriptions": "Συνδρομές",
   "recurring.total": "Σύνολο πάγιων",
   "recurring.add": "+ Προσθήκη",

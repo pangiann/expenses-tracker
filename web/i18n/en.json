@@ -33,6 +33,7 @@
   "common.nothingYet": "Nothing yet",
 
   "quickAdd.title": "Add expense",
+  "quickAdd.description": "Log what you just spent.",
 
   "summary.earned": "Earned",
   "summary.expected": "Expected",
@@ -43,7 +44,9 @@
   "summary.variableSpending": "Variable spending",
 
   "charts.budgetVsActual": "Budget vs actual",
+  "charts.budgetVsActualDescription": "What each category spent, against its budget.",
   "charts.whereMoneyWent": "Where the money went",
+  "charts.whereMoneyWentDescription": "Each category’s share of this month’s variable spending.",
   "charts.variableSpendingCaption": "variable spending",
   "charts.noExpensesYet": "No expenses yet",
 
@@ -76,6 +79,7 @@
   "income.descriptionPlaceholder": "Description (e.g. lesson)",
 
   "recurring.fixedCosts": "Fixed costs",
+  "recurring.description": "Costs that repeat every month.",
   "recurring.subscriptions": "Subscriptions",
   "recurring.total": "Total fixed",
   "recurring.add": "+ Add",

@@ -6,6 +6,7 @@ import { categoryName, t } from '../../i18n/translator.ts';
 import { parseAmount } from '../../utils/money.ts';
 import { defaultExpenseDate, monthDateRange } from '../../utils/month-keys.ts';
 import { AmountInput } from '../../components/amount-input.tsx';
+import { CardTitle } from '../../components/card-title.tsx';
 
 /**
  * The "Add expense" bar: amount, description, category, date. Submitting adds the expense
@@ -26,7 +27,7 @@ export function QuickAdd({ month }: { month: MonthRecord }) {
 
   return (
     <section className="card quick-add">
-      <h2>{t('quickAdd.title')}</h2>
+      <CardTitle icon="circlePlus" titleStringId="quickAdd.title" descriptionStringId="quickAdd.description" />
       <form
         className="quick-add-form"
         autoComplete="off"

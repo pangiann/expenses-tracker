@@ -6,6 +6,7 @@ import * as recurringCostsApi from '../../api/recurring-costs-api.ts';
 import { t } from '../../i18n/translator.ts';
 import { formatEuros, parseAmount } from '../../utils/money.ts';
 import { AmountInput } from '../../components/amount-input.tsx';
+import { CardTitle } from '../../components/card-title.tsx';
 
 /**
  * The fixed costs and subscriptions panel. Every row's name and amount can be edited, rows
@@ -14,7 +15,7 @@ import { AmountInput } from '../../components/amount-input.tsx';
 export function RecurringCostsPanel({ month }: { month: MonthRecord }) {
   return (
     <aside className="card recurring-costs-panel">
-      <h2>{t('recurring.fixedCosts')}</h2>
+      <CardTitle icon="repeat" titleStringId="recurring.fixedCosts" descriptionStringId="recurring.description" />
       <RecurringCostRows month={month} listName={RecurringCostList.FIXED_COSTS} />
       <h3>{t('recurring.subscriptions')}</h3>
       <RecurringCostRows month={month} listName={RecurringCostList.SUBSCRIPTIONS} />

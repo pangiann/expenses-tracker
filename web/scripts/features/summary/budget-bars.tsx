@@ -1,13 +1,18 @@
 import type { Category } from '../../../../shared/month/categories.ts';
 import type { MonthRecord } from '../../../../shared/month/month-record.ts';
-import { categoryName, t } from '../../i18n/translator.ts';
+import { categoryName } from '../../i18n/translator.ts';
 import { formatEuros } from '../../utils/money.ts';
+import { CardTitle } from '../../components/card-title.tsx';
 
 /** "Budget vs actual": one bar per category, spent compared to budget, red when over budget. */
 export function BudgetBars({ month }: { month: MonthRecord }) {
   return (
     <div className="card">
-      <h2>{t('charts.budgetVsActual')}</h2>
+      <CardTitle
+        icon="chartColumn"
+        titleStringId="charts.budgetVsActual"
+        descriptionStringId="charts.budgetVsActualDescription"
+      />
       <div className="budget-bars">
         {month.categories.map((category) => (
           <BudgetBar key={category.id} category={category} month={month} />
