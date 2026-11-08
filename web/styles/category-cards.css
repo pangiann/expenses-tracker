@@ -51,8 +51,13 @@
   white-space: nowrap;
 }
 /* The clickable name has padding for its hover box; pull it back so the text lines up with "Budget". */
+/*
+ * The rule above sets h2's margin to 0, so the name sets the .click-to-edit margin again (see
+ * base.css), except on the right, next to the amount. The name then lines up with "Budget".
+ */
 .category-card-title h2.category-name {
-  margin: -1px 0 -1px -4px;
+  margin: calc(-1 * var(--click-to-edit-padding-y)) 0 calc(-1 * var(--click-to-edit-padding-y))
+    calc(-1 * var(--click-to-edit-padding-x));
 }
 .category-card-spent {
   font-weight: 700;

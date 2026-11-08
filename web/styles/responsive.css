@@ -225,7 +225,7 @@
     inset: -10px -14px;
   }
   .click-to-edit {
-    padding: 4px 6px;
-    margin: -4px -6px;
+    --click-to-edit-padding-y: 4px;
+    --click-to-edit-padding-x: 6px;
   }
 }

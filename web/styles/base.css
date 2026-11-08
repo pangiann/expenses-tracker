@@ -208,11 +208,17 @@ h3 {
 }
 
 /* Any value you can click to edit in place. */
+/*
+ * Its padding is cancelled by a negative margin, so the text lines up with the text around it.
+ * Touch screens use more padding (responsive.css), for a bigger tap area.
+ */
 .click-to-edit {
+  --click-to-edit-padding-y: 1px;
+  --click-to-edit-padding-x: 4px;
   cursor: text;
   border-radius: 4px;
-  padding: 1px 4px;
-  margin: -1px -4px;
+  padding: var(--click-to-edit-padding-y) var(--click-to-edit-padding-x);
+  margin: calc(-1 * var(--click-to-edit-padding-y)) calc(-1 * var(--click-to-edit-padding-x));
 }
 .click-to-edit:hover {
   background: var(--color-accent-light);
