@@ -24,8 +24,8 @@
 
 <p align="center">
   <a href="#features">Features</a> ·
-  <a href="#try-changes-locally">Run locally</a> ·
-  <a href="#checks">Checks</a> ·
+  <a href="#run-the-app-locally">Run locally</a> ·
+  <a href="#check-your-changes">Checks</a> ·
   <a href="#deploy-to-cloudflare">Deploy</a> ·
   <a href="#project-layout">Project layout</a> ·
   <a href="#how-data-flows">How data flows</a>
@@ -53,28 +53,108 @@
 
 The screenshots show made-up data from `npm run seed`.
 
-## Try changes locally
+## Run the app locally
 
-Test on your own computer before you push. You need Node.js.
+This section shows you how to run the app on your computer with made-up data, so you can try a change before you push it. The local app keeps its own storage and never touches the live site.
 
-1. Run `npm install` once, and copy `.dev.vars.example` to `.dev.vars` (git-ignored). It lets you skip the login, on localhost only.
-2. Run `npm run dev` and open http://localhost:8787. This runs the real Worker and Durable Object on your computer, with their own storage in `.wrangler/` (git-ignored), separate from the live site.
-3. In a second terminal, run `npm run seed` to fill the last six months with made-up expenses, income and fixed costs. Run it again whenever you want fresh data; it replaces those six months.
-4. Click around. `wrangler dev` rebuilds the page when you save a file in `web/scripts/`; reload the browser to see it.
+### Prerequisites
 
-## Checks
+Before you begin, install Node.js 22 or later. If you use [mise](https://mise.jdx.dev), run `mise install` in this folder to get the Node.js version in `mise.toml`.
 
-Run `npm run check` before you push. It runs every check below; each one also has its own command.
+### To run the app locally
 
-- `npm run format:check` checks the layout with Prettier. `npm run format` fixes it.
-- `npm run lint` looks for mistakes with ESLint.
-- `npm run typecheck` checks the TypeScript code. The page and the Worker each have a `tsconfig.json`, because one runs in a browser and the other on Cloudflare. Existing `.js` files aren't checked until they become `.ts`.
-- `npm test` runs the unit tests with vitest, including the React components in `test/components.test.tsx` (React Testing Library, in a simulated browser). `npm run test:watch` reruns them on every save.
+1. Install the dependencies:
 
-- `npm run test:integration` runs the integration tests in `tests/integration/`, their own npm workspace. They start the real Worker and Durable Object in workerd, Cloudflare's runtime, from `wrangler.jsonc`, call every endpoint and the live-update WebSocket, and check what the household stored: each edit's month and revision, refused edits storing nothing, import, export, the year summary, and who is refused. They need no server and take a few seconds; each test starts from an empty household. Not part of `npm run check`; CI runs them on every push and pull request.
-- `npm run test:ui` runs the UI tests in `tests/ui/`, another npm workspace. Playwright starts its own `wrangler dev` on port 8788 (never your `npm run dev` on 8787) with empty storage in `tests/ui/.state`, sets up two months through the import endpoint, then drives real browsers: Chromium, desktop Safari (WebKit), and an iPhone (WebKit with touch). It clicks, types, drags, opens a second device, goes offline, and checks both the screen and what the server saved. About 40 seconds. The first time, download the browsers with `npm run browsers --workspace tests/ui` (about 300 MB, into `~/Library/Caches/ms-playwright`). A failed test leaves a trace you can open with `npx playwright show-trace` from `tests/ui/test-results/`.
+   ```
+   npm install
+   ```
 
-The Worker's Cloudflare types are generated into `worker/worker-configuration.d.ts`, which is git-ignored. `npm run check` and `npm run typecheck` regenerate it first; after a fresh clone or a change to `wrangler.jsonc`, run `npm run types` once so your editor sees them too.
+2. Copy the local settings file. It lets you skip the login on localhost only, and git ignores it:
+
+   ```
+   cp .dev.vars.example .dev.vars
+   ```
+
+3. Start the app:
+
+   ```
+   npm run dev
+   ```
+
+   This runs the real Worker and Durable Object on your computer. Their storage is in `.wrangler/`, which git ignores.
+
+4. Open [http://localhost:8787](http://localhost:8787). The page shows the current month.
+
+5. In a second terminal, fill the last six months with made-up expenses, income and fixed costs:
+
+   ```
+   npm run seed
+   ```
+
+   The output looks like the following:
+
+   ```
+   Imported 6 months (2026-06 to 2026-11). Reload http://localhost:8787
+   ```
+
+6. Reload the page. The months now have data.
+
+When you save a file in `web/scripts/`, `wrangler dev` rebuilds the page. Reload the browser to see the change. Run `npm run seed` again whenever you want fresh data; it replaces those six months.
+
+If the page says that it can't read your sign-in, check that `.dev.vars` exists, then stop and restart `npm run dev`.
+
+## Check your changes
+
+Run every check before you push. CI runs the same checks on every push to `main` and every pull request.
+
+### To run every check
+
+1. Run the format, lint and type checks and the unit tests:
+
+   ```
+   npm run check
+   ```
+
+   The last lines show the unit test count, such as `Tests  97 passed (97)`.
+
+2. Run the integration tests. They take a few seconds:
+
+   ```
+   npm run test:integration
+   ```
+
+3. The first time only, download the browsers for the UI tests. They take about 300 MB, in `~/Library/Caches/ms-playwright` on a Mac:
+
+   ```
+   npm run browsers --workspace tests/ui
+   ```
+
+4. Run the UI tests. They take about 40 seconds:
+
+   ```
+   npm run test:ui
+   ```
+
+If the format check fails, run `npm run format` to fix the layout, then run `npm run check` again. If a UI test fails, it leaves a trace in `tests/ui/test-results/`. Open the trace with `npx playwright show-trace`.
+
+### What each check does
+
+| Command                    | What it checks                                                                                   |
+| -------------------------- | ------------------------------------------------------------------------------------------------ |
+| `npm run format:check`     | The layout, with Prettier. `npm run format` fixes it.                                            |
+| `npm run lint`             | Common mistakes, with ESLint.                                                                    |
+| `npm run typecheck`        | The TypeScript code of the page, the Worker, the shared code and the tests.                      |
+| `npm test`                 | The unit and React component tests, with vitest. `npm run test:watch` reruns them on every save. |
+| `npm run test:integration` | Every endpoint and the WebSocket, against the real Worker in workerd.                            |
+| `npm run test:ui`          | The page in Chromium, desktop Safari and an iPhone, with Playwright.                             |
+
+`npm run check` runs the first four. The page and the Worker each have a `tsconfig.json`, because one runs in a browser and the other on Cloudflare. Existing `.js` files aren't checked until they become `.ts`.
+
+The integration tests live in `tests/integration/`, their own npm workspace. They start the real Worker and Durable Object in workerd, Cloudflare's runtime, from `wrangler.jsonc`. They call every endpoint and the live-update WebSocket, then check what the household stored: each edit's month and revision, refused edits storing nothing, import, export, the year summary, and who is refused. They need no server, and each test starts from an empty household.
+
+The UI tests live in `tests/ui/`, another npm workspace. Playwright starts its own `wrangler dev` on port 8788, never your `npm run dev` on 8787, with empty storage in `tests/ui/.state`. It sets up two months through the import endpoint, then clicks, types, drags, opens a second device, goes offline, and checks both the screen and what the server saved.
+
+The Worker's Cloudflare types are generated into `worker/worker-configuration.d.ts`, which git ignores. `npm run check` and `npm run typecheck` regenerate it first. After a fresh clone or a change to `wrangler.jsonc`, run `npm run types` once so your editor sees them too.
 
 ## Build
 
@@ -86,21 +166,52 @@ The page is React written in TypeScript (`.tsx` files) in `web/scripts/`, and it
 
 ## Deploy to Cloudflare
 
-Cloudflare builds and deploys the Worker from GitHub. Nothing personal is in this repository: who can sign in and which household they belong to are set in the Cloudflare dashboard.
+This section shows you how to put the app on your own Cloudflare account, behind a login. Cloudflare builds and deploys it from GitHub on every push to `main`.
 
-1. **Connect the repository.** In the Cloudflare dashboard, go to **Workers & Pages → Create → Import a repository** and choose this repository. Keep the default deploy command, `npx wrangler deploy`. Every push to `main` deploys again.
-2. **Turn on the login.** Open the Worker's **Access** tab (or **Settings → Domains & Routes → Enable Cloudflare Access**). Choose **All traffic**, and for the policy choose **Cloudflare account** to start with only yourself.
-3. **Add one secret.** In the Worker, go to **Settings → Variables and Secrets**, click **Add**, choose type **Secret**, and add:
+> [!IMPORTANT]
+> Never put emails or other personal settings in this repository. Who can sign in and which household they belong to live in the Cloudflare dashboard only.
+
+### Prerequisites
+
+Before you begin, complete the following:
+
+- Create a free [Cloudflare account](https://dash.cloudflare.com/sign-up).
+- Fork this repository, or push your own copy of it to GitHub.
+
+### To deploy the app
+
+1. In the Cloudflare dashboard, go to **Workers & Pages → Create → Import a repository**.
+2. Choose this repository. Keep the default deploy command, `npx wrangler deploy`, and wait for the first deploy to finish.
+3. Open the Worker's **Access** tab, or go to **Settings → Domains & Routes → Enable Cloudflare Access**.
+4. Choose **All traffic**. For the policy, choose **Cloudflare account**, so only you can sign in at first.
+5. In the Worker, go to **Settings → Variables and Secrets** and click **Add**.
+6. Choose type **Secret** and add the following, using the email you sign in with:
 
    | Name                | Value                                                                               |
    | ------------------- | ----------------------------------------------------------------------------------- |
    | `HOUSEHOLD_MEMBERS` | JSON from each email to a household name, for example `{"you@example.com": "home"}` |
 
-   Use the email you sign in with. The Worker learns who is signed in from Cloudflare Access (`ctx.access`); a request that Access didn't authenticate is refused. If the page ever says the sign-in can't be read, you can also add the optional secrets `ACCESS_TEAM_DOMAIN` and `ACCESS_AUD`, and the Worker verifies the Access token itself.
+7. Open the site. Cloudflare asks you to sign in.
+8. Sign in. The page shows the current month.
 
-4. **Open the site** and sign in. To bring over months from a backup file, click **Import**.
+To bring over months from a backup file, click **Import**.
 
-**Adding a household.** In **Zero Trust → Access → Policies**, edit this Worker's policy and add **Include → Emails** with the new people's addresses; they sign in with a one-time code sent to their email and need no Cloudflare account. Then add them to `HOUSEHOLD_MEMBERS` with their own household name, for example `{"you@example.com": "home", "a@example.com": "family-2", "b@example.com": "family-2"}`. People with the same household name share months; different households never see each other's data. The Cloudflare account owner can see all data stored in the account.
+If the page says that it can't read your sign-in, add the optional secrets `ACCESS_TEAM_DOMAIN` and `ACCESS_AUD` in the same way. The Worker then checks the Access token itself. Normally the Worker learns who signed in from Cloudflare Access (`ctx.access`) and refuses any request that Access didn't sign in.
+
+### To add a household
+
+1. In **Zero Trust → Access → Policies**, edit this Worker's policy.
+2. Add **Include → Emails** with the new people's addresses. They sign in with a one-time code sent to their email and need no Cloudflare account.
+3. In the Worker's `HOUSEHOLD_MEMBERS` secret, add each new email with its household name, for example:
+
+   ```
+   {"you@example.com": "home", "a@example.com": "family-2", "b@example.com": "family-2"}
+   ```
+
+People with the same household name share months. Different households never see each other's data.
+
+> [!IMPORTANT]
+> The Cloudflare account owner can see all data stored in the account, including every household's months.
 
 ### Cost
 
